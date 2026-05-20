@@ -2,7 +2,8 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [ dev ]   # ← Only trigger on pushes to dev
+    branches: [ master ]
+  workflow_dispatch:
 
 permissions:
   contents: read

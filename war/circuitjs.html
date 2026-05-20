@@ -1,183 +1,443 @@
 <!DOCTYPE html>
 <html>
-  <head>
-  <link rel="manifest" href="/circuit/manifest.json">
-  
-    <!-- Properties can be specified to influence deferred binding -->
-    <meta name='gwt:property' content='locale=en_UK'>
-    
-    
-    <!-- Titles are optional, but useful -->
-    <title></title>
 
-<style>
-.disabled {
-	color: lightgray
-}
-.topSpace {
-	margin-top: 12px;
-}
-.cursorPointer {
-   cursor: default;
-}
-.cursorCross {
-   cursor: crosshair;
-}
+<head>
+	<link rel="manifest" href="manifest.json">
 
-.cursorSplitter {
-   cursor: row-resize;
-}
-
-.gwt-MenuItem-disabled {
-	color: lightgray;
-}
-.offScreen {
-	position: absolute;
-	right: 101%;
-	overflow: hidden;
-}
-.gwt-Frame{
-	scrolling="no";
-	border: 0px !important;
-}
-
-.gwt-MenuItem {
-	font-size: 12px !important;
-}
-
-.gwt-MenuBar-horizontal {
-	font-size: 12px !important;
-	}
-	
-.gwt-Label-selected {
-	font-size: 1.3em;
-	font-weight: 700;
-	border-top: 1px solid black;
-	border-bottom: 1px solid black;
-}
-.gwt-Label-1off {
-	color: DarkGray;
-}
-
-.gwt-Label-2off {
-	font-size:0.8em;
-	color: LightGray;
-}
-
-.gwt-Label-current {
-}
-
-.gwt-Button.chbut {
-	padding:3px;
-	margin: 3px;
-}
-
-.gwt-Button.chbut.chsel {
-	font-weight: bold;
-}
-
-.gwt-Button.chbut-black {
-	background: black;
-	color: white;
-}
-
-.gwt-Button.chbut-white {
-	background: white;
-	color: black;
-}
-
-.gwt-TextBox.scalebox {
-	width: 100px;
-}
-
-.gwt-Button.expand-but {
-	line-height: 0;
-	font-size: 13px;
-	margin-right: 5px;
-	border-radius:0px;
-	display: inline-block;
-	text-align: center;
-	width: 15px;
-	height: 15px;
-	padding-left: 0;
-	padding-right: 0;
-	padding-bottom:1px;
-	padding-top:0;
-	margin-bottom:1px;
-	background:gray;
-	color:white;
-}
+	<!-- Properties can be specified to influence deferred binding -->
+	<meta name='gwt:property' content='locale=en_UK'>
 
 
-.topButton-red {
-    margin-top: 5px;
-    margin-bottom: 5px;
-    margin-left:5px;
-    padding: 5px 7px;
-    text-decoration: none;
-    color: #ffffff;
-    cursor: pointer;
-    cursor: hand;
-    font-size: small;
-    background-color: #ff0000; 
-    border: 1px solid #bbb;
-    border-bottom: 1px solid #a0a0a0;
-    border-radius: 3px;
-    -moz-border-radius: 3px;
-}
+	<!-- Titles are optional, but useful -->
+	<title></title>
 
-.topButton {
-    margin-top: 5px;
-    margin-bottom: 5px;
-    margin-left:5px;
-    padding: 5px 7px;
-    text-decoration: none;
-    cursor: pointer;
-    cursor: hand;
-    font-size: small;
-    background-color: #e7e7e7; 
-    border: 1px solid #bbb;
-    border-bottom: 1px solid #a0a0a0;
-    border-radius: 3px;
-    -moz-border-radius: 3px;
-}
+	<style>
+		@font-face {
+			font-family: "Geist Mono";
+			src: local("Geist Mono"), local("GeistMono"), local("Geist Mono Regular");
+			font-style: normal;
+			font-weight: 100 900;
+			font-display: swap;
+		}
 
-.radioPanel label {
-	margin-right: 15px;
-}
+		:root {
+			color-scheme: dark;
+			/* Theme controls: colors */
+			--ui-bg: #171717;
+			--ui-control-bg: #323232;
+			--ui-surface: #262626;
+			--ui-surface-2: #2f2f2f;
+			--ui-border: #3f3f46;
+			--ui-text: #fafafa;
+			--ui-muted: #a1a1aa;
+			--ui-accent: #cfcfcf;
+			--canvas-bg: #1f1f1f;
+			--canvas-grid: rgba(250, 250, 250, 0.07);
+			--scope-bg: #222222;
+			--scope-icon: #a1a1aa;
+			--scope-plot-voltage: #c9ff4d;
+			--scope-plot-current: #b084ff;
+			--scope-plot-neutral: #fafafa;
+			--scope-plot-1: #ff6b6b;
+			--scope-plot-2: #ff9f43;
+			--scope-plot-3: #ff78f2;
+			--scope-plot-4: #b084ff;
+			--scope-plot-5: #6ea8ff;
+			--scope-plot-6: #56d4ff;
+			--scope-plot-7: #fff36b;
+			--scope-plot-8: #8ef7c6;
+			--scope-plot-9: #ffa8c5;
+			--scope-plot-10: #ffd6a5;
+			--scope-plot-11: #caffbf;
+			--scope-plot-12: #9bf6ff;
+			--scope-plot-13: #a0c4ff;
+			--scope-plot-14: #d0b3ff;
+			--scope-plot-15: #f1fa8c;
+			--scope-plot-16: #b8f2e6;
+			/* Theme controls: type */
+			--ui-font: "Geist Mono", "IBM Plex Mono", "SFMono-Regular", "SF Mono", "Cascadia Mono",
+				"Roboto Mono", "Menlo", "Monaco", "Liberation Mono", monospace;
+			--ui-font-size: 12px;
+			--ui-font-size-sm: 12px;
+			--ui-font-size-lg: 14px;
+			--ui-font-weight: 100;
+			--ui-font-weight-strong: 200;
+			--ui-font-weight-selected: 400;
+			--ui-letter-spacing: 0.02em;
+		}
 
-</style>
+		html,
+		body {
+			margin: 0;
+			min-height: 100%;
+			background: var(--ui-bg);
+			color: var(--ui-text);
+			font-family: var(--ui-font);
+		}
 
-<link rel="stylesheet" href="font/fontello.css">
+		body {
+			padding: 0;
+			box-sizing: border-box;
+		}
+
+		body,
+		table,
+		tbody,
+		tr,
+		td,
+		th,
+		button,
+		input,
+		select,
+		textarea,
+		option,
+		label {
+			font-family: var(--ui-font) !important;
+			color: var(--ui-text);
+			text-shadow: none !important;
+		}
+
+		*,
+		*::before,
+		*::after {
+			box-shadow: none !important;
+			border-radius: 0 !important;
+		}
+
+		.topSpace {
+			margin-top: 18px;
+		}
+
+		.cursorPointer {
+			cursor: default;
+		}
+
+		.cursorCross {
+			cursor: crosshair;
+		}
+
+		.cursorSplitter {
+			cursor: row-resize;
+		}
+
+		.offScreen {
+			position: absolute;
+			right: 101%;
+			overflow: hidden;
+		}
+
+		.gwt-Frame {
+			border: 0 !important;
+			background: var(--ui-surface);
+		}
+
+		.verticalPanel {
+			background: var(--ui-surface);
+			border-left: 1px solid var(--ui-border);
+			padding: 12px;
+			box-sizing: border-box;
+		}
+
+		.verticalPanel>.gwt-Label,
+		.verticalPanel>.gwt-HTML {
+			color: var(--ui-muted);
+			font-size: var(--ui-font-size-sm);
+			letter-spacing: var(--ui-letter-spacing);
+		}
+
+		.gwt-MenuBar-horizontal,
+		.gwt-MenuBar-horizontal table,
+		.gwt-MenuBar-horizontal tbody,
+		.gwt-MenuBar-horizontal tr,
+		.gwt-MenuBar-horizontal td {
+			background: var(--ui-surface) !important;
+			background-image: none !important;
+			color: var(--ui-text) !important;
+			border: 0 !important;
+			box-shadow: none !important;
+		}
+
+		.gwt-MenuBar-horizontal {
+			padding: 8px 12px !important;
+			margin-bottom: 0;
+			border-bottom: 1px solid var(--ui-border) !important;
+		}
+
+		.gwt-MenuBar-horizontal table {
+			border-collapse: separate !important;
+			border-spacing: 10px 0 !important;
+		}
+
+		.gwt-MenuItem,
+		.gwt-MenuBarPopup .gwt-MenuItem {
+			font-size: var(--ui-font-size-sm) !important;
+			font-weight: var(--ui-font-weight) !important;
+			letter-spacing: var(--ui-letter-spacing);
+			padding: 4px 0 !important;
+			color: var(--ui-muted) !important;
+			background: transparent !important;
+			border: 0 !important;
+			transition: color 120ms ease;
+		}
+
+		.gwt-MenuBar-horizontal .gwt-MenuItem:hover,
+		.gwt-MenuBar-horizontal .gwt-MenuItem-selected,
+		.gwt-MenuBarPopup .gwt-MenuItem:hover,
+		.gwt-MenuBarPopup .gwt-MenuItem-selected {
+			color: var(--ui-accent) !important;
+			background: transparent !important;
+		}
+
+		.gwt-MenuItem-disabled,
+		.gwt-MenuBarPopup .gwt-MenuItem-disabled,
+		.disabled,
+		.gwt-Label-1off,
+		.gwt-Label-2off {
+			color: #71717a !important;
+		}
+
+		.gwt-MenuBarPopup,
+		.gwt-MenuBarPopup table,
+		.gwt-MenuBarPopup tbody,
+		.gwt-MenuBarPopup tr,
+		.gwt-MenuBarPopup td,
+		.menuPopupTopLeft,
+		.menuPopupTopCenter,
+		.menuPopupTopRight,
+		.menuPopupMiddleLeft,
+		.menuPopupMiddleCenter,
+		.menuPopupMiddleRight,
+		.menuPopupBottomLeft,
+		.menuPopupBottomCenter,
+		.menuPopupBottomRight {
+			background: var(--ui-surface-2) !important;
+			background-image: none !important;
+			border: 0 !important;
+		}
+
+		.gwt-MenuBarPopup {
+			border: 1px solid var(--ui-border) !important;
+			padding: 3px 8px !important;
+			min-width: 0;
+		}
+
+		.menu-shortcut-row {
+			display: grid;
+			grid-template-columns: minmax(0, 1fr) auto;
+			align-items: center;
+			gap: 10px;
+			min-width: 0;
+		}
+
+		.menu-shortcut-label {
+			display: inline-flex;
+			align-items: center;
+			min-width: 0;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			white-space: nowrap;
+		}
+
+		.menu-shortcut-key {
+			color: var(--ui-muted);
+			white-space: nowrap;
+			text-align: right;
+			justify-self: end;
+			padding-left: 8px;
+		}
+
+		.menu-gap {
+			display: inline-block;
+			width: 8px;
+		}
+
+		.gwt-DialogBox,
+		.gwt-PopupPanel {
+			background: var(--ui-surface-2) !important;
+			border: 1px solid var(--ui-border) !important;
+		}
+
+		.gwt-DialogBox *,
+		.gwt-PopupPanel * {
+			color: var(--ui-text) !important;
+		}
+
+		.app-dialog,
+		.app-dialog>div,
+		.app-dialog table,
+		.app-dialog tbody,
+		.app-dialog tr,
+		.app-dialog td,
+		.app-dialog .Caption,
+		.app-dialog .dialogTop,
+		.app-dialog .dialogMiddle,
+		.app-dialog .dialogBottom,
+		.app-dialog .dialogTopLeft,
+		.app-dialog .dialogTopCenter,
+		.app-dialog .dialogTopRight,
+		.app-dialog .dialogMiddleLeft,
+		.app-dialog .dialogMiddleCenter,
+		.app-dialog .dialogMiddleRight,
+		.app-dialog .dialogBottomLeft,
+		.app-dialog .dialogBottomCenter,
+		.app-dialog .dialogBottomRight {
+			background: var(--ui-surface-2) !important;
+			background-image: none !important;
+			color: var(--ui-text) !important;
+			border: 0 !important;
+		}
+
+		.app-dialog {
+			border: 1px solid var(--ui-border) !important;
+		}
+
+		.app-dialog .Caption {
+			padding: 10px 12px !important;
+			border-bottom: 1px solid var(--ui-border) !important;
+			color: var(--ui-text) !important;
+			font-weight: var(--ui-font-weight-strong) !important;
+		}
+
+		.app-dialog .dialogMiddleCenter,
+		.app-dialog .dialogMiddleCenterInner,
+		.app-dialog .dialogContent {
+			padding: 10px 12px !important;
+			background: var(--ui-surface-2) !important;
+		}
+
+		.app-dialog input,
+		.app-dialog select,
+		.app-dialog textarea,
+		.app-dialog .gwt-TextBox,
+		.app-dialog .gwt-ListBox {
+			background: var(--ui-surface) !important;
+			color: var(--ui-text) !important;
+			border: 1px solid var(--ui-border) !important;
+		}
+
+		.context-popup,
+		.context-popup>div,
+		.context-popup table,
+		.context-popup tbody,
+		.context-popup tr,
+		.context-popup td,
+		.context-popup .gwt-MenuBar,
+		.context-popup .gwt-MenuItem {
+			background: var(--ui-surface-2) !important;
+			background-image: none !important;
+			color: var(--ui-text) !important;
+			border: 0 !important;
+		}
+
+		.context-popup {
+			padding: 3px 8px !important;
+		}
+
+		.context-popup .gwt-MenuItem:hover,
+		.context-popup .gwt-MenuItem-selected {
+			color: var(--ui-accent) !important;
+			background: transparent !important;
+		}
+
+		.gwt-Button,
+		.topButton,
+		.topButton-red,
+		.gwt-Button.chbut,
+		.gwt-Button.chbut.chsel,
+		.gwt-Button.chbut-black,
+		.gwt-Button.chbut-white,
+		.gwt-Button.expand-but {
+			background: var(--ui-surface-2) !important;
+			color: var(--ui-text) !important;
+			border: 1px solid var(--ui-border) !important;
+			padding: 8px 12px !important;
+			font-size: var(--ui-font-size) !important;
+			font-weight: var(--ui-font-weight) !important;
+			letter-spacing: var(--ui-letter-spacing) !important;
+		}
+
+		.run-stop-button {
+			min-width: 112px;
+			text-align: center;
+			font-weight: var(--ui-font-weight-strong) !important;
+		}
+
+		.run-stop-button.run-stop-stopped {
+			background: var(--ui-accent) !important;
+			border-color: var(--ui-accent) !important;
+			color: #171717 !important;
+		}
+
+		.gwt-Button:hover,
+		.topButton:hover,
+		.topButton-red:hover,
+		.gwt-Button.chbut:hover,
+		.gwt-Button.expand-but:hover {
+			color: var(--ui-accent) !important;
+			border-color: var(--ui-accent) !important;
+		}
+
+		input,
+		select,
+		textarea {
+			background: var(--ui-surface-2) !important;
+			color: var(--ui-text) !important;
+			border: 1px solid var(--ui-border) !important;
+			padding: 6px 8px !important;
+		}
+
+		.gwt-Label-selected {
+			font-size: 1.1em;
+			font-weight: var(--ui-font-weight-selected);
+			color: var(--ui-text) !important;
+		}
+
+		.gwt-TextBox.scalebox {
+			width: 100px;
+		}
+
+		.verticalPanel .gwt-Label+canvas,
+		.verticalPanel canvas {
+			margin-top: 6px;
+		}
+
+		.radioPanel label {
+			margin-right: 15px;
+		}
+	</style>
+
+	<link rel="stylesheet" href="font/fontello.css">
 
 </head>
-  <body>
-  <!-- Include the next line to allow support for dropbox import/export. You will need your own app key. -->
-  <!--<script type="text/javascript" src="https://www.dropbox.com/static/api/2/dropins.js" id="dropboxjs" data-app-key="YOUR_KEY"></script>-->
 
-  <script language="javascript" src="lz-string.min.js"></script>
-   
-    <!-- This script tag is what actually loads the GWT module.  The -->
-    <!-- 'nocache.js' file (also called a "selection script") is     -->
-    <!-- produced by the GWT compiler in the module output directory -->
-    <!-- or generated automatically in development mode.             -->
-    <script language="javascript" src="circuitjs1/circuitjs1.nocache.js"></script>
-    
-    <!-- Include a history iframe to enable full GWT history support -->
-    <!-- (the id must be exactly as shown)                           -->
-    <iframe src="javascript:''" id="__gwt_historyFrame" style="width:0;height:0;border:0"></iframe>
-    
-    <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-	navigator.serviceWorker.register('service-worker.js').then(registration => {
-	  console.log('Service Worker registered with scope:', registration.scope);
-	}).catch(error => {
-	  console.error('Service Worker registration failed:', error);
-	});
-      });
-    }
-    </script>
+<body>
+	<!-- Include the next line to allow support for dropbox import/export. You will need your own app key. -->
+	<!--<script type="text/javascript" src="https://www.dropbox.com/static/api/2/dropins.js" id="dropboxjs" data-app-key="YOUR_KEY"></script>-->
 
-  </body>
- </html>
+	<script language="javascript" src="lz-string.min.js"></script>
+
+	<!-- This script tag is what actually loads the GWT module.  The -->
+	<!-- 'nocache.js' file (also called a "selection script") is     -->
+	<!-- produced by the GWT compiler in the module output directory -->
+	<!-- or generated automatically in development mode.             -->
+	<script language="javascript" src="circuitjs1/circuitjs1.nocache.js"></script>
+
+	<!-- Include a history iframe to enable full GWT history support -->
+	<!-- (the id must be exactly as shown)                           -->
+	<iframe src="javascript:''" id="__gwt_historyFrame" style="width:0;height:0;border:0"></iframe>
+
+	<script>
+		if ('serviceWorker' in navigator) {
+			window.addEventListener('load', () => {
+				navigator.serviceWorker.register('service-worker.js').then(registration => {
+					console.log('Service Worker registered with scope:', registration.scope);
+				}).catch(error => {
+					console.error('Service Worker registration failed:', error);
+				});
+			});
+		}
+	</script>
+
+</body>
+
+</html>
