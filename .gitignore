@@ -70,6 +70,7 @@ Temporary Items
 /spice
 /tmp
 /.gradle
+/.gradle-home
 *.tgz
 
 /.apt_generated/
