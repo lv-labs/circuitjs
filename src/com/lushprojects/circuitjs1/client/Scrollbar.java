@@ -50,16 +50,16 @@ import com.google.gwt.event.dom.client.TouchMoveHandler;
 import com.google.gwt.event.dom.client.TouchStartEvent;
 import com.google.gwt.event.dom.client.TouchStartHandler;
 
+public class Scrollbar extends Composite
+		implements ClickHandler, MouseDownHandler, MouseMoveHandler, MouseUpHandler, MouseOutHandler, MouseOverHandler,
+		MouseWheelHandler, TouchStartHandler, TouchCancelHandler, TouchEndHandler, TouchMoveHandler {
 
-public class Scrollbar extends  Composite implements 
-	ClickHandler, MouseDownHandler, MouseMoveHandler, MouseUpHandler, MouseOutHandler, MouseOverHandler,
-	MouseWheelHandler, TouchStartHandler, TouchCancelHandler, TouchEndHandler, TouchMoveHandler {
-	
-	static int HORIZONTAL =1;
-	static int HMARGIN=2;
-	static int SCROLLHEIGHT=14;
-	static int BARWIDTH=3;
-	static int BARMARGIN=3;
+	static int HORIZONTAL = 1;
+	static int HMARGIN = 2;
+	static int SCROLLHEIGHT = 14;
+	static int BARWIDTH = 3;
+	static int BARMARGIN = 3;
+	static int PANEL_INSET = 24;
 
 	Canvas can;
 	VerticalPanel pan;
@@ -68,117 +68,111 @@ public class Scrollbar extends  Composite implements
 	int max;
 	int val;
 	double stepSize; // step size in scrollbar units (0 = continuous)
-	boolean dragging=false;
-	boolean enabled=true;
-	Command command=null;
-	CircuitElm attachedElm=null;
+	boolean dragging = false;
+	boolean enabled = true;
+	Command command = null;
+	CircuitElm attachedElm = null;
 	int VERTICALPANELWIDTH;
 
 	public Scrollbar(int orientation, int value, int visible, int minimum, int maximum) {
-		VERTICALPANELWIDTH = UIManager.VERTICALPANELWIDTH;
-		min=minimum;
-		max=maximum-1;
-		val=value;
-		 pan = new VerticalPanel();
+		VERTICALPANELWIDTH = UIManager.VERTICALPANELWIDTH - PANEL_INSET;
+		min = minimum;
+		max = maximum - 1;
+		val = value;
+		pan = new VerticalPanel();
 		can = Canvas.createIfSupported();
-		can.setWidth((VERTICALPANELWIDTH)+" px");
+		can.setWidth((VERTICALPANELWIDTH) + " px");
 		can.setHeight("40 px");
 		can.setCoordinateSpaceWidth(VERTICALPANELWIDTH);
 		can.setCoordinateSpaceHeight(SCROLLHEIGHT);
 		pan.add(can);
-		g=can.getContext2d();
-		g.setFillStyle("#ffffff");
-		can.addClickHandler( this);
+		g = can.getContext2d();
+		g.setFillStyle(Theme.uiSurface());
+		pan.getElement().getStyle().setBackgroundColor(Theme.uiSurface());
+		can.addClickHandler(this);
 		can.addMouseDownHandler(this);
 		can.addMouseUpHandler(this);
 		can.addMouseMoveHandler(this);
 		can.addMouseOutHandler(this);
 		can.addMouseOverHandler(this);
 		can.addMouseWheelHandler(this);
-		
-		// our hack from CirSim doesn't work here so we have to handle touch events explicitly
+
+		// our hack from CirSim doesn't work here so we have to handle touch events
+		// explicitly
 		can.addTouchStartHandler(this);
 		can.addTouchMoveHandler(this);
 		can.addTouchEndHandler(this);
 		can.addTouchCancelHandler(this);
-		
+
 		this.draw();
 		initWidget(pan);
 	}
-	
-	public Scrollbar(int orientation, int value, int visible, int minimum, int maximum, 
-			Command cmd, CircuitElm e) {
-		this(orientation,value,visible,minimum,maximum);
-		this.command=cmd;
-		attachedElm=e;
+
+	public Scrollbar(int orientation, int value, int visible, int minimum, int maximum, Command cmd, CircuitElm e) {
+		this(orientation, value, visible, minimum, maximum);
+		this.command = cmd;
+		attachedElm = e;
 	}
-	
+
 	public Scrollbar(int orientation, int value, int visible, int minimum, int maximum, Command cmd) {
 		this(orientation, value, visible, minimum, maximum);
-		this.command=cmd;
+		this.command = cmd;
 	}
-	
+
 	void draw() {
-		if (enabled)
-			g.setStrokeStyle("#000000");
-		else
-			g.setStrokeStyle("lightgrey");
+		g.setFillStyle(Theme.uiSurface());
+		g.setStrokeStyle(enabled ? Theme.uiText() : Theme.uiBorder());
 		g.setLineWidth(1.0);
-		g.fillRect(0,0,VERTICALPANELWIDTH,SCROLLHEIGHT);
+		g.fillRect(0, 0, VERTICALPANELWIDTH, SCROLLHEIGHT);
 		g.beginPath();
-		g.moveTo(HMARGIN+SCROLLHEIGHT-3, 0);
-		g.lineTo(HMARGIN, SCROLLHEIGHT/2);
-		g.lineTo(HMARGIN+SCROLLHEIGHT-3, SCROLLHEIGHT);
-		g.moveTo(VERTICALPANELWIDTH-HMARGIN-SCROLLHEIGHT+3, 0);
-		g.lineTo(VERTICALPANELWIDTH-HMARGIN, SCROLLHEIGHT/2);
-		g.lineTo(VERTICALPANELWIDTH-HMARGIN-SCROLLHEIGHT+3, SCROLLHEIGHT);
+		g.moveTo(HMARGIN + SCROLLHEIGHT - 3, 0);
+		g.lineTo(HMARGIN, SCROLLHEIGHT / 2);
+		g.lineTo(HMARGIN + SCROLLHEIGHT - 3, SCROLLHEIGHT);
+		g.moveTo(VERTICALPANELWIDTH - HMARGIN - SCROLLHEIGHT + 3, 0);
+		g.lineTo(VERTICALPANELWIDTH - HMARGIN, SCROLLHEIGHT / 2);
+		g.lineTo(VERTICALPANELWIDTH - HMARGIN - SCROLLHEIGHT + 3, SCROLLHEIGHT);
 		g.stroke();
-		if (enabled)
-			g.setStrokeStyle("grey");
+		g.setStrokeStyle(Theme.uiBorder());
 		g.beginPath();
 		g.setLineWidth(5.0);
-		g.moveTo(HMARGIN+SCROLLHEIGHT+BARMARGIN, SCROLLHEIGHT/2);
-		g.lineTo(VERTICALPANELWIDTH-HMARGIN-SCROLLHEIGHT-BARMARGIN, SCROLLHEIGHT/2);
+		g.moveTo(HMARGIN + SCROLLHEIGHT + BARMARGIN, SCROLLHEIGHT / 2);
+		g.lineTo(VERTICALPANELWIDTH - HMARGIN - SCROLLHEIGHT - BARMARGIN, SCROLLHEIGHT / 2);
 		g.stroke();
-		double p=HMARGIN+SCROLLHEIGHT+BARMARGIN+((VERTICALPANELWIDTH-2*(HMARGIN+SCROLLHEIGHT+BARMARGIN))*((double)(val-min)))/(max-min);
+		double p = HMARGIN + SCROLLHEIGHT + BARMARGIN
+				+ ((VERTICALPANELWIDTH - 2 * (HMARGIN + SCROLLHEIGHT + BARMARGIN)) * ((double) (val - min)))
+						/ (max - min);
 		if (enabled) {
-			if (attachedElm!=null && attachedElm.needsHighlight())
-				g.setStrokeStyle(CircuitElm.selectColor.getHexValue());
-			else
-				g.setStrokeStyle("red");
+			g.setStrokeStyle(Theme.uiAccent());
 			g.beginPath();
-			g.moveTo(HMARGIN+SCROLLHEIGHT+BARMARGIN, SCROLLHEIGHT/2);
-			g.lineTo(p, SCROLLHEIGHT/2);
+			g.moveTo(HMARGIN + SCROLLHEIGHT + BARMARGIN, SCROLLHEIGHT / 2);
+			g.lineTo(p, SCROLLHEIGHT / 2);
 			g.stroke();
-			g.setStrokeStyle("#000000");
-//			g.beginPath();
-//			g.moveTo(p, 0);
-//			g.lineTo(p, SCROLLHEIGHT);
-			g.setLineWidth(2.0);
-			g.fillRect(p-2, 2, 5, SCROLLHEIGHT-4);
-			g.strokeRect(p-2, 2, 5, SCROLLHEIGHT-4);
-//			g.stroke();
+			g.setFillStyle(Theme.uiAccent());
+			g.beginPath();
+			g.arc(p, SCROLLHEIGHT / 2, 6, 0, Math.PI * 2);
+			g.fill();
 		}
 
-
-		
 	}
-	
-	int calcValueFromPos(int x){
+
+	int calcValueFromPos(int x) {
 		int v;
-		v= min+(max-min)*(x-HMARGIN-SCROLLHEIGHT-BARMARGIN)/(VERTICALPANELWIDTH-2*(HMARGIN+SCROLLHEIGHT+BARMARGIN));
-		if (v<min)
-			v=min;
-		if (v>max)
-			v=max;
+		v = min + (max - min) * (x - HMARGIN - SCROLLHEIGHT - BARMARGIN)
+				/ (VERTICALPANELWIDTH - 2 * (HMARGIN + SCROLLHEIGHT + BARMARGIN));
+		if (v < min)
+			v = min;
+		if (v > max)
+			v = max;
 		return snapToStep(v);
 	}
 
 	int snapToStep(int v) {
 		if (stepSize > 0) {
 			v = (int) (Math.round((v - min) / stepSize) * stepSize) + min;
-			if (v < min) v = min;
-			if (v > max) v = max;
+			if (v < min)
+				v = min;
+			if (v > max)
+				v = max;
 		}
 		return v;
 	}
@@ -186,177 +180,175 @@ public class Scrollbar extends  Composite implements
 	void setStepSize(double step) {
 		stepSize = step;
 	}
-	
-	public void onMouseDown(MouseDownEvent e){
-//		GWT.log("Down");
-		dragging=false;
+
+	public void onMouseDown(MouseDownEvent e) {
+		// GWT.log("Down");
+		dragging = false;
 		e.preventDefault();
 		doMouseDown(e.getX(), true);
 	}
-	
+
 	void doMouseDown(int x, boolean mouse) {
-	    if (enabled){
-		int step = (stepSize > 0) ? Math.max(1, (int) Math.round(stepSize)) : 1;
-		if (x < HMARGIN+SCROLLHEIGHT ) {
-		    val = snapToStep(Math.max(min, val - step));
-		}
-		else {
-		    if (x > VERTICALPANELWIDTH-HMARGIN-SCROLLHEIGHT ) {
-			val = snapToStep(Math.min(max, val + step));
-		    }
-		    else {
-			val=calcValueFromPos(x);	
-			dragging=true;
-			
-			// setCapture doesn't work on touch for some reason; touchend/touchmoved events
-			// don't get sent
-			if (mouse)
-			    Event.setCapture(can.getElement());
-		    }
-		}
-		draw();
-		if (command!=null)
-		    command.execute();
-	    }
-	}
-	
-	native boolean noButtonsDown(NativeEvent e) /*-{
-	    return e.buttons == 0;
-	}-*/;
-	
-	public void onMouseMove(MouseMoveEvent e){
-//		GWT.log("Move");
-		e.preventDefault();
-		
-		// we don't always get the mouse up event so make sure the button is still down
-		if (dragging && noButtonsDown(e.getNativeEvent())) {
-		    Event.releaseCapture(can.getElement());
-		    dragging = false;
-		    return;
-		}
-		doMouseMove(e.getX());
-	}
-	
-	void doMouseMove(int x) {
-	    if (enabled) {
-		if (dragging) {
-		    val=calcValueFromPos(x);	
-		    draw();
-		    if (command!=null)
-			command.execute();
-		}
-	    }
-	}
-	
-	public void onMouseUp(MouseUpEvent e){
-//		GWT.log("Up");
-		e.preventDefault();
-		Event.releaseCapture(can.getElement());
-		if (enabled && dragging) {
-			val=calcValueFromPos(e.getX());	
-			dragging=false;
+		if (enabled) {
+			int step = (stepSize > 0) ? Math.max(1, (int) Math.round(stepSize)) : 1;
+			if (x < HMARGIN + SCROLLHEIGHT) {
+				val = snapToStep(Math.max(min, val - step));
+			} else {
+				if (x > VERTICALPANELWIDTH - HMARGIN - SCROLLHEIGHT) {
+					val = snapToStep(Math.min(max, val + step));
+				} else {
+					val = calcValueFromPos(x);
+					dragging = true;
+
+					// setCapture doesn't work on touch for some reason; touchend/touchmoved events
+					// don't get sent
+					if (mouse)
+						Event.setCapture(can.getElement());
+				}
+			}
 			draw();
-			if (command!=null)
+			if (command != null)
 				command.execute();
 		}
 	}
-	
-	public void onMouseOut(MouseOutEvent e){
-//		GWT.log("Out");
-//		e.preventDefault();
-	    	if (dragging)
-	    	    return;
-		if (enabled && attachedElm!=null && attachedElm.isMouseElm())
+
+	native boolean noButtonsDown(NativeEvent e) /*-{
+	    return e.buttons == 0;
+	}-*/;
+
+	public void onMouseMove(MouseMoveEvent e) {
+		// GWT.log("Move");
+		e.preventDefault();
+
+		// we don't always get the mouse up event so make sure the button is still down
+		if (dragging && noButtonsDown(e.getNativeEvent())) {
+			Event.releaseCapture(can.getElement());
+			dragging = false;
+			return;
+		}
+		doMouseMove(e.getX());
+	}
+
+	void doMouseMove(int x) {
+		if (enabled) {
+			if (dragging) {
+				val = calcValueFromPos(x);
+				draw();
+				if (command != null)
+					command.execute();
+			}
+		}
+	}
+
+	public void onMouseUp(MouseUpEvent e) {
+		// GWT.log("Up");
+		e.preventDefault();
+		Event.releaseCapture(can.getElement());
+		if (enabled && dragging) {
+			val = calcValueFromPos(e.getX());
+			dragging = false;
+			draw();
+			if (command != null)
+				command.execute();
+		}
+	}
+
+	public void onMouseOut(MouseOutEvent e) {
+		// GWT.log("Out");
+		// e.preventDefault();
+		if (dragging)
+			return;
+		if (enabled && attachedElm != null && attachedElm.isMouseElm())
 			CirSim.theApp.mouse.setMouseElm(null);
 	}
-	
-	public void onMouseOver(MouseOverEvent e){
-		
-		if (enabled && attachedElm!=null)
-			 CirSim.theApp.mouse.setMouseElm(attachedElm);
+
+	public void onMouseOver(MouseOverEvent e) {
+
+		if (enabled && attachedElm != null)
+			CirSim.theApp.mouse.setMouseElm(attachedElm);
 	}
-	
+
 	public void onMouseWheel(MouseWheelEvent e) {
 		e.preventDefault();
 		if (enabled)
-			setValue(val+e.getDeltaY()/3);
+			setValue(val + e.getDeltaY() / 3);
 	}
-	
+
 	public void onClick(ClickEvent e) {
-//		GWT.log("Click");
+		// GWT.log("Click");
 		e.preventDefault();
-//		if (e.getX()<HMARGIN+SCROLLHEIGHT ) {
-//			if (val>min)
-//				val--;
-//		}
-//		else {
-//			if (e.getX()>VERTICALPANELWIDTH-HMARGIN-SCROLLHEIGHT ) {
-//				if (val<max)
-//					val++;
-//			}
-//			else {
-//				val=calcValueFromPos(e.getX());			}
-//		}
-//		draw();
-		
+		// if (e.getX()<HMARGIN+SCROLLHEIGHT ) {
+		// if (val>min)
+		// val--;
+		// }
+		// else {
+		// if (e.getX()>VERTICALPANELWIDTH-HMARGIN-SCROLLHEIGHT ) {
+		// if (val<max)
+		// val++;
+		// }
+		// else {
+		// val=calcValueFromPos(e.getX()); }
+		// }
+		// draw();
+
 	}
-	
-	public int getValue(){
+
+	public int getValue() {
 		return val;
 	}
-	
-	public void setValue(int i){
-		if (i<min)
-			i=min;
-		else if (i>max)
-			i=max;
-		val =i;
+
+	public void setValue(int i) {
+		if (i < min)
+			i = min;
+		else if (i > max)
+			i = max;
+		val = i;
 		draw();
-		if (command!=null)
+		if (command != null)
 			command.execute();
 	}
-	
+
 	public void enable() {
-		enabled=true;
+		enabled = true;
 		draw();
 	}
-	
+
 	public void disable() {
-		enabled=false;
-		dragging=false;
+		enabled = false;
+		dragging = false;
 		draw();
 	}
 
 	public void onTouchMove(TouchMoveEvent e) {
-//	    GWT.log("touchmove");
-	    e.preventDefault();
-	    Touch t = e.getTouches().get(0);
-	    doMouseMove(t.getRelativeX(getElement()));
+		// GWT.log("touchmove");
+		e.preventDefault();
+		Touch t = e.getTouches().get(0);
+		doMouseMove(t.getRelativeX(getElement()));
 	}
 
 	public void onTouchEnd(TouchEndEvent event) {
-//	    GWT.log("touchend");;
-	    event.preventDefault();
-	    if (enabled && dragging) {
-		dragging=false;
-		draw();
-		if (command!=null)
-		    command.execute();
-	    }
+		// GWT.log("touchend");;
+		event.preventDefault();
+		if (enabled && dragging) {
+			dragging = false;
+			draw();
+			if (command != null)
+				command.execute();
+		}
 	}
 
 	public void onTouchCancel(TouchCancelEvent event) {
-//	    GWT.log("touchcancel");;
-	    event.preventDefault();
-	    dragging = false;
+		// GWT.log("touchcancel");;
+		event.preventDefault();
+		dragging = false;
 	}
 
 	public void onTouchStart(TouchStartEvent event) {
-//	    GWT.log("touchstart");
-	    event.preventDefault();
-	    dragging=false;
-	    Touch t = event.getTouches().get(0);
-	    doMouseDown(t.getRelativeX(getElement()), false);
+		// GWT.log("touchstart");
+		event.preventDefault();
+		dragging = false;
+		Touch t = event.getTouches().get(0);
+		doMouseDown(t.getRelativeX(getElement()), false);
 	}
-	
+
 }

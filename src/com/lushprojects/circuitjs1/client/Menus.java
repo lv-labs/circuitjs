@@ -485,10 +485,14 @@ public class Menus {
     }
 
     MenuItem menuItemWithShortcut(String icon, String text, String shortcut, MyCommand cmd) {
-        final String edithtml="<div style=\"white-space:nowrap\"><div style=\"display:inline-block;width:100%;\"><i class=\"cirjsicon-";
-        String nbsp = "&nbsp;";
-        if (icon=="") nbsp="";
-        String sn=edithtml + icon + "\"></i>" + nbsp + Locale.LS(text) + "</div>" + shortcut + "</div>";
+        String iconHtml = icon.equals("") ? "" : "<i class=\"cirjsicon-" + icon + "\"></i><span class=\"menu-gap\"></span>";
+        String sn =
+            "<div class=\"menu-shortcut-row\">" +
+                "<div class=\"menu-shortcut-label\">" +
+                    iconHtml + Locale.LS(text) +
+                "</div>" +
+                "<div class=\"menu-shortcut-key\">" + shortcut + "</div>" +
+            "</div>";
         return new MenuItem(SafeHtmlUtils.fromTrustedString(sn), cmd);
     }
     
@@ -600,4 +604,3 @@ public class Menus {
 	ExportAsLocalFileDialog.setLastFileName(str.equals("blank.txt") ? null : str);
     }
 }
-

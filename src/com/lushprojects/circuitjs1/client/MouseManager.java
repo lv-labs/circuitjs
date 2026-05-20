@@ -787,9 +787,9 @@ public class MouseManager implements MouseDownHandler, MouseMoveHandler, MouseUp
     	    	    sim.scopeManager.menuPlot=sim.scopeManager.scopes[sim.scopeManager.scopeSelected].selectedPlot;
     	    	    sim.scopeManager.scopePopupMenu.doScopePopupChecks(false, sim.scopeManager.canStackScope(sim.scopeManager.scopeSelected), sim.scopeManager.canCombineScope(sim.scopeManager.scopeSelected),
     	    		    sim.scopeManager.canUnstackScope(sim.scopeManager.scopeSelected), sim.scopeManager.scopes[sim.scopeManager.scopeSelected]);
-    	    	    ui.contextPanel=new PopupPanel(true);
-    	    	    ui.contextPanel.add(sim.scopeManager.scopePopupMenu.getMenuBar());
-    	    	    showContextPanel(menuClientX, menuClientY);
+	    	    ui.contextPanel=createContextPanel();
+	    	    ui.contextPanel.add(sim.scopeManager.scopePopupMenu.getMenuBar());
+	    	    showContextPanel(menuClientX, menuClientY);
     		}
     	} else if (mouseElm != null) {
     	    	if (! (mouseElm instanceof ScopeElm)) {
@@ -826,25 +826,31 @@ public class MouseManager implements MouseDownHandler, MouseMoveHandler, MouseUp
     	    	    sim.menus.elmFlipXMenuItem.setEnabled(canFlipX);
     	    	    sim.menus.elmFlipYMenuItem.setEnabled(canFlipY);
     	    	    sim.menus.elmFlipXYMenuItem.setEnabled(canFlipXY);
-    	    	    ui.contextPanel=new PopupPanel(true);
-    	    	    ui.contextPanel.add(sim.menus.elmMenuBar);
-    	    	    showContextPanel(menuClientX, menuClientY);
+	    	    ui.contextPanel=createContextPanel();
+	    	    ui.contextPanel.add(sim.menus.elmMenuBar);
+	    	    showContextPanel(menuClientX, menuClientY);
     	    	} else {
     	    	    ScopeElm s = (ScopeElm) mouseElm;
     	    	    if (s.elmScope.canMenu()) {
     	    		sim.scopeManager.menuPlot = s.elmScope.selectedPlot;
     	    		sim.scopeManager.scopePopupMenu.doScopePopupChecks(true, false, false, false, s.elmScope);
-    			ui.contextPanel=new PopupPanel(true);
-    			ui.contextPanel.add(sim.scopeManager.scopePopupMenu.getMenuBar());
-    			showContextPanel(menuClientX, menuClientY);
+			ui.contextPanel=createContextPanel();
+			ui.contextPanel.add(sim.scopeManager.scopePopupMenu.getMenuBar());
+			showContextPanel(menuClientX, menuClientY);
     	    	    }
     	    	}
     	} else {
     		doMainMenuChecks();
-    		ui.contextPanel=new PopupPanel(true);
-    		ui.contextPanel.add(sim.menus.mainMenuBar);
-    		showContextPanel(menuClientX, menuClientY);
+	    	ui.contextPanel=createContextPanel();
+	    	ui.contextPanel.add(sim.menus.mainMenuBar);
+	    	showContextPanel(menuClientX, menuClientY);
     	}
+    }
+
+    PopupPanel createContextPanel() {
+	PopupPanel panel = new PopupPanel(true);
+	panel.setStyleName("context-popup");
+	return panel;
     }
 
     boolean canSplit(CircuitElm ce) {

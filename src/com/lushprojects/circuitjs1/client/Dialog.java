@@ -28,6 +28,7 @@ class Dialog extends DialogBox  {
 
 	Dialog() {
 		closeOnEnter = true;
+		setStyleName("app-dialog");
 	}
 
 	public void closeDialog()
@@ -49,4 +50,3 @@ class Dialog extends DialogBox  {
 	    return true;
 	}
 }
-
