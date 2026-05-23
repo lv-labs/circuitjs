@@ -146,7 +146,13 @@ tasks.register('makeSite', Copy) {
         include 'font/**'
         // Importantly: exclude the old GWT module dir to avoid overwriting with stub
         exclude 'circuitjs1/**'
+        // Serve the full app at the site root instead of redirecting / to circuitjs.html
+        exclude 'index.html'
         // exclude 'WEB-INF/**' if needed
+    }
+
+    from('war/circuitjs.html') {
+        rename { 'index.html' }
     }
 
     // Copy the PRODUCTION GWT output (this is the key part)
