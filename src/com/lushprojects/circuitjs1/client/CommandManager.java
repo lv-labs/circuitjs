@@ -27,18 +27,8 @@ public class CommandManager {
     		app.aboutBox = new AboutBox(circuitjs1.versionString);
     	if (item=="importfromlocalfile") {
     		app.undoManager.pushUndo();
-    		if (app.isElectron())
-    		    electronOpenFile();
-    		else
-    		    app.ui.loadFileInput.click();
+    		app.ui.loadFileInput.click();
     	}
-    	if (item=="newwindow") {
-    	    newElectronWindow();
-    	}
-    	if (item=="save")
-    	    electronSave(app.dumpCircuit());
-    	if (item=="saveas")
-    	    electronSaveAs(app.dumpCircuit());
     	if (item=="importfromtext") {
     		app.dialogShowing = new ImportFromTextDialog(app);
     	}
@@ -91,8 +81,6 @@ public class CommandManager {
     	}
     	if (menu=="options" && item=="other")
     		doEdit(new EditOptions(app, app.sim));
-    	if (item=="devtools")
-    	    toggleDevTools();
     	if (item=="undo")
     		app.undoManager.doUndo();
     	if (item=="redo")
@@ -144,10 +132,6 @@ public class CommandManager {
 	    app.undoManager.pushUndo();
 	    WireConverter.convertWires(app);
 	    app.needAnalyze();
-    	}
-    	if (item=="createTest") {
-	    app.undoManager.pushUndo();
-	    TestCreator.createTest(app);
     	}
     	if (item=="stackAll")
     		app.scopeManager.stackAll();
@@ -623,55 +607,4 @@ public class CommandManager {
     	app.undoManager.writeRecoveryToStorage();
     }
     
-    static void electronSaveAsCallback(String s) {
-	s = s.substring(s.lastIndexOf('/')+1);
-	s = s.substring(s.lastIndexOf('\\')+1);
-	CirSim app = CirSim.theApp;
-	app.setCircuitTitle(s);
-	app.allowSave(true);
-	app.savedFlag = true;
-	app.repaint();
-    }
-
-    static void electronSaveCallback() {
-	CirSim app = CirSim.theApp;
-	app.savedFlag = true;
-	app.repaint();
-    }
-        
-    static native void newElectronWindow() /*-{
-        $wnd.newWindow();
-    }-*/;
-
-    static native void electronSaveAs(String dump) /*-{
-        $wnd.showSaveDialog().then(function (file) {
-            if (file.canceled)
-            	return;
-            $wnd.saveFile(file, dump);
-            @com.lushprojects.circuitjs1.client.CommandManager::electronSaveAsCallback(Ljava/lang/String;)(file.filePath.toString());
-        });
-    }-*/;
-
-    static native void electronSave(String dump) /*-{
-        $wnd.saveFile(null, dump);
-        @com.lushprojects.circuitjs1.client.CommandManager::electronSaveCallback()();
-    }-*/;
-    
-    static void electronOpenFileCallback(String text, String name) {
-	CirSim app = CirSim.theApp;
-	LoadFile.doLoadCallback(text, name);
-	app.allowSave(true);
-    }
-    
-    static native void electronOpenFile() /*-{
-        $wnd.openFile(function (text, name) {
-            @com.lushprojects.circuitjs1.client.CommandManager::electronOpenFileCallback(Ljava/lang/String;Ljava/lang/String;)(text, name);
-        });
-    }-*/;
-    
-    static native void toggleDevTools() /*-{
-        $wnd.toggleDevTools();
-    }-*/;
-    
-
 }

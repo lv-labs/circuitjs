@@ -13,6 +13,11 @@ circuitjs1.tar.gz
 
 # Editor configurations
 .vscode
+.idea
+*.iml
+.classpath
+.project
+.settings/
 
 # Windows image file caches
 Thumbs.db
@@ -74,3 +79,5 @@ Temporary Items
 *.tgz
 
 /.apt_generated/
+/.apt_generated_tests/
+/.wrangler/

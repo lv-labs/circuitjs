@@ -133,36 +133,6 @@ class XMLDeserializer {
 		Adjustable.undumpXml(this, app);
 		continue;
 	    }
-	    if (tagName.equals("test")) {
-		if (TestManager.theManager != null) {
-		    currentXmlElement = elem;
-		    TestManager.theManager.saveTestTag(parseDoubleAttr("len", -1));
-		}
-		continue;
-	    }
-	    if (tagName.equals("switchevent")) {
-		if (TestManager.theManager != null) {
-		    currentXmlElement = elem;
-		    TestManager.theManager.saveSwitchEvent(parseDoubleAttr("t", 0), parseIntAttr("en", -1));
-		}
-		continue;
-	    }
-	    if (tagName.equals("scopedata")) {
-		if (TestManager.theManager != null) {
-		    currentXmlElement = elem;
-		    int si = parseIntAttr("si", -1);
-		    int pi = parseIntAttr("pi", -1);
-		    int en = parseIntAttr("en", -1);
-		    int v  = parseIntAttr("v", 0);
-		    int u  = parseIntAttr("u", 0);
-		    int sp = parseIntAttr("sp", 1);
-		    double ts = parseDoubleAttr("ts", 0);
-		    double[] values = parseDoubleArray(parseContents());
-		    TestManager.theManager.saveScopeDataTag(si, pi, en, v, u, sp, ts, values);
-		}
-		continue;
-	    }
-
 	    String x = elem.getAttribute("x");
 	    if (x == null)
 		continue;
@@ -246,4 +216,3 @@ class XMLDeserializer {
 
     public void parseChildElement(Element e) { currentXmlElement = e; }
 }
-

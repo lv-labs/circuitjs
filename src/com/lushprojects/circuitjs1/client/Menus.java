@@ -101,10 +101,6 @@ public class Menus {
 	ctrlMetaKey = (isMac) ? Locale.LS("Cmd-") : Locale.LS("Ctrl-");
 
 	fileMenuBar = new MenuBar(true);
-	if (isElectron())
-	    fileMenuBar.addItem(menuItemWithShortcut("window", "New Window...", Locale.LS(ctrlMetaKey + "N"),
-		    new MyCommand("file", "newwindow")));
-	
 	fileMenuBar.addItem(iconMenuItem("doc-new", "New Blank Circuit", new MyCommand("file", "newblankcircuit")));
 	importFromLocalFileItem = menuItemWithShortcut("folder", "Open File...", Locale.LS(ctrlMetaKey + "O"),
 		new MyCommand("file","importfromlocalfile"));
@@ -114,16 +110,10 @@ public class Menus {
 	fileMenuBar.addItem(importFromTextItem);
 	importFromDropboxItem = iconMenuItem("dropbox", "Import From Dropbox...", new MyCommand("file", "importfromdropbox"));
 	fileMenuBar.addItem(importFromDropboxItem);
-	if (isElectron()) {
-	    saveFileItem = fileMenuBar.addItem(menuItemWithShortcut("floppy", "Save", Locale.LS(ctrlMetaKey + "S"),
-		    new MyCommand("file", "save")));
-	    fileMenuBar.addItem(iconMenuItem("floppy", "Save As...", new MyCommand("file", "saveas")));
-	} else {
-	    exportAsLocalFileItem = menuItemWithShortcut("floppy", "Save As...", Locale.LS(ctrlMetaKey + "S"),
-		    new MyCommand("file","exportaslocalfile"));
-	    exportAsLocalFileItem.setEnabled(ExportAsLocalFileDialog.downloadIsSupported());
-	    fileMenuBar.addItem(exportAsLocalFileItem);
-	}
+	exportAsLocalFileItem = menuItemWithShortcut("floppy", "Save As...", Locale.LS(ctrlMetaKey + "S"),
+		new MyCommand("file","exportaslocalfile"));
+	exportAsLocalFileItem.setEnabled(ExportAsLocalFileDialog.downloadIsSupported());
+	fileMenuBar.addItem(exportAsLocalFileItem);
 	exportAsUrlItem = iconMenuItem("export", "Export As Link...", new MyCommand("file","exportasurl"));
 	fileMenuBar.addItem(exportAsUrlItem);
 	exportAsTextItem = iconMenuItem("export", "Export As Text...", new MyCommand("file","exportastext"));
@@ -236,14 +226,9 @@ public class Menus {
 
 	m.addItem(new CheckboxAlignedMenuItem(Locale.LS("Shortcuts..."), new MyCommand("options", "shortcuts")));
 	m.addItem(optionsItem = new CheckboxAlignedMenuItem(Locale.LS("Other Options..."), new MyCommand("options","other")));
-	if (isElectron())
-	    m.addItem(new CheckboxAlignedMenuItem(Locale.LS("Toggle Dev Tools"), new MyCommand("options","devtools")));
-
 	m = new MenuBar(true);
 	m.addItem(new MenuItem(Locale.LS("Convert Wires to Routed Wires"), new MyCommand("tools", "convertWires")));
 	m.addItem(new MenuItem(Locale.LS("Subcircuit Manager"), new MyCommand("tools", "subcircuits")));
-	if (TestCreator.enabled)
-	    m.addItem(new MenuItem(Locale.LS("Create Test"), new MyCommand("tools", "createTest")));
 	menuBar.addItem(Locale.LS("Tools"), m);
 
 	mainMenuBar = new MenuBar(true);
@@ -503,8 +488,6 @@ public class Menus {
 
     CheckboxMenuItem getClassCheckItem(String s, String t) { return sim.ui.getClassCheckItem(s, t); }
     
-    boolean isElectron() { return CirSim.isElectron(); }
-
     void getSetupList(final boolean openDefault) {
 
     	String url;

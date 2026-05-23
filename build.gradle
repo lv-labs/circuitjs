@@ -5,8 +5,8 @@
 //  URL:        https: https://github.com/E3V3A/circuitjs1
 //
 //  Description:
-//      A build.gradle for the circuitjs1 project that was converted 
-//      into a Gradle build from Maven and Eclipse+GWT based builds.
+//      A build.gradle for the circuitjs1 project that was converted
+//      into a Gradle build from older Maven and GWT-based builds.
 //=====================================================================
 
 // tested with gradle 8.7
@@ -32,7 +32,6 @@ buildscript {
 plugins {
     //id 'com.gradle.build-scan' version '2.2.1'    // For sending build scans to https://scans.gradle.com/
     id 'java'                                       // 
-    //id 'eclipse'                                  // 
     //id 'war'                                      // 
 }
 
@@ -61,7 +60,6 @@ dependencies {
 //apply plugin: 'gwt-base'      // Compile-only plugin?
 apply plugin: 'gwt-compiler'    // Compile-only plugin
 //apply plugin: 'gwt'           // GWT + WAR
-//apply plugin: 'eclipse'       // Eclipse
 
 /*
 apply plugin: 'java'
@@ -252,34 +250,5 @@ war {
     classpath fileTree('additionalLibs')    // adds a file-set to the WEB-INF/lib dir.
     classpath configurations.moreLibs       // adds a configuration to the WEB-INF/lib dir.
     webXml = file('src/main/java/com/lushprojects/circuitjs1/circuitjs1.gwt.xml') // copies a file to WEB-INF/web.xml
-}
-*/
-
-//---------------------------------------------------------------------
-//  Eclipse 
-//---------------------------------------------------------------------
-// For other issues see:
-// [1] https://discuss.gradle.org/t/how-to-tell-eclipse-not-use-my-custom-sourcesets/8756
-// [2] https://discuss.gradle.org/t/multi-project-build-organization-and-output-of-build-files/26641
-//-------------------------------------
-/*
-configurations {
-  //provided
-  //someBoringConfig
-}
-
-eclipse {
-    // If you want parts of paths in resulting file to be replaced by variables (files):
-    //pathVariables 'GRADLE_HOME': file('/best/software/gradle'), 'TOMCAT_HOME': file('../tomcat')
-
-    // Tweak the classpath of the Eclipse project
-    classpath {
-        //plusConfigurations += [ configurations.provided ]             // Adding extra configurations
-        //minusConfigurations += [ configurations.someBoringConfig ]    // Remove configurations from the classpath
-        //containers 'someFriendlyContainer', 'andYetAnotherContainer'  // Append extra containers
-        defaultOutputDir = file('build-eclipse')                        // Customizing the classes output directory
-        downloadSources = true
-        downloadJavadoc = false
-    }
 }
 */

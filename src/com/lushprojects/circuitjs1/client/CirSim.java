@@ -171,8 +171,6 @@ public class CirSim implements NativePreviewHandler {
 	    String cct=qp.getValue("cct");
 	    if (cct!=null)
 		startCircuitText = cct.replace("%24", "$");
-	    if (startCircuitText == null)
-		startCircuitText = getElectronStartCircuitText();
 	    String ctz=qp.getValue("ctz");
 	    if (ctz!= null)
 		startCircuitText = decompress(ctz);
@@ -210,16 +208,9 @@ public class CirSim implements NativePreviewHandler {
 	}
 
 	loader = new CircuitLoader(this, sim, scopeManager, menus);
-	TestManager.init(this);
-
-	if (TestManager.loadingTestCircuit) {
-	    startCircuitText = startCircuit = null;
-	} else if (startCircuitText != null) {
+	if (startCircuitText != null) {
 	    menus.getSetupList(false);
 	    loader.readCircuit(startCircuitText);
-	    String electronFileName = getElectronStartCircuitFileName();
-	    if (electronFileName != null)
-		setCircuitTitle(electronFileName);
 	    unsavedChanges = false;
 	} else {
 	    if (stopMessage == null && startCircuitLink!=null) {
@@ -393,19 +384,6 @@ public class CirSim implements NativePreviewHandler {
     
     public void resetAction() { ui.resetAction(); }
 
-    static native boolean isElectron() /*-{
-        return ($wnd.openFile != undefined);
-    }-*/;    
-
-    static native String getElectronStartCircuitText() /*-{
-    	return $wnd.startCircuitText;
-    }-*/;
-
-    static native String getElectronStartCircuitFileName() /*-{
-    	return $wnd.startCircuitFileName;
-    }-*/;
-
-
     void allowSave(boolean b) { ui.allowSave(b); }
     
     public void importCircuitFromText(String circuitText, boolean subcircuitsOnly) {
@@ -447,7 +425,7 @@ public class CirSim implements NativePreviewHandler {
 	return dump;
     }
 
-    static final String baseTitle = "Circuit Simulator";
+    static final String baseTitle = "circuit simulator";
 
     void setCircuitTitle(String s) { ui.setCircuitTitle(s); }
     
@@ -668,4 +646,3 @@ class CircuitContext {
     String modelName;
     Vector<CustomCompositeModel> changedModels = new Vector<CustomCompositeModel>();
 }
-

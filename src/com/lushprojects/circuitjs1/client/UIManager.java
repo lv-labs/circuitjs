@@ -349,11 +349,6 @@ public class UIManager {
 		 * verticalPanel.add(exportImportButton);
 		 */
 
-		if (TestManager.enabled) {
-			TestManager tm = new TestManager(app);
-			tm.createUI(verticalPanel);
-		}
-
 		// verticalPanel.add(new Label(""));
 		// Font f = new Font("SansSerif", 0, 10);
 		l = new Label(Locale.LS("Current Circuit:"));
@@ -379,9 +374,7 @@ public class UIManager {
 
 		Window.addWindowClosingHandler(new Window.ClosingHandler() {
 			public void onWindowClosing(ClosingEvent event) {
-				// there is a bug in electron that makes it impossible to close the app if this
-				// warning is given
-				if (app.unsavedChanges && !app.isElectron())
+				if (app.unsavedChanges)
 					event.setMessage(Locale.LS("Are you sure?  There are unsaved changes."));
 			}
 		});
@@ -1235,15 +1228,8 @@ public class UIManager {
 					app.commands.menuPerformed("key", "print");
 					e.cancel();
 				}
-				if (code == KEY_N && CirSim.isElectron()) {
-					app.commands.menuPerformed("key", "newwindow");
-					e.cancel();
-				}
 				if (code == KEY_S) {
-					String cmd = "exportaslocalfile";
-					if (CirSim.isElectron())
-						cmd = menus.saveFileItem.isEnabled() ? "save" : "saveas";
-					app.commands.menuPerformed("key", cmd);
+					app.commands.menuPerformed("key", "exportaslocalfile");
 					e.cancel();
 				}
 				if (code == KEY_O) {
@@ -1328,10 +1314,7 @@ public class UIManager {
 
 	void setCircuitTitle(String s) {
 		titleLabel.setText(s == null ? s : s.replace("_", "_\u200B"));
-		if (s != null && s.length() > 0)
-			Document.get().setTitle(s + " - " + CirSim.baseTitle);
-		else
-			Document.get().setTitle(CirSim.baseTitle);
+		Document.get().setTitle(CirSim.baseTitle);
 	}
 
 	void allowSave(boolean b) {

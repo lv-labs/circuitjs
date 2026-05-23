@@ -55,13 +55,9 @@ public class circuitjs1 implements EntryPoint {
         if (navigator.languages) {
             if (navigator.languages.length > 0) {
                 return navigator.languages[0];
-            } else {
-                // In Electron, navigator.languages returns an empty array
-                return "en-US";
             }
-        } else {
-            return (navigator.language || navigator.userLanguage);  
         }
+        return (navigator.language || navigator.userLanguage || "en-US");
     }-*/;
 
     void loadLocale() {
