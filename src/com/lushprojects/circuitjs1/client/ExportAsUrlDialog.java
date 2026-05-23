@@ -100,7 +100,7 @@ public class ExportAsUrlDialog extends Dialog {
 		    start[0] = "https://www.falstad.com/circuit/circuitjs.html";
 		String query="?ctz=" + compress(dump);
 		dump = start[0] + query;
-		requrl = URL.encodeQueryString(query);
+		requrl = URL.encodeQueryString(dump);
 		Button okButton, copyButton;
 	
 		Label la1, la2;
