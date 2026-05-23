@@ -66,7 +66,10 @@ public class ExportAsUrlDialog extends Dialog {
 		try {
 			requestBuilder.sendRequest(null, new RequestCallback() {
 				public void onError(Request request, Throwable exception) {
-					String text = "Shortener error: " + exception.getMessage();
+					String errorText = exception.getMessage();
+					if (errorText == null || errorText.length() == 0)
+					    errorText = "network request failed";
+					String text = "Shortener error: " + errorText;
 					textArea.setText(text);
 					GWT.log("File Error Response", exception);
 				}
