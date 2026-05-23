@@ -1,4 +1,4 @@
-const CACHE_NAME = 'circuitjs1-app-cache-v1';
+const CACHE_NAME = 'circuitjs1-app-cache-v2';
 const urlsToCache = [
   './about.html',
   './canvas2svg.js',
@@ -8,13 +8,16 @@ const urlsToCache = [
   './customlogic.html',
   './customtransformer.html',
   './diodecalc.html',
+  './favicon.svg',
   './icon512.png',
   './icon128.png',
+  './index.html',
   './iframe.html',
   './lz-string.min.js',
   './manifest.json',
   './mosfet-beta.html',
   './opampreal.html',
+  './service-worker.js',
   './subcircuits.html',
   // put everything else here
 ];
@@ -24,32 +27,27 @@ self.addEventListener('install', event => {
     caches.open(CACHE_NAME)
       .then(cache => cache.addAll(urlsToCache))
   );
+  self.skipWaiting();
 });
 
 self.addEventListener('fetch', (event) => {
-    event.respondWith(
-        caches.match(event.request).then((cachedResponse) => {
-            if (cachedResponse) {
-                // If the resource is already cached, return it
-                return cachedResponse;
-            }
+    if (event.request.method !== 'GET') {
+        return;
+    }
 
-            // Otherwise, fetch it from the network and add it to the cache
-            return fetch(event.request).then((networkResponse) => {
-                // Only cache non-GET requests and responses that aren't errors
-                if (
-                    event.request.method === 'GET' &&
-                    networkResponse.status === 200
-                ) {
-		    const responseClone = networkResponse.clone();
+    event.respondWith(
+        fetch(event.request)
+            .then((networkResponse) => {
+                if (networkResponse.status === 200) {
+                    const responseClone = networkResponse.clone();
                     caches.open(CACHE_NAME).then((cache) => {
                         cache.put(event.request, responseClone);
                     });
                 }
 
                 return networkResponse;
-            });
-        })
+            })
+            .catch(() => caches.match(event.request))
     );
 });
 
@@ -69,4 +67,5 @@ self.addEventListener('activate', (event) => {
             );
         })
     );
+    self.clients.claim();
 });
