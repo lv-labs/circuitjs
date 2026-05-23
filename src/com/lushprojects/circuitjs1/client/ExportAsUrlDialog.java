@@ -66,6 +66,8 @@ public class ExportAsUrlDialog extends Dialog {
 		try {
 			requestBuilder.sendRequest(null, new RequestCallback() {
 				public void onError(Request request, Throwable exception) {
+					String text = "Shortener error: " + exception.getMessage();
+					textArea.setText(text);
 					GWT.log("File Error Response", exception);
 				}
 
@@ -77,7 +79,12 @@ public class ExportAsUrlDialog extends Dialog {
 					// end or processing
 					}
 					else  {
-						String text="Shortner error:"+response.getStatusText();
+						String errorText = response.getText();
+						if (errorText == null || errorText.length() == 0)
+						    errorText = response.getStatusText();
+						if (errorText == null || errorText.length() == 0)
+						    errorText = "HTTP " + response.getStatusCode();
+						String text="Shortener error: " + errorText;
 						textArea.setText(text);
 						GWT.log(text );
 					}
