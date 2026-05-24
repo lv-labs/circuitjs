@@ -74,7 +74,7 @@ public class ExportAsUrlDialog extends Dialog {
 
 				public void onResponseReceived(Request request, Response response) {
 					// processing goes here
-					if (response.getStatusCode()==Response.SC_OK) {
+					if (response.getStatusCode() >= 200 && response.getStatusCode() < 300) {
 					String text = response.getText();
 					textArea.setText(text);
 					// end or processing
