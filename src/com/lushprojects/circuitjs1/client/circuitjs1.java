@@ -38,9 +38,8 @@ public class circuitjs1 implements EntryPoint {
 
     public static final String versionString = "4.1.1js";
 
-    // Set to true if the server runs the shortrelay.php file in the same directory
-    // as the circuit simulator
-    public static final boolean shortRelaySupported = true;
+    // Set to true if short URL creation is enabled for this deployment.
+    public static final boolean shortUrlSupported = true;
 
     static CirSim theApp;
 

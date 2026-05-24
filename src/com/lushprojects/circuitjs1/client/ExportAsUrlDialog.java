@@ -42,10 +42,9 @@ public class ExportAsUrlDialog extends Dialog {
 	VerticalPanel vp;
 	Button shortButton;
 	static TextArea textArea;
-	String requrl;
 	
 	public boolean shortIsSupported() {
-		return circuitjs1.shortRelaySupported;
+		return circuitjs1.shortUrlSupported;
 	}
 	
 //	static public final native boolean bitlyIsSupported() 
@@ -57,12 +56,13 @@ public class ExportAsUrlDialog extends Dialog {
 	
 	static public void createShort(String urlin) 
 	{
-    	String url;
-    	url = "shortrelay.php"+"?v="+urlin; 
-    	textArea.setText("Waiting for short URL for web service...");
-		RequestBuilder requestBuilder = new RequestBuilder(RequestBuilder.GET, url);
+		String url = "https://go.lv-labs.com/api/circuitjs";
+		String requestBody = "url=" + URL.encodeQueryString(urlin);
+		textArea.setText("Waiting for short URL for web service...");
+		RequestBuilder requestBuilder = new RequestBuilder(RequestBuilder.POST, url);
+		requestBuilder.setHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
 		try {
-			requestBuilder.sendRequest(null, new RequestCallback() {
+			requestBuilder.sendRequest(requestBody, new RequestCallback() {
 				public void onError(Request request, Throwable exception) {
 					String errorText = exception.getMessage();
 					if (errorText == null || errorText.length() == 0)
@@ -106,7 +106,7 @@ public class ExportAsUrlDialog extends Dialog {
 		String start[] = Location.getHref().split("\\?");
 		String query="?ctz=" + compress(dump);
 		dump = start[0] + query;
-		requrl = URL.encodeQueryString(dump);
+		final String shareUrl = dump;
 		Button okButton, copyButton;
 	
 		Label la1, la2;
@@ -141,7 +141,7 @@ public class ExportAsUrlDialog extends Dialog {
 			shortButton.addClickHandler(new ClickHandler() {
 				public void onClick(ClickEvent event) {
 					shortButton.setVisible(false);
-					createShort(requrl);
+					createShort(shareUrl);
 				}
 			});
 		}
