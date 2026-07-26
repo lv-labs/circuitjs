@@ -19,6 +19,7 @@
 
 package com.lushprojects.circuitjs1.client;
 
+import java.util.HashMap;
 import com.google.gwt.canvas.client.Canvas;
 import com.google.gwt.event.dom.client.MouseDownEvent;
 import com.google.gwt.event.dom.client.MouseDownHandler;
@@ -87,7 +88,7 @@ public class MouseManager implements MouseDownHandler, MouseMoveHandler, MouseUp
     public int mousePost = -1;
     public CircuitNode highlightedNode = null;
     public boolean netHighlightKeyHeld = false;
-    public CircuitElm plotXElm, plotYElm;
+    public HashMap<CircuitElm, String> scopePlotRoles = new HashMap<CircuitElm, String>();
     public int draggingPost;
     public SwitchElm heldSwitchElm;
     private boolean mouseDragging;
@@ -230,8 +231,10 @@ public class MouseManager implements MouseDownHandler, MouseMoveHandler, MouseUp
     	}
     	int gx = inverseTransformX(e.getX());
     	int gy = inverseTransformY(e.getY());
-    	if (!sim.circuitArea.contains(e.getX(), e.getY()))
+    	if (!sim.circuitArea.contains(e.getX(), e.getY())) {
+    	    sim.repaint();
     	    return;
+    	}
     	boolean changed = false;
     	if (dragElm != null)
     	    dragElm.drag(gx, gy);
@@ -398,7 +401,7 @@ public class MouseManager implements MouseDownHandler, MouseMoveHandler, MouseUp
     		    if (conns == null)
     			continue;
     		    for (SimulationManager.RoutedWireConnection conn : conns) {
-    			if (!conn.wire.isSelected())
+    			if (!conn.wire.isSelected() && conn.wire.getPost(conn.wirePost).z == 0)
     			    conn.wire.movePoint(conn.wirePost, dx, dy);
     		    }
     		}
@@ -447,7 +450,7 @@ public class MouseManager implements MouseDownHandler, MouseMoveHandler, MouseUp
     		ArrayList<SimulationManager.RoutedWireConnection> conns = sim.sim.routedWireMap.get(mouseElm);
     		if (conns != null) {
     		    for (SimulationManager.RoutedWireConnection conn : conns) {
-    			if (conn.elmPost == draggingPost)
+    			if (conn.elmPost == draggingPost && conn.wire.getPost(conn.wirePost).z == 0)
     			    conn.wire.movePoint(conn.wirePost, dx, dy);
     		    }
     		}
@@ -462,34 +465,62 @@ public class MouseManager implements MouseDownHandler, MouseMoveHandler, MouseUp
     }
 
     void doSplit(CircuitElm ce) {
-	int x = snapGrid(inverseTransformX(menuX));
-	int y = snapGrid(inverseTransformY(menuY));
-	if (ce == null || !(ce instanceof WireElm))
+	if (!(ce instanceof WireElm))
 	    return;
+	int px = snapGrid(inverseTransformX(menuX));
+	int py = snapGrid(inverseTransformY(menuY));
+	if (splitWireAt(px, py))
+	    sim.needAnalyze();
+    }
 
-	if (ce instanceof RoutedWireElm) {
-	    RoutedWireElm rw2 = ((RoutedWireElm) ce).split(x, y);
-	    if (rw2 != null) {
-		ui.elmList.addElement(rw2);
-		sim.needAnalyze();
+    // Split any WireElm (including RoutedWireElm) whose interior contains (px, py).
+    // Returns true if any wire was split.
+    boolean splitWireAt(int px, int py) {
+	boolean split = false;
+	for (int i = ui.elmList.size() - 1; i >= 0; i--) {
+	    CircuitElm ce = ui.elmList.get(i);
+	    if (!(ce instanceof WireElm))
+		continue;
+	    WireElm we = (WireElm) ce;
+	    if (!we.pointOnWireInterior(px, py))
+		continue;
+	    WireElm newWire = we.split(px, py);
+	    if (newWire != null) {
+		ui.elmList.addElement(newWire);
+		split = true;
 	    }
-	    return;
 	}
+	return split;
+    }
 
-	if (ce.x == ce.x2)
-	    x = ce.x;
-	else
-	    y = ce.y;
+    // Split the lead stub of any non-wire element whose lead contains (px, py).
+    // Moves the element's post to the split point and inserts a wire for the remainder.
+    // Returns true if any lead was split.
+    boolean splitLeadsAt(int px, int py) {
+	boolean split = false;
+	for (int i = ui.elmList.size() - 1; i >= 0; i--) {
+	    CircuitElm ce = ui.elmList.get(i);
+	    if (ce instanceof WireElm)
+		continue;
+	    int post = ce.getLeadPost(px, py);
+	    if (post < 0)
+		continue;
+	    int ox = (post == 0) ? ce.x : ce.x2;
+	    int oy = (post == 0) ? ce.y : ce.y2;
+	    ce.movePoint(post, px - ox, py - oy);
+	    WireElm w = new WireElm(px, py);
+	    w.drag(ox, oy);
+	    ui.elmList.addElement(w);
+	    split = true;
+	}
+	return split;
+    }
 
-	// don't create zero-length wire
-	if (x == ce.x && y == ce.y || x == ce.x2 && y == ce.y2)
-	    return;
-
-	WireElm newWire = new WireElm(x, y);
-	newWire.drag(ce.x2, ce.y2);
-	ce.drag(x, y);
-	ui.elmList.addElement(newWire);
-	sim.needAnalyze();
+    // Split any wire or element lead whose interior contains (px, py).
+    boolean splitAt(int px, int py) {
+	boolean a = splitWireAt(px, py);
+	boolean b = splitLeadsAt(px, py);
+	return a || b;
     }
 
     void selectArea(int x, int y, boolean add) {
@@ -648,7 +679,7 @@ public class MouseManager implements MouseDownHandler, MouseMoveHandler, MouseUp
     	//	CircuitElm origMouse = mouseElm;
 
     	mousePost = -1;
-    	plotXElm = plotYElm = null;
+    	scopePlotRoles.clear();
 
     	if (mouseIsOverSplitter(sx, sy)) {
     		setMouseElm(null);
@@ -677,10 +708,7 @@ public class MouseManager implements MouseDownHandler, MouseMoveHandler, MouseUp
     		Scope s = sim.scopeManager.scopes[i];
     		if (s.rect.contains(sx, sy)) {
     		    newMouseElm=s.getElm();
-    		    if (s.plotXY) {
-    			plotXElm = s.getXElm();
-    			plotYElm = s.getYElm();
-    		    }
+    		    s.addScopePlotRoles(scopePlotRoles);
     		    sim.scopeManager.scopeSelected = i;
     		}
     	    }
@@ -730,6 +758,12 @@ public class MouseManager implements MouseDownHandler, MouseMoveHandler, MouseUp
     }
 
     @SuppressWarnings("deprecation")
+    PopupPanel createContextPanel() {
+	PopupPanel panel = new PopupPanel(true);
+	panel.setStyleName("context-popup");
+	return panel;
+    }
+
     // show a context menu popup, clamping to canvas bounds and repositioning submenus
     void showContextPanel(int x, int y) {
 	watchSubmenus(true);
@@ -787,9 +821,9 @@ public class MouseManager implements MouseDownHandler, MouseMoveHandler, MouseUp
     	    	    sim.scopeManager.menuPlot=sim.scopeManager.scopes[sim.scopeManager.scopeSelected].selectedPlot;
     	    	    sim.scopeManager.scopePopupMenu.doScopePopupChecks(false, sim.scopeManager.canStackScope(sim.scopeManager.scopeSelected), sim.scopeManager.canCombineScope(sim.scopeManager.scopeSelected),
     	    		    sim.scopeManager.canUnstackScope(sim.scopeManager.scopeSelected), sim.scopeManager.scopes[sim.scopeManager.scopeSelected]);
-	    	    ui.contextPanel=createContextPanel();
-	    	    ui.contextPanel.add(sim.scopeManager.scopePopupMenu.getMenuBar());
-	    	    showContextPanel(menuClientX, menuClientY);
+    	    	    ui.contextPanel=createContextPanel();
+    	    	    ui.contextPanel.add(sim.scopeManager.scopePopupMenu.getMenuBar());
+    	    	    showContextPanel(menuClientX, menuClientY);
     		}
     	} else if (mouseElm != null) {
     	    	if (! (mouseElm instanceof ScopeElm)) {
@@ -807,10 +841,8 @@ public class MouseManager implements MouseDownHandler, MouseMoveHandler, MouseUp
     	    	    	sim.menus.elmAddScopeMenuItem.setEnabled(mouseElm.canViewInScope() );
     	    	    }
     	    	    sim.menus.elmEditMenuItem .setEnabled(mouseElm.getEditInfo(0) != null);
-    	    	    sim.menus.elmSplitMenuItem.setEnabled(canSplit(mouseElm));
+    	    	    sim.menus.elmSplitMenuItem.setEnabled(mouseElm instanceof WireElm);
     	    	    sim.menus.elmSliderMenuItem.setEnabled(sliderItemEnabled(mouseElm));
-		    sim.menus.elmSplitMenuItem.setEnabled(canSplit(mouseElm));
-
 		    boolean canFlipX = mouseElm.canFlipX();
 		    boolean canFlipY = mouseElm.canFlipY();
 		    boolean canFlipXY = mouseElm.canFlipXY();
@@ -826,40 +858,25 @@ public class MouseManager implements MouseDownHandler, MouseMoveHandler, MouseUp
     	    	    sim.menus.elmFlipXMenuItem.setEnabled(canFlipX);
     	    	    sim.menus.elmFlipYMenuItem.setEnabled(canFlipY);
     	    	    sim.menus.elmFlipXYMenuItem.setEnabled(canFlipXY);
-	    	    ui.contextPanel=createContextPanel();
-	    	    ui.contextPanel.add(sim.menus.elmMenuBar);
-	    	    showContextPanel(menuClientX, menuClientY);
+    	    	    ui.contextPanel=createContextPanel();
+    	    	    ui.contextPanel.add(sim.menus.elmMenuBar);
+    	    	    showContextPanel(menuClientX, menuClientY);
     	    	} else {
     	    	    ScopeElm s = (ScopeElm) mouseElm;
     	    	    if (s.elmScope.canMenu()) {
     	    		sim.scopeManager.menuPlot = s.elmScope.selectedPlot;
     	    		sim.scopeManager.scopePopupMenu.doScopePopupChecks(true, false, false, false, s.elmScope);
-			ui.contextPanel=createContextPanel();
-			ui.contextPanel.add(sim.scopeManager.scopePopupMenu.getMenuBar());
-			showContextPanel(menuClientX, menuClientY);
+			    ui.contextPanel=createContextPanel();
+    			ui.contextPanel.add(sim.scopeManager.scopePopupMenu.getMenuBar());
+    			showContextPanel(menuClientX, menuClientY);
     	    	    }
     	    	}
     	} else {
     		doMainMenuChecks();
 	    	ui.contextPanel=createContextPanel();
-	    	ui.contextPanel.add(sim.menus.mainMenuBar);
-	    	showContextPanel(menuClientX, menuClientY);
+    		ui.contextPanel.add(sim.menus.mainMenuBar);
+    		showContextPanel(menuClientX, menuClientY);
     	}
-    }
-
-    PopupPanel createContextPanel() {
-	PopupPanel panel = new PopupPanel(true);
-	panel.setStyleName("context-popup");
-	return panel;
-    }
-
-    boolean canSplit(CircuitElm ce) {
-	if (!(ce instanceof WireElm))
-	    return false;
-	WireElm we = (WireElm) ce;
-	if (we.x == we.x2 || we.y == we.y2)
-	    return true;
-	return false;
     }
 
     // check if the user can create sliders for this element
@@ -915,7 +932,7 @@ public class MouseManager implements MouseDownHandler, MouseMoveHandler, MouseUp
     void clearMouseElm() {
     	sim.scopeManager.scopeSelected = -1;
     	setMouseElm(null);
-    	plotXElm = plotYElm = null;
+    	scopePlotRoles.clear();
     }
 
     public void onMouseDown(MouseDownEvent e) {
@@ -980,6 +997,16 @@ public class MouseManager implements MouseDownHandler, MouseMoveHandler, MouseUp
 	    clearSelection();
 	    mouseDragging=false;
 	    return;
+	}
+
+	// start drag-to-measure if clicking inside a scope
+	if (!sim.dialogIsShowing()) {
+	    int i;
+	    for (i = 0; i != sim.scopeManager.scopeCount; i++)
+		sim.scopeManager.scopes[i].mousePressed(e.getX(), e.getY());
+	    if (sim.scopeElmArr != null)
+		for (i = 0; i != sim.scopeElmArr.length; i++)
+		    sim.scopeElmArr[i].elmScope.mousePressed(e.getX(), e.getY());
 	}
 
 	int gx = inverseTransformX(e.getX());
@@ -1080,6 +1107,7 @@ public class MouseManager implements MouseDownHandler, MouseMoveHandler, MouseUp
     public void onMouseUp(MouseUpEvent e) {
     	e.preventDefault();
     	mouseDragging=false;
+    	Scope.dragStartTime = -1;
 
     	// click to clear selection
     	if (tempMouseMode == MODE_SELECT && selectedArea == null)
@@ -1093,6 +1121,12 @@ public class MouseManager implements MouseDownHandler, MouseMoveHandler, MouseUp
     	selectedArea = null;
     	dragging = false;
     	boolean circuitChanged = false;
+    	// auto-split wires when a post is dragged onto a wire's interior
+    	if (draggingPost >= 0 && mouseElm != null) {
+    	    Point p = mouseElm.getPost(draggingPost);
+    	    if (splitAt(p.x, p.y))
+    		circuitChanged = true;
+    	}
     	if (heldSwitchElm != null) {
     		heldSwitchElm.mouseUp();
     		heldSwitchElm = null;
@@ -1109,6 +1143,9 @@ public class MouseManager implements MouseDownHandler, MouseMoveHandler, MouseUp
 			dragElm = null;
     		}
     		else {
+    			// auto-split wires at the new element's endpoints before adding it
+    			splitAt(dragElm.x, dragElm.y);
+    			splitAt(dragElm.x2, dragElm.y2);
     			ui.elmList.addElement(dragElm);
     			dragElm.draggingDone();
     			circuitChanged = true;

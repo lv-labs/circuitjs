@@ -95,7 +95,6 @@ ladder.txt LC Ladder
 -
 phaseseq.txt Phase-Sequence Network
 3phasewye.txt 3-Phase Wye-Wye Balanced Load
-lissa.txt Lissajous Figures
 -
 +Diodes
 diodevar.txt Diode
@@ -241,6 +240,7 @@ crystalosc.txt CMOS Crystal Oscillator
 555sequencer.txt Pulse Sequencer
 555schmitt.txt Schmitt Trigger (inverting)
 555missing.txt Missing Pulse Detector
+555dutycycle.txt Adjustable Duty Cycle Oscillator
 -
 +Active Filters
 filt-vcvs-lopass.txt VCVS Low-Pass Filter
@@ -337,7 +337,13 @@ ledflasher.txt LED Flasher
 traffic.txt Traffic Light
 sram.txt Static RAM
 dram.txt Dynamic RAM
-td4.txt TD4 CPU
++TD4 CPU
+td4.txt TD4 LED Strobe
+td4-ctr.txt TD4 Counter
+td4-ctr-dn.txt TD4 Down Counter
+td4-ctr-up-dn.txt TD4 Up-Down Counter
+td4-add2.txt TD4 Add 2
+-
 -
 +Analog/Digital
 flashadc.txt Flash ADC
@@ -458,11 +464,22 @@ wienbridge.txt Wien Bridge Oscillator
 varactor.txt Varactor
 varactorvco.txt VCO
 -
++Norton Amplifier
+norton-invert.txt Norton Inverting Amplifier
+norton-noninvert.txt Norton Noninverting Amplifier
+norton-saw.txt Norton Sawtooth Oscillator
+-
 ledarray.txt LED Array
 triacdimmer.txt DIAC/TRIAC Dimmer
 ujtosc.txt Unijunction Oscillator
 3motor.txt 3-Phase Motor
 latchingrelay.txt Latching Relay
 gyratorelm.txt Gyrator
+-
++2-D Scope
+lissa.txt Lissajous Figures
+plot2d-checker.txt Checkerboard
+plot2d-color.txt Color Checkerboard
+plot2d-smile.txt Smiley
 -
 blank.txt Blank Circuit

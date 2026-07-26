@@ -36,7 +36,7 @@ import com.lushprojects.circuitjs1.client.util.Locale;
 
 public class circuitjs1 implements EntryPoint {
 
-    public static final String versionString = "4.1.1js";
+    public static final String versionString = "4.1.3js";
 
     // Set to true if short URL creation is enabled for this deployment.
     public static final boolean shortUrlSupported = true;
