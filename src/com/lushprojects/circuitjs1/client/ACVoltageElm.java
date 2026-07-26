@@ -22,8 +22,7 @@ package com.lushprojects.circuitjs1.client;
 class ACVoltageElm extends VoltageElm {
 	public ACVoltageElm(int xx, int yy) {
 	    super(xx, yy, WF_AC);
-	    // Store the sine-wave peak value; this displays as 5 V RMS.
-	    maxVoltage = 5*Math.sqrt(2);
+	    maxVoltage = 5;
 	}
 	Class getDumpClass() { return VoltageElm.class; }
     }
