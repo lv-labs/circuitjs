@@ -29,8 +29,8 @@ class Font {
 	
 	public Font(String name, int style, int size){
 		String styleStr="normal ";
-		if (name=="SansSerif")
-			name="sans-serif";
+		if ("SansSerif".equals(name) || "normal".equals(name))
+			name=Theme.uiFont();
 		if ((style & BOLD) !=0)
 			styleStr="bold ";
 		fontname=styleStr+size+"px "+name;
