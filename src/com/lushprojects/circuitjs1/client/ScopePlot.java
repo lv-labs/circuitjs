@@ -136,25 +136,20 @@ class ScopePlot {
 	return null;
     }
 
-    static final String colors[] = {
-	    "#FF0000", "#FF8000", "#FF00FF", "#7F00FF",
-	    "#0000FF", "#0080FF", "#FFFF00", "#00FFFF",
-    };
-
     void assignColor(int count) {
 	if (count > 0) {
-	    color = colors[(count-1) % 8];
+	    color = Theme.scopePlotColor(count - 1);
 	    return;
 	}
 	switch (units) {
 	case Scope.UNITS_V:
-	    color = CircuitElm.positiveColor.getHexValue();
+	    color = Theme.scopePlotVoltage();
 	    break;
 	case Scope.UNITS_A:
-	    color = (CirSim.theApp.isPrintable()) ? "#A0A000" : "#FFFF00";
+	    color = CirSim.theApp.isPrintable() ? "#A0A000" : Theme.scopePlotCurrent();
 	    break;
 	default:
-	    color = (CirSim.theApp.isPrintable()) ? "#000000" : "#FFFFFF";
+	    color = CirSim.theApp.isPrintable() ? "#000000" : Theme.scopePlotNeutral();
 	    break;
 	}
     }
