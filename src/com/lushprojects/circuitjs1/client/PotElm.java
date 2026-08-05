@@ -36,6 +36,7 @@ class PotElm extends CircuitElm implements Command, MouseWheelHandler {
 	double position, maxResistance, resistance1, resistance2;
 	double current1, current2, current3;
 	double curcount1, curcount2, curcount3;
+	VoltageSource voltSource;
 	Scrollbar slider;
 	Label label;
 	String sliderText;
@@ -368,11 +369,36 @@ class PotElm extends CircuitElm implements Command, MouseWheelHandler {
 	    sim.stampResistor(nodes[0], nodes[2], resistance1);
 	if (resistance2 > 0)
 	    sim.stampResistor(nodes[2], nodes[1], resistance2);
+	if (position == 0 || position == 1)
+	    sim.stampVoltageSource(voltSource, 0);
+    }
+
+    int getVoltageSourceCount() {
+	return (position == 0 || position == 1) ? 1 : 0;
+    }
+
+    void setVoltageSource(int n, VoltageSource v) {
+	voltSource = v;
+	if (position == 0)
+	    v.setNodes(nodes[0], nodes[2]);
+	else
+	    v.setNodes(nodes[1], nodes[2]);
+    }
+
+    void setCurrent(VoltageSource vs, double c) {
+	if (position == 0) {
+	    current1 = c;
+	    current2 = 0;
+	} else {
+	    current1 = 0;
+	    current2 = c;
+	}
+	current3 = -current1-current2;
     }
 
     // At either endpoint the wiper is an ideal connection to one end of the
-    // resistive track.  This lets wire closure merge the corresponding nodes
-    // instead of trying to stamp a zero-ohm resistor.
+    // resistive track.  getConnection() is used by circuit validation, while
+    // the 0 V voltage source above enforces the connection in the matrix.
     boolean getConnection(int n1, int n2) {
 	if (position == 0)
 	    return (n1 == 0 && n2 == 2) || (n1 == 2 && n2 == 0);
