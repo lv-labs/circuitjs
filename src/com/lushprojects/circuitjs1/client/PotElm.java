@@ -132,7 +132,7 @@ class PotElm extends CircuitElm implements Command, MouseWheelHandler {
     }
     
     int calcSliderValue() {
-    	int value = (int) Math.round((position-.005)/.0099);
+	int value = (int) Math.round(position * 100);
 	return value;
     }
 
@@ -203,7 +203,7 @@ class PotElm extends CircuitElm implements Command, MouseWheelHandler {
 	dn = distance(point1, point2);
 	int bodyLen = 32;
 	calcLeads(bodyLen);
-	position = slider.getValue() * .0099 + .005;
+	position = slider.getValue() / 100.;
 	int soff = (int) ((position - .5) * bodyLen);
 	// int offset2 = offset - sign(offset)*4;
 	post3 = interpPoint(point1, point2, .5, offset);
@@ -348,10 +348,8 @@ class PotElm extends CircuitElm implements Command, MouseWheelHandler {
 	super.reset();
     }
     void calculateCurrent() {
-	if (resistance1 == 0)
-	    return; // avoid NaN
-	current1 = (volts[0]-volts[2])/resistance1;
-	current2 = (volts[1]-volts[2])/resistance2;
+	current1 = (resistance1 == 0) ? 0 : (volts[0]-volts[2])/resistance1;
+	current2 = (resistance2 == 0) ? 0 : (volts[1]-volts[2])/resistance2;
 	current3 = -current1-current2;
     }
     
@@ -366,8 +364,25 @@ class PotElm extends CircuitElm implements Command, MouseWheelHandler {
     void stamp() {
 	resistance1 = maxResistance*position;
 	resistance2 = maxResistance*(1-position);
-	sim.stampResistor(nodes[0], nodes[2], resistance1);
-	sim.stampResistor(nodes[2], nodes[1], resistance2);
+	if (resistance1 > 0)
+	    sim.stampResistor(nodes[0], nodes[2], resistance1);
+	if (resistance2 > 0)
+	    sim.stampResistor(nodes[2], nodes[1], resistance2);
+    }
+
+    // At either endpoint the wiper is an ideal connection to one end of the
+    // resistive track.  This lets wire closure merge the corresponding nodes
+    // instead of trying to stamp a zero-ohm resistor.
+    boolean getConnection(int n1, int n2) {
+	if (position == 0)
+	    return (n1 == 0 && n2 == 2) || (n1 == 2 && n2 == 0);
+	if (position == 1)
+	    return (n1 == 1 && n2 == 2) || (n1 == 2 && n2 == 1);
+	return true;
+    }
+
+    boolean isWireEquivalent() {
+	return position == 0 || position == 1;
     }
     void getInfo(String arr[]) {
 	arr[0] = "potentiometer";
@@ -436,4 +451,3 @@ class PotElm extends CircuitElm implements Command, MouseWheelHandler {
 	super.flipXY(xmy, count);
     }
 }
-
