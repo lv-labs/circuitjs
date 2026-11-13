@@ -1,0 +1,67 @@
+{
+  "description": "Proposed protocol example, not executable by the current text-based worker. Begins after initializing session worker-A and installing voltage-divider.json at circuit revision 1, run epoch 1.",
+  "initialState": {"documentId": "doc-divider", "documentRevision": 1, "circuitRevision": 1, "runEpoch": 1, "sessionId": "worker-A"},
+  "scenarios": [
+    {
+      "action": "Move R1 and reroute w1 without changing endpoints",
+      "documentRevision": 2,
+      "circuitRevision": 1,
+      "outgoingWorkerMessages": [],
+      "reason": "The canonical electrical projection is unchanged. Existing live results remain valid."
+    },
+    {
+      "action": "Advance simulation",
+      "request": {
+        "protocolVersion": 1, "sessionId": "worker-A", "requestId": 3, "operation": "step",
+        "base": {"documentId": "doc-divider", "circuitRevision": 1, "runEpoch": 1},
+        "payload": {"count": 100}
+      },
+      "reply": {
+        "protocolVersion": 1, "sessionId": "worker-A", "requestId": 3, "ok": true,
+        "state": {"documentId": "doc-divider", "circuitRevision": 1, "runEpoch": 1},
+        "result": {
+          "documentId": "doc-divider", "circuitRevision": 1, "runEpoch": 1, "frameSequence": 1,
+          "time": 0.001, "timeStep": 0.00001,
+          "pinVoltages": {"v1": {"p": 5, "n": 0}, "r1": {"a": 5, "b": 2.5}, "r2": {"a": 2.5, "b": 0}, "g1": {"g": 0}},
+          "componentCurrents": {"v1": -0.0025, "r1": 0.0025, "r2": 0.0025},
+          "diagnostics": []
+        }
+      },
+      "displayDecision": "accept"
+    },
+    {
+      "action": "Reset the latest accepted circuit",
+      "request": {
+        "protocolVersion": 1, "sessionId": "worker-A", "requestId": 4, "operation": "reset",
+        "base": {"documentId": "doc-divider", "circuitRevision": 1, "runEpoch": 1},
+        "target": {"documentId": "doc-divider", "circuitRevision": 1, "runEpoch": 2},
+        "payload": {"statePolicy": "reset"}
+      },
+      "reply": {
+        "protocolVersion": 1, "sessionId": "worker-A", "requestId": 4, "ok": true,
+        "state": {"documentId": "doc-divider", "circuitRevision": 1, "runEpoch": 2},
+        "result": {"time": 0, "frameAvailable": false}
+      }
+    },
+    {
+      "action": "An obsolete copy of a frame from before reset is delivered",
+      "frameIdentity": {"sessionId": "worker-A", "documentId": "doc-divider", "circuitRevision": 1, "runEpoch": 1, "frameSequence": 1},
+      "displayDecision": "discard",
+      "reason": "The active epoch is 2 even though component IDs and circuit revision still match."
+    },
+    {
+      "action": "Change R2 to 2000 ohms",
+      "documentRevision": 3,
+      "desiredCircuitRevision": 2,
+      "statePolicy": "reset",
+      "coordinatorAction": "Stage the complete updated projection in worker-B at target revision 2, epoch 3. Activate only if it still matches the desired revision and validation/load succeeds.",
+      "expectedAfterFirstStep": {"outputVoltage": 3.3333333333333335, "r1Current": 0.0016666666666666668}
+    },
+    {
+      "action": "A response from worker-A arrives after worker-B activation",
+      "frameIdentity": {"sessionId": "worker-A", "documentId": "doc-divider", "circuitRevision": 1, "runEpoch": 2, "frameSequence": 1},
+      "displayDecision": "discard",
+      "reason": "The session is obsolete; the active circuit is also revision 2, epoch 3."
+    }
+  ]
+}

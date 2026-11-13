@@ -49,6 +49,21 @@ If you only want the compiled web assets in `war/`:
 
 ## Local Preview
 
+An experimental editor-independent simulation prototype is also available. See
+[the project plan](docs/new-simulator/PLAN.md) and
+[Phase 0 build/verification instructions](docs/new-simulator/PHASE-0.md).
+The [saved-document worker example](docs/new-simulator/DOCUMENT-ADAPTER.md) loads
+the divider JSON and returns results using stable component/pin IDs.
+The [simulation coordinator](docs/new-simulator/COORDINATOR.md) adds revision
+handling, stale-result rejection and safe worker replacement/reset.
+The [live RC demo](docs/new-simulator/RUN-AND-LIVE-EDITS.md) adds continuous
+Run/Pause and state-preserving document switch changes.
+The [editor canvas prototype](docs/new-simulator/EDITOR-PROTOTYPE.md) adds component
+placement, selection, explicit wiring, pan/zoom and live simulation feedback.
+Its KiCad-like interaction pass adds grid-aligned pin contacts and connected wire
+stretching. Start with the [current handoff](docs/new-simulator/HANDOFF.md) to resume
+development on another machine.
+
 After `makeSite`:
 
 ```bash

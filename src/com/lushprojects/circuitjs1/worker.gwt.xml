@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module rename-to="circuitjsworker">
+    <inherits name="com.lushprojects.circuitjs1.engine" />
+    <!-- Only computational paths run; no browser-specific DOM implementations. -->
+    <set-property name="user.agent" value="safari" />
+    <set-configuration-property name="user.agent.runtimeWarning" value="false" />
+    <set-configuration-property name="document.compatMode.severity" value="IGNORE" />
+    <define-linker name="engineworker" class="com.lushprojects.circuitjs1.rebind.EngineWorkerLinker" />
+    <add-linker name="engineworker" />
+</module>

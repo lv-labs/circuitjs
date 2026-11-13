@@ -1,0 +1,134 @@
+# Saved-document worker: first implemented slice
+
+Implemented and verified, 2026-11-13. This adds stable component/pin IDs on top of
+the existing worker engine. This low-level API is retained; the revision/epoch
+protocol and safe editor-facing coordinator now exist separately in
+[COORDINATOR.md](COORDINATOR.md).
+
+## Run it
+
+With the Java 8 / Gradle / Node / Python / Chrome setup in PHASE-0.md:
+
+```sh
+node tools/test_document_adapter.mjs
+./gradlew makeEngineSite --console plain
+python3 tools/verify_engine.py
+python3 -m http.server 8000 --directory build/engine-site
+```
+
+Open http://localhost:8000/document.html for the saved-divider demonstration, or
+`/verify.html` for the combined numerical and document-worker checks. The build
+copies the real `docs/new-simulator/examples/voltage-divider.json` into the demo;
+there is no separate hand-maintained circuit fixture for this example.
+
+## API currently available
+
+Load `worker-client.js` on a browser page served from the engine-site directory:
+
+```js
+const worker = createDocumentWorker();
+await worker.ready;
+const document = await (await fetch('examples/voltage-divider.json')).json();
+const loaded = await worker.loadDocument(document);
+const frame = await worker.step(100);
+console.log(frame.pinVoltages.r2.a);       // 2.5 volts
+console.log(frame.componentCurrents.r1);   // 0.0025 amps
+console.log(frame.componentCurrents.v1);   // -0.0025 amps
+await worker.snapshot();                  // last completed frame
+await worker.reset();                     // latest loaded document, time zero
+worker.terminate();
+```
+
+Load/reset acknowledges the document ID, timestep, component IDs and net count,
+with `frameAvailable: false`. Snapshot before a successful step returns NO_FRAME.
+Frames contain documentId, frameSequence, time, timeStep, pinVoltages,
+componentCurrents and diagnostics. Frame sequences start at 1 and reset on
+load/reset; there are no circuit revisions/run epochs yet. Results contain only
+public component/pin IDs, not engine indices, synthetic wires or internal geometry.
+
+Positive current is a to b for a resistor and p to n for a source. The source's
+legacy post order and current sign are normalized by the adapter. Ground voltage
+is available at pin g, but ground current is deliberately omitted.
+
+The separate Phase 0 `createCircuitWorker` text/index API remains supported. Do not
+mix its methods with a document worker. The new wrapper exposes loadDocument,
+step, snapshot, reset and terminate; step bounds remain 1–10000 per call.
+
+## Implementation
+
+- `experiments/engine/document-adapter.js`: pure electrical-document validation,
+  net derivation, canonical projection, synthetic CircuitJS input and result mapping.
+  It also owns the adapter session lifecycle around the existing engine.
+- `document-worker.js`: dedicated worker bootstrap and operation routing. Compiles
+  and maps inside the worker so its mapping belongs to the actual loaded engine.
+- `worker-client.js`: asynchronous document API plus error-code propagation.
+- `document.html` / `document-demo.js`: runnable saved-divider example.
+- `tools/test_document_adapter.mjs`: graph/compiler and fault-behaviour checks.
+- `document-tests.js`: real-browser worker integration checks, invoked by the
+  existing verification runner alongside the original six numerical fixtures.
+
+The catalog now supports version 1 resistors, capacitors, DC sources, non-momentary
+SPST switches and ground. See RUN-AND-LIVE-EDITS.md for parameter and topology limits
+and use the coordinator for state-preserving switch changes.
+Electrical parameters/settings are checked rather than silently ignoring unknown
+fields. Wire endpoints and unique IDs are validated, all grounds are joined, and
+nets are derived from explicit edges. Junction-only routing fragments are omitted
+from the solver. Layout, labels and probes are excluded from the electrical
+projection; this module does not validate/render those editor-only fields.
+
+The canonical projection and generated engine text are deterministic under array
+reordering, layout changes, redundant wire edges and junction splitting that keeps
+the same connected pins. Component terminals receive distinct private coordinates,
+then connect to net hubs with ordinary wires. The numerical solver and electrical
+models were not changed for this slice.
+
+All document ground symbols map to one physical engine ground. Emitting multiple
+GroundElm records plus explicit hub connections creates a redundant loop rejected
+by legacy wire-current analysis. Aliasing their public g pins avoids that loop
+while preserving global-ground semantics and each symbol's stable identity.
+
+## Validation and failures
+
+Explicit ground is required. Floating circuit islands and ideal voltage-source
+loops are rejected before loading in this initial catalog, avoiding silent reliance
+on the legacy grounding/ideal-source repair rules. Dangling pins in an otherwise
+ground-referenced circuit produce UNCONNECTED_PIN warnings and can still simulate.
+Unsupported document models return UNSUPPORTED_MODEL even when the text engine
+already supports that model; its document adapter still needs implementing/testing.
+
+Pre-load validation errors preserve the existing simulation and mapping. An engine
+failure after mutation marks the session faulted and blocks frames/steps until an
+explicit valid document reload. There is no rollback or candidate replacement yet.
+Timeouts terminate the worker, as in the existing client.
+
+Errors expose a `.code`, initially INVALID_DOCUMENT, UNSUPPORTED_MODEL, NO_DOCUMENT,
+NO_FRAME, ENGINE_FAILURE or INVALID_OPERATION, plus a message. Full structured
+entity diagnostics and the versioned request contract remain future work.
+
+## Verification
+
+- Saved divider: three nets, 2.5 V output, 2.5 mA resistor currents, -2.5 mA source
+  current and power balance, with 1e-12 numerical tolerance.
+- Moving/rotating/mirroring every component onto coincident coordinates, changing
+  routes and reversing serialized entity order leaves the real worker results equal.
+- Explicit reconnection changes the output to 5 V and branch current to 5 mA;
+  overlapping layout alone has no effect. Explicitly shorted resistor pins work
+  without zero-length synthetic components.
+- Multiple ground symbols retain distinct public IDs and share global ground.
+- IDs including `__proto__` map safely through worker messages.
+- Graph-equivalent junction splitting/redundant edges preserve the canonical input.
+- Invalid/dangling references, duplicate IDs, unsupported versions/models/fields,
+  invalid values, missing ground and unsupported floating/source loops are rejected.
+- Validation failures preserve a previous frame; reset after changing R2 uses the
+  latest 2 kΩ value and produces 10/3 V on the next step.
+- Compiler checks exercise fault-after-mutation handling with an injected engine
+  failure. The existing six real numerical/worker regression fixtures still pass.
+
+## Next slice
+
+Revision/epoch gating and candidate replacement/reset are implemented separately;
+see COORDINATOR.md. Continuous run/pause and capacitor/switch support are now
+implemented in RUN-AND-LIVE-EDITS.md. The editor prototype now uses this boundary;
+see [EDITOR-PROTOTYPE.md](EDITOR-PROTOTYPE.md). Pin contact detection commits explicit
+edges, including zero-length contact edges; the adapter still ignores display
+geometry. The UI language/toolkit remains open.

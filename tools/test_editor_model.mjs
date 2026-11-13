@@ -1,0 +1,97 @@
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import '../experiments/engine/editor-model.js';
+import '../experiments/engine/document-adapter.js';
+const M=CircuitEditorModel;
+const initial=JSON.parse(await readFile(new URL('../docs/new-simulator/examples/voltage-divider.json',import.meta.url)));
+const calls=[],model=M.create(initial,(doc,label)=>calls.push({doc,label}));
+const canonical=CircuitDocumentAdapter.compile(initial).canonical;
+assert.equal(M.hit(initial,initial.layout.components.r1,.2).kind,'component','Zoomed-out pin targets must not swallow the component body');
+const selected=new Set([M.token('component','r1'),M.token('component','r2')]);
+model.transaction('Move group',d=>M.move(d,selected,32,-16));
+assert.equal(calls.length,1);assert.equal(model.document.layout.components.r1.x,initial.layout.components.r1.x+32);
+assert.equal(CircuitDocumentAdapter.compile(model.document).canonical,canonical,'Group movement does not reconnect anything');
+model.undo();assert.deepEqual(model.document,initial);model.redo();assert.equal(calls.length,3);
+const before=model.document;
+model.transaction('Rotate',d=>d.layout.components.r1.rotation=90);
+const pin=M.pin(model.document,{kind:'pin',componentId:'r1',pinId:'a'}),pose=model.document.layout.components.r1;
+assert.ok(Math.abs(pin.x-pose.x)<1e-9);assert.equal(pin.y,pose.y-48);
+model.undo();assert.deepEqual(model.document,before);
+const camera={x:80,y:-45,scale:.7},cursor={x:344,y:270};
+const changed=M.zoom(camera,cursor,1.5);
+assert.ok(Math.abs((cursor.x-camera.x)/camera.scale-(cursor.x-changed.x)/changed.scale)<1e-9);
+assert.ok(Math.abs((cursor.y-camera.y)/camera.scale-(cursor.y-changed.y)/changed.scale)<1e-9);
+assert.equal(M.zoom(camera,cursor,100).scale,4);assert.equal(M.zoom(camera,cursor,.001).scale,.2);
+const own=M.create(M.empty());
+const a=own.addComponent('resistor',64,64),b=own.addComponent('resistor',256,64),g=own.addComponent('ground',128,192);
+assert.notEqual(a,b);assert.equal(own.document.electrical.components[0].reference,'R1');assert.equal(own.document.electrical.components[1].reference,'R2');
+const from={kind:'pin',componentId:a,pinId:'b'},to={kind:'pin',componentId:b,pinId:'a'};
+own.connect(from,to);const wire=own.document.electrical.wires[0];
+assert.equal(own.document.electrical.junctions.length,0);
+const center={x:160,y:64};
+assert.equal(M.hit(own.document,center).kind,'wire');
+const graph=JSON.stringify(own.document.electrical);
+own.transaction('Drag segment',d=>M.moveSegment(d,wire.id,0,0,32));
+assert.equal(JSON.stringify(own.document.electrical),graph,'Rerouting preserves endpoint graph');
+assert.ok(M.route(own.document,wire).some(p=>p.y===96));
+const unchangedRoute=own.document;
+own.transaction('Along segment',d=>M.moveSegment(d,wire.id,1,0,0));
+assert.deepEqual(own.document,unchangedRoute);
+own.undo();
+const beforeSplit=own.document;
+own.connect({kind:'wire',id:wire.id,point:center},{kind:'pin',componentId:g,pinId:'g'});
+assert.equal(own.document.electrical.junctions.length,1);assert.equal(own.document.electrical.wires.length,3);
+const junction=own.document.electrical.junctions[0].id;
+assert.ok(own.document.electrical.wires.every(w=>w.from.junctionId===junction||w.to.junctionId===junction));
+own.undo();assert.deepEqual(own.document,beforeSplit,'One undo removes branch and both split changes');
+own.redo();
+const afterSplit=own.document;
+own.remove(new Set([M.token('component',g)]));
+assert.equal(own.document.electrical.wires.length,2);assert.equal(own.document.electrical.components.length,2);
+assert.ok(own.document.electrical.junctions.some(j=>j.id===junction),'Shared junction identity survives deleting branch');
+own.undo();assert.deepEqual(own.document,afterSplit);
+// Splitting the same original wire twice must resolve the second point on its new segment.
+const twice=M.create(beforeSplit);
+twice.connect({kind:'wire',id:wire.id,point:{x:128,y:64}},{kind:'wire',id:wire.id,point:{x:192,y:64}},[{x:128,y:96},{x:192,y:96}]);
+assert.equal(twice.document.electrical.junctions.length,2);assert.equal(twice.document.electrical.wires.length,4);
+M.validate(twice.document);
+// Placement creates explicit pin-contact edges, not runtime geometry inference.
+const coincident=M.create(M.empty());coincident.addComponent('resistor',0,0);coincident.addComponent('resistor',0,0);
+assert.equal(coincident.document.electrical.wires.length,2);
+assert.equal(M.junctionDots(coincident.document).length,0,'Two-way contacts have no junction dots');
+for(const [kind,definition] of Object.entries(M.definitions))for(const rotation of [0,90,180,270]) {
+ const d=M.empty(),id='test';d.electrical.components.push({id,kind,parameters:structuredClone(definition.parameters),reference:'X1',modelVersion:1});
+ d.layout.components[id]=M.placementPose(kind,{x:64,y:96},rotation);
+ for(const pinId of Object.keys(definition.pins)) {
+  const p=M.pin(d,{kind:'pin',componentId:id,pinId});assert.equal(p.x%16,0);assert.equal(p.y%16,0);
+ }
+ if(kind==='ground')assert.deepEqual(M.pin(d,{kind:'pin',componentId:id,pinId:'g'}),{x:64,y:96},'Ground pin is its placement anchor');
+}
+const contact=M.create(M.empty()),resistor=contact.addComponent('resistor',0,0),ground=contact.addComponent('ground',48,0);
+assert.deepEqual(M.pin(contact.document,{kind:'pin',componentId:ground,pinId:'g'}),M.pin(contact.document,{kind:'pin',componentId:resistor,pinId:'b'}));
+assert.equal(contact.document.electrical.wires.length,1);const touching=contact.document;
+assert.equal(M.route(touching,touching.electrical.wires[0]).length,1,'Contact edge is invisible until separated');
+const electrical=CircuitDocumentAdapter.compile(touching).canonical;
+contact.transaction('Drag ground',d=>{M.move(d,new Set([M.token('component',ground)]),0,64);M.connectContacts(d,new Set([ground]));});
+assert.equal(contact.document.electrical.wires.length,1);
+assert.deepEqual(M.route(contact.document,contact.document.electrical.wires[0]).map(p=>[p.x,p.y]),[[48,64],[48,0]]);
+assert.equal(CircuitDocumentAdapter.compile(contact.document).canonical,electrical,'Dragging the touching ground retains its electrical net');
+contact.undo();assert.deepEqual(contact.document,touching);contact.undo();assert.equal(contact.document.electrical.components.length,1);assert.equal(contact.document.electrical.wires.length,0);
+// Drop onto a wire interior: split, junction and contact belong to the placement transaction.
+const onWire=M.create(beforeSplit),onWireGround=onWire.addComponent('ground',160,64);
+assert.equal(onWire.document.electrical.junctions.length,1);assert.equal(onWire.document.electrical.wires.length,3);
+assert.equal(M.junctionDots(onWire.document).length,1,'A true three-way branch gets a filled dot');
+onWire.undo();assert.deepEqual(onWire.document,beforeSplit);
+// Legacy stale waypoints that go past an endpoint must not draw an out-and-back spur.
+const backtrack=M.create(M.empty()),left=backtrack.addComponent('resistor',0,0),right=backtrack.addComponent('resistor',160,0);
+backtrack.connect({kind:'pin',componentId:left,pinId:'b'},{kind:'pin',componentId:right,pinId:'a'},[{x:112,y:-64}]);
+const edge=backtrack.document.electrical.wires[0];
+assert.deepEqual(M.route(backtrack.document,edge).map(p=>[p.x,p.y]),[[48,0],[112,0]]);
+backtrack.transaction('Drag resistor down',d=>M.move(d,new Set([M.token('component',right)]),0,64));
+assert.deepEqual(M.route(backtrack.document,edge).map(p=>[p.x,p.y]),[[48,0],[112,0],[112,64]]);
+const immutable=own.document;immutable.electrical.components=[];assert.notEqual(own.document.electrical.components.length,0);
+const bad=structuredClone(initial);bad.electrical.wires[0].from.pinId='missing';
+assert.throws(()=>model.replace(bad),/Invalid wire/);M.validate(model.document);
+assert.throws(()=>M.validate({...M.empty(),layout:{}}),/layout maps/);
+assert.throws(()=>M.validate({...M.empty(),id:''}),/version 1/);
+console.log('Editor model checks passed: identity, transactions, connected moves, rotation, routes, atomic junctions, delete/undo and anchored zoom.');

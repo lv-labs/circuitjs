@@ -1,0 +1,26 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Live RC simulation</title>
+<style>
+body{font:16px/1.5 system-ui,sans-serif;max-width:800px;margin:40px auto;padding:0 20px;color:#202124;background:#fafafa}
+button{font:inherit;padding:6px 15px;margin:0 6px 8px 0;cursor:pointer}button:disabled{cursor:default}
+svg{width:100%;background:white;border:1px solid #ddd}pre{font-size:12px;overflow:auto;max-height:320px;background:white;padding:16px}#error{color:#a71919}
+</style>
+<h1>Live RC simulation</h1>
+<p>Close the switch to charge the capacitor through 1 kΩ. Open it to discharge
+through 10 kΩ. Switching keeps the current charge; Reset restores its initial voltage.</p>
+<div>
+<button id="run" disabled>Run</button><button id="pause" disabled>Pause</button>
+<button id="step" disabled>Step</button><button id="switch" disabled>Open switch</button>
+<button id="reset" disabled>Reset</button>
+</div>
+<p id="readout">Loading simulation…</p><p id="error" role="alert"></p>
+<svg id="plot" viewBox="0 0 600 160" role="img" aria-label="Recent capacitor voltage, zero to five volts"><text x="2" y="20">5 V</text><text x="2" y="145">0 V</text><path d="M35 15V140H590" fill="none" stroke="#bbb"/><g id="traces"></g></svg>
+<p>Recent samples; each new run clears the history. Lines break at switch revisions.</p>
+<p><a href="verify.html">Run verification</a> · <a href="coordinator.html">Revision demo</a></p>
+<details><summary>Simulation state</summary><pre id="result">Loading…</pre></details>
+<script src="document-adapter.js"></script>
+<script src="revision-client.js"></script>
+<script src="simulation-coordinator.js"></script>
+<script src="continuous-demo.js"></script>
