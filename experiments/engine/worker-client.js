@@ -64,7 +64,7 @@ window.createDocumentWorker = function(url = 'document-worker.js') {
   const client = createCircuitWorker(url);
   return {ready: client.ready,
     loadDocument: document => client.request('loadDocument', document),
-    step: count => client.request('step', count),
+    step: (count, channels) => client.request('step', count, channels),
     snapshot: () => client.request('snapshot'),
     reset: () => client.request('reset'),
     terminate: client.terminate};

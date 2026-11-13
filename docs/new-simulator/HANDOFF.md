@@ -34,7 +34,7 @@ and timed SPST switching. Chrome worker execution is verified; other browsers,
 Node engine runtime and full-model compatibility are unproven.
 
 The separate schema-v1 document adapter supports resistor, capacitor, DC source,
-SPST switch and ground. Inductor/diode fixtures exercise the legacy text API, not
+SPST switch, three-pin op-amp, one-terminal voltage rail and ground. Inductor/diode fixtures exercise the legacy text API, not
 the new document catalog. Documents have stable component/pin/junction/wire IDs,
 explicit graph edges and separate layout. Synthetic CircuitJS coordinates are
 private compiler output. Canonical electrical identity ignores layout and graph
@@ -126,11 +126,11 @@ performance claim from this small prototype.
 
 ## Next concrete task and remaining limits
 
-Design a separate Move command versus wire-preserving Drag, using KiCad as the
-interaction reference. Decide explicit disconnection/cleanup and undo semantics
-before implementation. All current component pointer drags preserve attached
-wires. Then add inline component insertion/wire cleanup: placing a two-pin part
-across an existing wire currently does **not** remove the bypass wire segment.
+Separate Move (M) and wire-preserving Drag (G), atomic undo/redo, R rotation and
+the searchable A component chooser are now implemented; see EDITOR-PROTOTYPE.md.
+Inline component insertion now removes the bypass span on clear straight wires,
+including subdivided spans. Next: dedicated wire-end reconnection and cleanup
+of rejoined loose wires. Preserve explicit graph IDs, endpoint branches and probes.
 
 Other open work: directional box selection, copy/paste, dedicated wire-end
 reconnection, obstacle routing, touch/accessibility/full keyboard navigation,
@@ -138,7 +138,7 @@ component search, richer waveforms/probes, CircuitJS import, broader model catal
 large-circuit profiling and a second frontend comparison before choosing a toolkit.
 The renderer rebuilds SVG children per update. Logical component-ID double-click
 handling and root-SVG pointer capture prevent transient-child identity problems.
-The editor validates layout for its five models; do not claim complete future-schema
+The editor validates layout for its seven models; do not claim complete future-schema
 or general probe validation in the worker adapter.
 
 ## Reproduce and continue at home
@@ -168,8 +168,267 @@ and include stable IDs, explicit connections, layout and initial conditions.
 Suggested continuation prompt:
 
 > Read docs/new-simulator/HANDOFF.md and linked plans plus applicable repository
-> instructions. Inspect Git state and run the documented checks. Continue the
-> separate Move/Drag interaction design using KiCad as reference. Preserve the
+> instructions. Inspect Git state and run the documented checks. Continue
+> wire-end reconnection and local cleanup using KiCad as reference. Preserve the
 > explicit graph, stable IDs and unchanged CircuitJS simulation behaviour. Rust
 > and the final toolkit remain open. Update the docs/handoff with checks, limits
 > and one concrete next task.
+
+
+## Move/Drag continuation, 2026-11-13
+
+Implemented in the dedicated new-sim worktree, with no Java numerical changes:
+M detaches boundary connections and leaves wires at their old locations; G stretches
+connected wires; R rotates; A opens a searchable component chooser; E focuses
+properties; P places ground. Commands use selection or hover, follow the cursor,
+commit on click and cancel on Escape. Rotation and destination pin contacts share
+one undo transaction. Pointer drags continue to preserve wires. Selected wire Move
+is supported; single-wire G reroutes a segment. See EDITOR-PROTOTYPE.md for exact
+cleanup rules and limits. Ordinary dangling endpoints intentionally remain.
+
+Baseline: four Node suites, makeEngineSite and all 27 Chrome engine groups passed
+before edits. The system Java launcher had no runtime; the temporary Java 8 JDK
+and Gradle cache described above were still available. Gradle and browser checks
+need local socket access outside this session's restrictive sandbox.
+
+Added tools/test_editor_browser.mjs, invoked with verify_engine.py --editor in an
+isolated temporary profile, so it does not touch the user's browser/autosave.
+Final verification: all four Node suites passed; makeEngineSite passed; the new
+editor browser suite passed all five groups; all 27 engine browser groups passed.
+One final engine attempt stopped with CircuitSimulation undefined before coordinator
+checks; an unchanged sequential rerun passed all groups. No cause was established;
+this is not recorded as a numerical mismatch. Editor visual QA of the chooser and
+toolbar passed at 1440×1000. git diff --check passed. Changes remain uncommitted.
+
+Checks for this pass:
+
+```sh
+node tools/test_editor_model.mjs
+node tools/test_document_adapter.mjs
+node tools/test_simulation_coordinator.mjs
+node tools/test_continuous_simulation.mjs
+./gradlew makeEngineSite --console plain --no-daemon
+python3 tools/verify_engine.py --editor --output /tmp/editor-results.json
+python3 tools/verify_engine.py --output /tmp/engine-results.json
+```
+
+The subsequent inline insertion pass below completes this milestone.
+
+
+## Inline insertion continuation, 2026-11-13
+
+Implemented inline insertion in editor-model.js before pin contact attachment.
+The component's two pins bound a straight electrical path; a draft copy splits the
+boundary wires, finds the path, rejects protected interior branches/pins/probes
+or ambiguous spans, removes the bypass and folds newly created cut junctions into
+the component endpoints. Ordinary intermediate junctions and deleted layout entries
+are removed locally. Existing endpoint junctions and unrelated crossings survive.
+Placement, Move/Drag drops and rotation share this operation and their existing
+atomic undo/redo. UI handlers catch rejected insertions and show the reason without
+committing a document or history entry. All supported two-pin models/rotations are
+covered; no Java numerical code changed. No global graph simplification was added.
+
+Expanded model and editor browser checks cover the cut, cleanup, rejection and
+undo behavior. The browser test also runs a real worker on a divider with an
+inserted 1 kΩ resistor and verifies 5/3 V output and 5/3000 A current. Temporary
+profiles isolate these checks from the user's running editor/autosave.
+
+Final verification: all four Node suites, makeEngineSite, all seven editor browser
+groups and all 27 engine browser groups passed. Two engine attempts timed out;
+live inspection showed the verification page complete but verify.js/report absent.
+The test HTTP server accept queue was increased from its default to 128 to
+accommodate parallel Chromium script preloads; the next engine run passed. This
+observed recovery does not establish that every historical timeout had that cause.
+Editor visual review and git diff --check passed. Generated build/engine-site is
+updated for the existing preview server; refresh editor.html. All changes remain
+uncommitted alongside the earlier Move/Drag work.
+Next concrete task: dedicated wire-end reconnection, with clear snapping,
+branch-versus-crossing behavior and reversible local cleanup when loose ends join.
+
+
+## Op-amp/editor feature continuation, 2026-11-13
+
+Implemented at the user's request before broader optimization:
+
+- `opamp@1` in the document adapter and editor: minus/plus/out, gain, minOutput,
+  maxOutput. Defaults 100000 and ±15 V. Uses unchanged CircuitJS OpAmpElm maths.
+  EngineEntryPoint now accepts validated `a` records. OpAmpElm skips its rendering
+  font lookup and mouse creation check when the old UI is absent, enabling a real
+  worker without window/document shims. Capability negotiation advertises opamp@1.
+- X/Y world-axis flips for placement, selection/hover and pending Move/Drag, with
+  ordered rotation/flipping and undo. Standalone flips retain graph/pin identities.
+- Non-loading voltage markers from Probe or A, attached to explicit pin/junction
+  references. Wire targets split atomically; labels store offsets in layout.probes.
+  New ground-referenced probe shape coexists with existing differential probes.
+- Properties dialog on E/double-click or Inspector button, with draft validation,
+  model-specific fields, reference editing, Apply/Cancel and one-step undo.
+- Switch bodies single-click to toggle after a 450 ms discrimination delay.
+  Double-click opens properties with no toggle; dragging does not toggle.
+
+Added the gain-two fixture docs/new-simulator/examples/opamp-noninverting.json;
+makeEngineSite copies it to examples/. The engine verifier now includes
+opamp-tests.js. Numerical checks cover feedback, inversion, follower, positive and
+negative saturation, output-current sign, reset, worker/main agreement and rejected
+invalid loads. Existing six numerical baselines still pass. The browser input
+runner now waits for actual reload and SVG readiness to avoid reading the previous
+page's ready flag. Temporary profiles preserve the user's editor/autosave.
+
+Verification so far: four Node suites, makeEngineSite, all 28 engine browser groups,
+and all 11 editor browser groups passed. Screenshot review confirms triangle/input
+signs, tidy controls, and a 2 V probe on the gain-two example. Final modal visual QA
+passed: reference, gain/limit fields, validation area and Apply/Cancel fit cleanly. Changes remain uncommitted alongside previous editor work.
+
+Limits: this is a three-pin implicit-supply model, not a powered chip or a specific
+manufacturer model. GBW/slew are not simulated by this legacy op-amp. Probe removal
+leaves equivalent wire subdivision; no full probe editor or scope UI was added.
+Switch live-state preservation remains validated on the previous RC set. Next task
+can return to loose wire-end reconnection or expand models per user direction.
+
+
+## Sine/value-selection/loose-wire continuation, 2026-11-13
+
+At the user's request, added a Sine source placement preset and source waveform
+schema with amplitude (peak V), frequency (Hz) and DC offset (V). Its electrical
+kind remains voltageSource, so existing source pins/signs, inline insertion and
+flips are reused. DC saved documents keep their original shape. All sine fields
+are exposed in properties with SI parsing, validation and atomic undo. The legacy
+engine already supported sine records; this pass changes no Java/math code.
+Capability negotiation now advertises voltageSource:sine@1.
+
+Properties focus/select the full main value immediately for double-click/E and
+Inspector editing. Ground/switch fall back to selected reference text.
+
+Wire drafts finish in blank space by double-click or Enter. The endpoint is a
+new explicit, snapped junction; a hollow square identifies degree-one junctions.
+Start-wire splitting, bends, loose endpoint and wire are one transaction; Escape
+leaves no draft edits. Zero-length no-op drafts add no history. Loose ends survive
+save/reopen and can start a subsequent wire in Wire mode. Dedicated endpoint-grab
+editing and general rejoined-route cleanup are still not implemented.
+
+Added examples/opamp-sine.json (gain-two AC amplifier with output probe) and
+sine-tests.js. Numerical checks cover analytic sine values at legacy sample times,
+zero amplitude, offsets/frequencies, AC op-amp gain and clipping, reset and worker/
+main agreement. New model checks cover loose endpoint graph/snap/reconnection,
+save/reopen, zero/invalid drafts and exact undo/redo. Browser checks cover selecting
+and replacing the primary value without Ctrl-A, sine fields/validation/undo, both
+loose-ending gestures, draft cancellation, reload and reconnection.
+
+Verification: all four Node suites, makeEngineSite, all 29 numerical/browser
+engine groups and all 13 editor browser groups passed. Real input checks verify
+immediate value replacement, sine field validation/application/undo, and both loose
+wire finishing gestures with exact undo/redo, reload, continuation and cancellation.
+Visual QA covers the sine symbol, compact three-line canvas values and the modal's
+selected amplitude plus frequency/offset fields. git diff --check passed.
+Generated build/engine-site is refreshed for the existing preview server.
+Existing uncommitted editor/op-amp work is preserved; no deployment is implied.
+
+
+## AC source / one-terminal continuation, 2026-11-13
+
+Renamed visible Sine source to AC source and added four explicit presets in the
+palette/chooser: AC/DC × one/two terminals. Sine document shapes are preserved;
+legacy sineSource placement calls alias to acSource. Properties on both models
+now select DC, sine, square, triangle, sawtooth or pulse. Square/pulse expose duty
+in percent; saved dutyCycle is a fraction. Shared/duty draft values and reference
+are retained across waveform changes; Apply is one undo step and Cancel discards.
+
+Added voltageRail@1 with one p pin and a true RailElm engine record. Source/rail
+parameters and validation are shared. Pin-anchored placement stays aligned across
+rotation/flips. Compiler preflight accounts for implicit reference without requiring
+a ground symbol, checks ideal rail/source loops, and keeps actual public pin/current
+mapping. EngineEntryPoint accepts validated R and periodic v records, with explicit
+pulse duty flag. Existing numerical source/rail/model equations remain unchanged.
+
+Added examples/opamp-ac-rail.json and waveform-tests.js. Model/compiler checks cover
+presets, anchor geometry, save/reopen, contacts, waveform/duty validation, worker
+projection and loop guards. Real worker/main checks cover all six waveform choices
+on both source models, non-default duty, op-amp feedback, reset, implicit reference,
+and positive/negative rail load currents. Browser input checks cover naming, all
+presets, waveform/duty drafts/validation/cancel/undo and a rail-driven probe update.
+
+Final verification: all four Node suites, makeEngineSite, all 30 engine browser
+check groups and all 16 editor browser groups passed. Visual review confirms clear
+terminal-count labels, source captions clear of attached wires, the waveform
+selector/duty field and the one-terminal square-wave-driven 1.5 V op-amp probe.
+The browser runner now waits two animation frames after reload before computing
+pointer positions; a loose-reconnection assertion on a rerun passed after adding
+that readiness wait. git diff --check passed. build/engine-site is refreshed for
+the user's existing preview server. Earlier
+uncommitted editor work remains in place; no deployment or commit was requested.
+
+
+## Oscilloscope continuation, 2026-11-13
+
+Added a bottom Oscilloscope dock for multiple voltage probes. It starts collapsed;
+Run/Pause, time/div, Auto/manual shared V/div, channel toggles, latest/min/max and
+synchronized hover readings work together. Exactly two visible traces also show
+their difference. Clear affects capture only; collapse retains it. Probe names are
+editable in Inspector as one undoable annotation change, and probe/trace colors
+match by stable ID. Existing differential voltage probes are supported.
+
+Accurate sampling is worker-side per successful electrical step, in one bounded
+reply. Adapter step now optionally receives up to 32 validated terminal-pair
+channels and returns sampleBatch descriptors/times/voltage arrays plus final frame.
+Unsampled behavior stays compatible. Coordinator setSampleChannels snapshots each
+request's channel set and applies existing revision/session/epoch/sequence gates.
+The editor resolves explicit pin/junction probe references to deterministic public
+terminal IDs. No Java or numerical equations changed for this slice.
+
+scope-model.js maintains a 20,000-sample ring per channel, rejects incompatible
+identities/targets, and computes display envelopes preserving min/max peaks.
+scope-view.js manages the dock/legend/axes/cursor. Capture is transient, not saved
+with the circuit. Rename/layout edits preserve history; channel set changes or
+reset/replacement/errors clear it. Supported same-epoch live RC switching may
+continue after its accepted revision. Missing/excess probe targets are reported.
+No trigger/single-shot/current/export modes or general performance claims yet.
+
+Added opamp-oscilloscope.json (named Vin/Vout) and scope-tests.js for real-worker
+per-step analytic gain, intermediate peaks/differentials, reset, no hidden steps,
+RC integration equivalence and invalid-channel preservation. Pure checks are
+node tools/test_scope_model.mjs and node tools/test_scope_sampling.mjs. The browser
+input suite covers multi-probe capture, scales/toggles/cursor, clear/Step/reset,
+rename/layout retention, probe deletion/undo and fresh runs after source edits.
+
+Final verification: all six Node suites, makeEngineSite, all 31 engine browser
+groups and all 19 editor browser groups passed. Visual QA shows two aligned sine
+traces at the expected gain of two, matching probe colors/names, shared axes,
+min/max and cursor readings. Actual probe-label dragging and collapse/reopen retain
+capture. A browser test was corrected to recalculate the toggle position after
+collapsing the dock; the final check asserts that it is visibly open. git diff
+--check passed. build/engine-site is updated for the current preview server. Earlier uncommitted
+work remains preserved and nothing is deployed.
+
+
+## End-of-day handoff — 2026-11-13
+
+The user is finishing for today. No additional implementation is requested now.
+Current stopping point is the working single-dock, multi-probe oscilloscope above.
+The last implementation checks passed: six Node suites, makeEngineSite, 31 engine
+browser groups and 19 editor browser groups. This closing update changes docs only.
+All source, fixtures, tests and documentation remain uncommitted on new-sim; nothing
+was deployed. Recheck Git state when resuming and preserve this accumulated work.
+Browser autosave and captured scope history do not transfer through Git; use JSON
+Save/Open for the circuit itself. Scope capture is transient and is not in that JSON.
+
+### Future request: multiple scope panes (deferred)
+
+The user would like multiple oscilloscope panes, with the option to arrange them
+vertically stacked or horizontally side by side. Record this as desired future
+work, not authorization to start implementing it automatically on resume.
+
+The current implementation plots multiple probes together in one dock. The future
+request is for multiple separate scope views. When the user chooses to pursue it,
+first specify probe assignment/grouping, pane creation/removal/resizing, and how
+per-pane time/voltage scales and cursors should behave. Linked versus independent
+scales/cursors and persistence of the pane layout have not been decided.
+Prefer sharing the existing synchronized acquisition across views rather than
+advancing the simulator independently for each pane. Preserve the existing run/
+revision/target guards and bounded buffers.
+
+Suggested next-session prompt:
+
+> Read HANDOFF.md and the linked editor/worker docs, inspect the current new-sim
+> worktree and preserve its uncommitted changes. The single multi-probe scope is
+> implemented and verified. Multiple separate scopes stacked or side by side are
+> a recorded future request, explicitly deferred at the end of the session. Ask
+> what the user wants to work on next before starting another feature.

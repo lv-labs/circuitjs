@@ -73,7 +73,7 @@ This keeps the first implementation free of ambiguous partial retries.
 | Operation | Payload | Effect |
 | --- | --- | --- |
 | installCircuit | Complete canonical electrical projection | Initial load into a fresh worker; adopt positive target revision/epoch after successful validation/load. |
-| step | count, within negotiated limit | Advance exactly count successful steps; return frame. Does not change revision/epoch. |
+| step | count, within negotiated limit; optional channels | Advance exactly count successful steps; return frame, plus aligned per-step samples if requested. Does not change revision/epoch. |
 | setSwitch | componentId, closed, statePolicy=preserve | Resolve ID, validate live-change capability; apply at step boundary. Target revision advances; epoch/time retained. |
 | reset | statePolicy=reset | Restore latest accepted circuit's initial conditions and switch parameters; same revision, new epoch, time zero. |
 | snapshot | none | Return last completed frame or `NO_FRAME`; do not invent solved results at time zero. |
@@ -208,3 +208,30 @@ Retain the original six numerical fixtures throughout. Add adapter tests that
 exercise behaviour rather than repeat serialization details: equivalent layouts,
 explicit crossings, reordered components, stale/duplicate requests, rejected
 candidate activation, capacitor continuity during switching, and undo/reset rules.
+
+
+## Implemented oscilloscope sample batches
+
+Step accepts optional `channels`, at most 32 descriptors of the form:
+
+```json
+{"id":"Vin","positive":{"componentId":"vin","pinId":"p"},"negative":null}
+```
+
+A negative terminal object gives a differential reading; null means implicit ground.
+Every descriptor and pin is validated before any engine mutation. Duplicate IDs,
+unknown pins and malformed descriptors fail without advancing the worker. Channels
+are canonically ordered by ID. No channels preserves the previous bounded-step API.
+Initialize now advertises perStepSamples and maxSampleChannels.
+
+A sampled result has `sampleBatch: {channels, times, values}`. `values[id]` and times
+have exactly count aligned entries, one per successful electrical step; values are
+volts and times seconds at the legacy solve timestamp (frame.time minus timestep).
+The final ordinary frame still describes the last completed result. Snapshot does
+not replay sample batches. Worker transport stays one reply per bounded request.
+
+The coordinator's setSampleChannels method stores descriptors separately from the
+circuit projection. Each request snapshots them at dispatch, and its usual run/
+revision/epoch/sequence gates apply to the whole reply. Display buffers additionally
+match the expected accepted identity and channel targets, rejecting old probes or
+runs even if their IDs/labels overlap. Labels/layout never become solver identity.

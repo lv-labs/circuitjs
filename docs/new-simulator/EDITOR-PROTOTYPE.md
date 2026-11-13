@@ -28,11 +28,16 @@ including stable IDs, layout, explicit connections and initial conditions.
 | --- | --- |
 | Select/drag | Select tool (1); click or drag a component body; attached wires stretch |
 | Multiple selection | Shift-click; drag an empty-area box; Shift-box adds |
-| Move a group | Drag a selected component; connections follow pins |
-| Place parts | R resistor, C capacitor, V DC source, S switch, G ground; click repeatedly |
-| Rotate | Q, Shift-Q for reverse; works on selection or placement preview |
+| Move / Drag | M leaves external wires behind; G stretches connected wires; selection or hovered item, click to place |
+| Add component | A opens searchable list; ↑/↓ and Enter choose; click to place, Escape finishes |
+| Ground / properties | P places ground; E or double-click opens component properties dialog |
+| Flip | X horizontally; Y vertically; selection/hover, placement or pending Move/Drag |
+| Voltage probe | Probe tool or A → Voltage probe; click a pin, wire or junction; name it in Inspector |
+| Oscilloscope | Open bottom dock; Run/Pause, time/div, volts/div, channel toggles and hover cursor |
+| Rotate | R counterclockwise, Shift-R reverse; selection, placement or pending Move/Drag |
 | Wire | W, then click a pin/junction/wire; pin clicks can start directly from Select |
-| Add wire bends | Click empty space while wiring; finish on another connection target |
+| Add wire bends | Click empty space while wiring; finish on a connection target |
+| Finish a loose wire | Double-click empty space or press Enter at the cursor; Escape cancels the draft |
 | Add a branch | Finish/start on an existing wire; commits an explicit junction and split |
 | Reroute | Select and drag a wire segment perpendicular to itself |
 | Pan | Scroll, Pan tool (H), middle-drag or Space + drag |
@@ -41,8 +46,8 @@ including stable IDs, layout, explicit connections and initial conditions.
 | Cancel | Escape cancels gesture/wire preview and returns to Select |
 | Undo/redo | Command/Ctrl Z; Shift Command/Ctrl Z; toolbar buttons |
 | Delete | Delete/Backspace; attached wires/probes are removed with a component |
-| Edit values | Select a component and use Inspector; SI prefixes such as 2k or 4.7u |
-| Live switch | Double-click the body or use its inspector button |
+| Edit values | Double-click, E or Inspector → Edit properties; SI prefixes such as 2k or 4.7u |
+| Live switch | Single-click body to toggle; double-click edits without toggling |
 | Simulate | Run/Pause, Step, Reset |
 | Files | Save/Open buttons or Command/Ctrl S/O; New creates an undoable empty document |
 
@@ -149,18 +154,274 @@ performance claim from this six-component interaction prototype.
 ## Limits and next work
 
 Desktop pointer/keyboard prototype: no copy/paste, box-direction variants, dedicated
-wire-end reconnection, obstacle routing, touch gestures, component library search,
-full keyboard graph navigation or CircuitJS text import. All component pointer
-drags currently preserve attached wires; a separate detach/move command is not
-implemented. Dropping a two-pin device across a wire does not cut out the intervening
-wire segment (inline component insertion is not implemented). Route adjustment is
+wire-end reconnection, obstacle routing, touch gestures, a broader component library,
+full keyboard graph navigation or CircuitJS text import. Component pointer drags
+preserve attached wires, while M explicitly detaches. Inline insertion supports
+clear straight spans; spans with interior branches,
+component pins, probe targets or ambiguous overlapping wires are rejected. Route adjustment is
 local, not obstacle avoidance or a general loop/intersection simplifier; deliberate
 U-shaped routes may remain. UI layout/pin geometry is
-structurally validated for the five supported model kinds. The current renderer
+structurally validated for the seven supported model kinds. The current renderer
 rebuilds SVG children per update and has not been optimized for large scenes.
 
-Next: distinguish wire-preserving Drag from a separate Move command with explicit
-disconnection semantics, then implement inline component insertion/wire cleanup.
+Next: dedicated wire-end reconnection and local cleanup for rejoined loose wires.
 Validate those interaction rules before comparing a second frontend implementation
 and committing to a toolkit. Expand
 models and richer waveform/probe UI independently behind the tested boundary.
+
+
+## Move/Drag and KiCad shortcut pass (2026-11-13)
+
+M starts Move and G starts Drag on the selection, or the item under the cursor if
+nothing is selected (a hovered pin picks its component). The item follows the
+cursor on the grid until a click places it. R rotates counterclockwise; Shift-R
+reverses it. Rotation during a pending command joins that command's undo step.
+Escape, pointer cancellation or window blur discards the preview; previews do not
+save, modify history or send new documents to the simulation coordinator.
+
+Move disconnects only the selection boundary. Stationary wires keep their IDs,
+routes and electrical joins through explicit loose junction endpoints at the old
+pin locations. Connections internal to a moved group travel together. Explicitly
+selected wires travel and detach from external pins; G on a single wire reroutes
+the hovered segment, retaining its endpoints. Zero-length contacts at the boundary
+collapse into the stationary neighbour, preserving other stationary branches and
+removing unused newly created junctions. This is local boundary cleanup.
+
+Drag preserves endpoint references and adjusts routes using the existing local
+wire stretching. Both commands detect component pin contacts only on commit.
+Move, detachment, rotation and destination contacts form one transaction, with exact
+undo/redo restoration of graph, stable IDs and layout. Layout-only Drag reuses the
+worker; Move changes connectivity and follows the existing replacement policy.
+
+A opens a modal chooser for the supported models and voltage probes, searchable by name/kind or
+reference prefix. Arrow keys highlight a result, Enter chooses it, Escape closes
+without placing anything. The palette still offers direct placement. Old R/C/V/S/G
+part shortcuts and Q rotation were removed to avoid conflicts. W is wire, E opens the properties dialog for
+the selected/hovered component, P places ground, Del deletes, Ctrl/Command-Z undoes,
+and Shift-Ctrl/Command-Z redoes. These cover the implemented editor actions; this
+is not a full KiCad action catalog. Shortcuts leave text fields alone.
+
+Reproducible browser input regression (isolated temporary Chrome profile):
+
+```sh
+python3 tools/verify_engine.py --editor --output /tmp/editor-results.json
+```
+
+The runner uses CDP keyboard/pointer input and the editor's normal autosave to
+check hover pickup, pending rotation/cancellation, detachment, connected Drag,
+exact undo/redo, chooser filtering/placement and inspector typing isolation.
+Pure model tests additionally check stationary geometry, internal edges, selected
+wire movement, contact branch preservation and destination-contact atomicity.
+
+
+## Inline insertion (2026-11-13)
+
+Place a two-pin component so that both pins lie on a straight wire span. On commit,
+the editor removes the wire between the pins and connects the remaining two sides
+to the part. This supports all four two-pin models and quarter-turn rotations,
+including spans subdivided into multiple wires by ordinary two-way junctions.
+The wire outside the cut may contain bends; its route and electrical endpoints are
+preserved. A component moved/dropped or rotated onto a clear span uses the same
+operation. Ground remains a one-pin contact and does not cut wires.
+
+The entire edit is atomic with placement/Move/Drag/rotation and its existing undo
+step. Previews do not cut the saved document. Undo restores the original wire(s),
+layout, junctions and IDs; redo restores the exact insertion. Explicit connectivity
+is updated before the coordinator receives the committed document, so the component
+is in series rather than bypassed by the original wire.
+
+Only the straight, collinear electrical path between the pins is removed. Unrelated
+crossings remain separate. Interior two-way junctions on the removed span are
+removed along with their unused layout entries; newly created cut junctions are
+folded directly into the component pins to avoid redundant contacts. Existing
+junctions at the cut boundaries, branches there, and probe identities are retained.
+Remaining route bends are normalized by the existing local route cleaner.
+
+An interior branch, component pin or voltage-probe target prevents insertion.
+Overlapping/parallel candidates are rejected as ambiguous. The UI explains the
+rejection and keeps the document, autosave and undo stack unchanged. This does not
+remove alternate bypass paths elsewhere in a circuit, route around obstacles,
+or reconnect arbitrary loose wire ends. Import and rendering never auto-insert.
+
+Verification adds model checks for all two-pin kinds/rotations, multi-wire spans,
+boundary branches, protected interior branches/probes, overlapping candidates,
+unrelated crossings, short/off-axis spans, Move insertion and exact undo/redo.
+The browser suite places a 1 kΩ resistor through A and real pointer input into a
+5 V divider's source lead: a real worker reports 5/3 V output and 5/3000 A through
+the inserted part, then undo/redo restores the exact documents. A separate pointer
+check verifies branch rejection produces a notice without any saved/history edit.
+
+
+## Op-amps, flips, probes and properties (2026-11-13)
+
+A → Op-amp places a three-pin amplifier with stable `minus`, `plus`, `out` pin IDs.
+This uses CircuitJS's existing OpAmpElm equations. The defaults are open-loop gain
+100000 and −15/+15 V output limits. Supplies are implicit; separate supply pins,
+bandwidth/slew-rate controls and specific manufacturer models are not included.
+Properties exposes gain and both output limits. Op-amp current readings use positive
+current delivered from the output to the external circuit. A runnable gain-two
+example is included in `examples/opamp-noninverting.json` in the built site.
+
+X flips left/right and Y flips top/bottom in world axes, matching the KiCad shortcut
+names. Toolbar buttons expose both actions. Flips work on selection/hover, placement
+previews and pending Move/Drag; order with R is preserved. Committed flips preserve
+pin identities and electrical connectivity, stretching attached routes. A flip alone
+does not add new geometric contacts. Placement and a Move/Drag drop still detect
+contacts when committed. Each flip is one undo step, or joins the pending gesture.
+
+Use the Probe tool or choose Voltage probe from A, then click a pin, wire or junction.
+A wire-interior placement creates an explicit junction/split in the same undo step.
+The saved voltage marker has `reference: "ground"`, a stable ID, target reference and
+label; `layout.probes[id]` stores the label's offset from the target. It adds no
+solver component and does not change canonical electrical identity. Its displayed
+voltage comes from the latest accepted stable-ID frame, with no stale value during
+replacement/errors. A disconnected target displays a dash. Drag or M/G repositions
+the label; Delete removes it. Undo/redo and JSON Save/Open preserve the marker.
+Existing differential voltage probes remain valid; only probes with explicit label
+layout are drawn. Removing a component/junction also removes probes targeting it.
+Deleting a probe currently leaves the electrically equivalent routing split.
+
+Double-click any component, press E, or use Inspector → Edit properties to open the
+modal editor. Reference and model parameters are edited together. Apply validates
+and commits them in one undo step; invalid entries remain in the dialog with an
+error; Cancel/Escape discard the draft. Resistors/sources/capacitors accept SI
+numbers, capacitors also expose initial voltage/integration, switches expose their
+closed state, and op-amps expose gain/limits. Ground has a reference field only.
+Simulation frame updates do not overwrite fields while typing.
+
+Single-click a switch body toggles it. The action waits 450 ms to distinguish a
+double-click, which opens properties without first sending a toggle to the worker.
+Dragging a switch does not toggle it. Existing live-switch policy remains unchanged;
+state-preserving live changes are verified for the RC cases, not general op-amp
+switching. Cancel/tool/document changes cancel pending body-click actions.
+
+New numerical checks cover finite-gain non-inverting/inverting amplifiers, a follower,
+positive/negative saturation, output-current sign, worker/main agreement, reset and
+invalid input preservation. Editor browser checks cover placement/flipping, the
+live 2 V probe, property validation/application/cancellation/undo, and switch click
+separation. The worker had a rendering-only font/CSS lookup in OpAmpElm.setPoints;
+that lookup and mouse-creation access are guarded when no old UI exists. Numerical
+stamping/stepping equations are unchanged.
+
+
+## Sine sources and loose wires (2026-11-13)
+
+A → AC source (2 terminals), also in the palette, places a voltage source with a
+sine waveform by default. The one-terminal AC and DC variants are available too.
+It uses the existing `voltageSource@1` device with waveform
+`{kind: "sine", amplitude, frequency, offset}`. Defaults are 1 V peak, 1 kHz and 0 V
+DC offset. Double-click/E exposes all three fields, accepting SI prefixes such as
+500m and 2k. Amplitude is peak, not peak-to-peak or RMS; frequency must be positive,
+amplitude nonnegative and all values finite. Offset may be negative. DC sources
+keep their existing saved shape; their voltage field appears when DC is selected. Sine properties apply
+as one undoable electrical edit using the existing replacement/reset policy.
+
+The properties dialog now focuses and selects the whole first value field when
+opened, so typing immediately replaces it. This applies to all components through
+double-click, E and the Inspector button. Components without a value field select
+the reference instead. Frame updates leave the selection/draft alone.
+
+While wiring, a single click in empty space adds a bend. Double-click empty space
+or press Enter to finish at a grid-snapped loose endpoint. Finishing creates one
+explicit junction and wire in the same transaction as any split of the start wire.
+A small hollow square marks a degree-one junction. An unfinished draft is never
+saved; Escape cancels it. Zero-length drafts create no document/history entries.
+The loose endpoint survives Save/Open and local reload, and can start another wire
+by clicking it in Wire mode. Reconnection uses the existing explicit junction
+rather than connecting arbitrary overlaps. General endpoint-grab/rerouting cleanup
+remains separate work.
+
+`examples/opamp-sine.json` is a gain-two op-amp driven by a 0.5 V peak, 1 kHz source
+with 0.25 V offset and an output probe. Numerical tests exercise the source formula,
+positive/negative offsets, zero amplitude, frequency changes, op-amp gain/clipping,
+reset and main/worker agreement. Legacy voltage sources evaluate at the start of
+the last completed timestep, so comparisons use frame.time minus frame.timeStep.
+No Java model/solver changes were required for this slice.
+
+
+## AC source names, waveforms and one-terminal rails (2026-11-13)
+
+The palette and A chooser now distinguish four presets: DC source (2 terminals),
+AC source (2 terminals), DC source (1 terminal), AC source (1 terminal). Searching
+`ac-source` finds the AC variants. Existing saved sine sources keep the same schema
+and appear as AC sources. The former sineSource placement API is retained as an
+alias for acSource, but it is not a visible chooser entry.
+
+Properties for either source model include Waveform: DC, Sine, Square, Triangle,
+Sawtooth or Pulse. AC fields are peak amplitude, positive frequency and DC offset.
+Square and pulse additionally expose duty cycle as a percentage, strictly between
+0 and 100; the saved value is a fraction. Pulse swings from offset to offset plus
+amplitude; square/sine/triangle/sawtooth swing about the offset. Changing waveform
+retains common draft field text and the duty value when switching away/back.
+Reference edits stay intact. Apply commits the selected waveform and active fields
+in one undo action; Cancel/Escape discard all changes. Opening/changing the waveform
+still selects the main numeric field for immediate typing.
+
+One-terminal sources use `voltageRail@1`, with one public `p` pin and the same
+waveform parameters. Their reference is implicit ground, using CircuitJS RailElm.
+A ground symbol is not required solely to define the source reference. External
+return paths must still be explicit where needed. Ideal rail/source shorts/loops
+are rejected before load rather than triggering legacy resistance repair. Current
+is reported positive into the rail pin, matching the two-terminal passive source
+convention. Placement is anchored at the connection pin at every rotation/flip.
+A one-pin source creates contacts rather than cutting a wire as an inline part.
+
+`examples/opamp-ac-rail.json` demonstrates a one-terminal AC source driving the
+non-inverting amplifier, with an output probe. Existing waveforms use the unchanged
+VoltageElm/RailElm maths; EngineEntryPoint only adds validated waveform/rail record
+loading, including the explicit pulse duty flag. No solver/model equations changed.
+
+Tests cover all six waveform choices on both terminal counts, non-default duty,
+analytic sample values, op-amp gain, reset/main-worker agreement, and currents
+between two rails with no explicit ground symbol. Editor checks cover all four
+chooser presets, modal waveform/duty drafts, percent conversion, invalid duty,
+cancel/undo, and a real rail-driven op-amp/probe update after changing waveform.
+
+
+## Multi-probe oscilloscope (2026-11-13)
+
+Place voltage probes on the op-amp input and output. Select a marker and use Probe
+name in the Inspector to name it Vin/Vout. Open the Oscilloscope dock at the bottom
+and click Run (either toolbar). All connected voltage probes plot together against
+simulation time, with shared time/voltage axes. Marker, legend and trace colors
+match by stable probe ID. Existing saved differential voltage probes are plotted
+as positive minus negative; current probes are not scope channels in this slice.
+
+Use Time per division to set the ten-division rolling window. Voltage Auto fits
+all visible signals to a shared zero-centered scale; manual V/div keeps the scale
+fixed. Toggle channels in the legend without losing their stored data. Pause
+freezes acquisition after the in-flight batch; hover the plot for synchronized
+sample readings, with a difference readout when exactly two channels are visible.
+The legend reports latest/min/max values for the current visible time window.
+Clear erases captured samples without editing the circuit or stopping Run. Step
+acquires each successful electrical step too. Collapsing/reopening retains capture.
+
+Samples come from every simulation step inside a worker request, not from browser
+paint frames. One batch carries the requested stable pin pairs and aligned voltage
+arrays back to the coordinator. The editor resolves explicit probe graph references
+to deterministic terminal IDs; it never infers contacts or uses private solver
+indices. Sample times follow the existing source convention (completed frame time
+minus timestep). Voltage/time values are actual solver samples, not synthesized
+from source settings. Dense display traces keep per-pixel first/last/min/max points
+rather than averaging away peaks.
+
+The buffer is bounded to 20,000 samples per channel and the first 32 resolved
+voltage probes. Unresolved/excess probes are reported in scope info. Time range is
+limited by the retained buffer and electrical timestep. Captured history/settings
+are session-only and excluded from JSON/autosave; saved probe names/targets/layout
+remain normal undoable document edits. Adding/removing/retargeting a channel begins
+a new aligned capture. Renaming or moving a label preserves capture. Reset, worker
+replacement or invalid simulation clears old traces; a supported live RC switch
+can continue history in the same run epoch after the revision acknowledgement.
+Old session/revision/sequence/channel batches cannot become current traces.
+
+`examples/opamp-oscilloscope.json` contains a one-terminal 1 kHz AC input, gain-two
+amplifier and named input/output markers. The dock starts collapsed to leave canvas
+space. This is a rolling voltage viewer, without triggering, single-shot capture,
+independent per-channel axes, current traces, persistence or CSV export yet.
+
+Code: scope-model.js owns the ring buffer, identity/target guards and peak envelope;
+scope-view.js owns the dock, controls, cursor and SVG rendering. New pure checks
+are tools/test_scope_model.mjs and tools/test_scope_sampling.mjs. Real-worker scope
+checks join the engine verifier; the editor input suite exercises capture, controls,
+renaming, deletion/undo, reset, source edits and label/layout retention.

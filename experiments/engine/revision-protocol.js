@@ -32,8 +32,8 @@
           if (message.operation === 'initialize') {
             require(sessionId === null, 'ALREADY_INITIALIZED', 'Worker is already initialized');
             sessionId = message.sessionId;
-            result = {models: ['resistor@1', 'capacitor@1', 'switch@1', 'voltageSource:dc@1', 'ground@1'],
-              liveChanges: typeof adapterSession.setSwitch === 'function' ? ['setSwitch:rc'] : [], maxStepCount: 10000};
+            result = {models: ['resistor@1', 'capacitor@1', 'switch@1', 'voltageSource:dc@1', 'voltageSource:sine@1', 'voltageSource:periodic@1', 'voltageRail@1', 'opamp@1', 'ground@1'],
+              liveChanges: typeof adapterSession.setSwitch === 'function' ? ['setSwitch:rc'] : [], maxSampleChannels: 32, perStepSamples: true, maxStepCount: 10000};
           } else {
             require(sessionId !== null, 'NOT_INITIALIZED', 'Initialize the worker first');
             require(same(message.base, state), 'STALE_BASE', 'Request does not match accepted circuit/run');
@@ -48,7 +48,7 @@
               }
               case 'step':
                 require(state.documentId !== null, 'NO_DOCUMENT', 'Install a circuit first');
-                result = adapterSession.step(message.payload?.count);
+                result = adapterSession.step(message.payload?.count, message.payload?.channels);
                 break;
               case 'snapshot':
                 require(state.documentId !== null, 'NO_DOCUMENT', 'Install a circuit first');

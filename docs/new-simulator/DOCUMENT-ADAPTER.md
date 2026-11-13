@@ -67,8 +67,8 @@ step, snapshot, reset and terminate; step bounds remain 1–10000 per call.
 - `document-tests.js`: real-browser worker integration checks, invoked by the
   existing verification runner alongside the original six numerical fixtures.
 
-The catalog now supports version 1 resistors, capacitors, DC sources, non-momentary
-SPST switches and ground. See RUN-AND-LIVE-EDITS.md for parameter and topology limits
+The catalog now supports version 1 resistors, capacitors, DC/periodic sources and one-terminal rails, non-momentary
+SPST switches, three-pin op-amps and ground. See RUN-AND-LIVE-EDITS.md for parameter and topology limits
 and use the coordinator for state-preserving switch changes.
 Electrical parameters/settings are checked rather than silently ignoring unknown
 fields. Wire endpoints and unique IDs are validated, all grounds are joined, and
@@ -132,3 +132,67 @@ implemented in RUN-AND-LIVE-EDITS.md. The editor prototype now uses this boundar
 see [EDITOR-PROTOTYPE.md](EDITOR-PROTOTYPE.md). Pin contact detection commits explicit
 edges, including zero-length contact edges; the adapter still ignores display
 geometry. The UI language/toolkit remains open.
+
+
+## Three-pin op-amp slice
+
+`opamp@1` has `minus`, `plus`, `out` pins and exactly `gain`, `minOutput`, `maxOutput`
+parameters. Gain must be finite/positive; output limits must be finite/ordered.
+The adapter emits the existing `a` element with its explicit-gain flag and maps
+its three actual posts to stable pin IDs. Positive reported op-amp current means
+current delivered at the output. The output has an implicit ground reference;
+the inputs have no artificial conductance and need an external reference/feedback
+path. Ideal output/source loops are rejected by the existing preflight policy.
+
+No numerical op-amp equations were ported or changed. Output limits use the legacy
+model's convergence behavior, including small saturation overshoot; tests use its
+finite-gain equations and a 0.01 V saturation tolerance. The unused legacy GBW
+serialization field remains 1 MHz; it does not implement a bandwidth limit.
+See `examples/opamp-noninverting.json` and the editor properties for usage.
+
+Placed voltage probes are document annotations, not catalog devices. A marker
+stores a positive target and `reference: "ground"`; the editor derives its reading
+from accepted component-pin voltages. Probes and label layout stay outside the
+canonical electrical projection; adding a junction for a marker is graph-equivalent.
+
+
+## Sine voltage waveform
+
+`voltageSource@1` also accepts waveform `{kind: "sine", amplitude, frequency, offset}`.
+Amplitude is nonnegative peak volts, frequency positive Hz, offset finite volts.
+All values and output extrema must remain finite. Unknown/missing waveform fields
+are rejected. DC serialization and its canonical projection are unchanged.
+
+The compiler emits the legacy VoltageElm AC waveform (type v, waveform code 1),
+frequency, amplitude, offset and zero phase. No per-timestep transport or new solver
+model is introduced. Worker capability negotiation includes voltageSource:sine@1.
+The existing reset/replacement policy restarts sine phase at zero. Live frequency
+or amplitude changes that preserve simulation time/phase are not implemented.
+
+
+## Periodic waveforms and one-terminal voltage rails
+
+Voltage waveforms additionally support square, triangle, sawtooth and pulse. They
+reuse sine's amplitude/frequency/offset fields; square and pulse require dutyCycle
+as a finite fraction strictly between 0 and 1. Other waveforms reject that extra
+field. Pulse records carry flag 4 so the legacy parser preserves the chosen duty
+instead of applying its old fixed pulse width. Source properties expose duty in %.
+
+`voltageRail@1` has exactly one `p` pin and the same waveform object as voltageSource.
+It emits RailElm (`R`) rather than inventing a second public terminal/ground wire.
+Its implicit ground participates in floating-island and ideal-source-loop preflight,
+including when the document contains no explicit ground symbol. Existing voltageSource
+DC/sine documents and their canonical projections remain unchanged. Rail current is
+positive into p (passive sign), and its only returned pin voltage is p relative to
+ground. Both models roundtrip through worker projection revalidation.
+
+
+## Optional per-step voltage acquisition
+
+createSession.step(count, channels) and the document worker's matching step method
+support up to 32 stable terminal-pair channels for the oscilloscope. Descriptor
+validation precedes stepping. A single returned sampleBatch holds the per-step
+voltage/time arrays plus channel descriptors, alongside the normal final frame.
+Omitting channels keeps the existing call/result behavior. This uses the existing
+engine step hook internally and changes no numerical equations. See
+WORKER-PROTOCOL.md for the request/reply shape and EDITOR-PROTOTYPE.md for the viewer.

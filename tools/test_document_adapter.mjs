@@ -83,3 +83,40 @@ const exposed=compile(document);
 exposed.mapping[0].pins.push('accidental mutation');
 unchanged(document);
 console.log('Document compiler checks passed: graph equivalence, connectivity changes, shorts, validation and fault handling.');
+
+const opamp=JSON.parse(await readFile(new URL('../docs/new-simulator/examples/opamp-noninverting.json',import.meta.url)));
+const opCompiled=compile(opamp),opMapping=opCompiled.mapping.find(m=>m.id==='u1');
+assert.deepEqual(opMapping.pins,['minus','plus','out']);assert.equal(opMapping.sign,-1);
+assert.match(opCompiled.text,/^a \d+ 32 \d+ 32 8 15 -15 1000000 0 0 100000$/m);
+assert.equal(CircuitDocumentAdapter.fromProjection(JSON.parse(opCompiled.canonical),opamp.id).canonical,opCompiled.canonical,'Op-amp worker revalidation');
+for(const update of [{gain:0},{gain:Infinity},{minOutput:15},{maxOutput:-15},{minOutput:NaN},{unknown:1}]){
+ const bad=structuredClone(opamp);Object.assign(bad.electrical.components.find(c=>c.id==='u1').parameters,update);assert.throws(()=>compile(bad),/op-amp|fields/);
+}
+const floatingInput=structuredClone(opamp);floatingInput.electrical.wires=floatingInput.electrical.wires.filter(w=>w.id!=='w1');assert.throws(()=>compile(floatingInput),/Floating/,'No invented input conductance');
+console.log('Op-amp compiler checks passed: post order, output-current sign, worker revalidation and parameter/input validation.');
+
+const sine=JSON.parse(await readFile(new URL('../docs/new-simulator/examples/opamp-sine.json',import.meta.url)));
+const sineCompiled=compile(sine),sourceRecord=sineCompiled.text.split('\n')[sineCompiled.mapping.find(m=>m.id==='vin').index].split(' ');
+assert.deepEqual(sourceRecord.slice(6),['1','1000','0.5','0.25','0','0.5'],'Sine amplitude/frequency/offset encoded without DC shape changes');
+assert.equal(CircuitDocumentAdapter.fromProjection(JSON.parse(sineCompiled.canonical),sine.id).canonical,sineCompiled.canonical);
+for(const update of [{amplitude:-1},{amplitude:Infinity},{frequency:0},{frequency:-100},{frequency:Infinity},{frequency:1e308},{offset:NaN},{offset:Infinity},{phase:1}]){
+ const bad=structuredClone(sine);Object.assign(bad.electrical.components.find(c=>c.id==='vin').parameters.waveform,update);assert.throws(()=>compile(bad),/sine|fields/);
+}
+const zeroSine=structuredClone(sine);zeroSine.electrical.components.find(c=>c.id==='vin').parameters.waveform.amplitude=0;compile(zeroSine);
+console.log('Sine compiler checks passed: legacy encoding, projection revalidation, zero amplitude and invalid-parameter rejection.');
+
+const rail=structuredClone(sine);rail.electrical.components.find(c=>c.id==='vin').kind='voltageRail';rail.electrical.wires=rail.electrical.wires.filter(w=>w.id!=='w2');
+const railCompiled=compile(rail);assert.equal(railCompiled.mapping.find(m=>m.id==='vin').pins.join(','),'p');assert.match(railCompiled.text,/^R /m);
+assert.equal(CircuitDocumentAdapter.fromProjection(JSON.parse(railCompiled.canonical),rail.id).canonical,railCompiled.canonical);
+for(const kind of ['square','triangle','sawtooth','pulse']){
+ const d=structuredClone(rail),w=d.electrical.components.find(c=>c.id==='vin').parameters.waveform;w.kind=kind;
+ if(['square','pulse'].includes(kind))w.dutyCycle=.3;
+ const compiled=compile(d),tokens=compiled.text.split('\n')[compiled.mapping.find(m=>m.id==='vin').index].split(' ');
+ assert.equal(tokens[6],String({square:2,triangle:3,sawtooth:4,pulse:5}[kind]));assert.equal(tokens[5],kind==='pulse'?'4':'0');
+ assert.equal(CircuitDocumentAdapter.fromProjection(JSON.parse(compiled.canonical),d.id).canonical,compiled.canonical);
+ if(['square','pulse'].includes(kind))for(const duty of [0,1,-.1,NaN,Infinity]){const bad=structuredClone(d);bad.electrical.components.find(c=>c.id==='vin').parameters.waveform.dutyCycle=duty;assert.throws(()=>compile(bad),/duty/);}
+}
+const loneRail={schemaVersion:1,id:'rail-only',electrical:{components:[{id:'v',kind:'voltageRail',modelVersion:1,parameters:{waveform:{kind:'dc',voltage:5}}}],junctions:[],wires:[]},simulation:{timeStep:1e-5}};
+compile(loneRail);assert.equal(CircuitDocumentAdapter.fromProjection(JSON.parse(compile(loneRail).canonical),loneRail.id).canonical,compile(loneRail).canonical,'Implicit reference survives worker revalidation without ground symbol');
+const groundedRail=structuredClone(rail);groundedRail.electrical.wires.push({id:'short-rail',from:{kind:'pin',componentId:'vin',pinId:'p'},to:{kind:'pin',componentId:'g1',pinId:'g'}});assert.throws(()=>compile(groundedRail),/loop/);
+console.log('AC/rail compiler checks passed: one-terminal mapping, all periodic waveforms/duty flags, implicit ground, loop guards and projection roundtrips.');

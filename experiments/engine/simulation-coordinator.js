@@ -15,6 +15,7 @@
     let active = null, candidate = null, stepPending = null, replacement = null;
     let desiredDocument = null, desiredCanonical = null, desiredDocumentId = null;
     let documentRevision = 0, circuitRevision = 0, nextEpoch = 0, generation = 0;
+    let sampleChannels=[];
     let lastFrame = null, status = 'empty', lastError = null, disposed = false;
     let runRequested = false, timer = null, livePending = null;
     const idleStatus = () => runRequested ? 'running' : 'paused';
@@ -205,14 +206,14 @@
       if (stepPending || livePending || status === 'loading' || (runRequested && !automatic))
         return Promise.reject(failure('BUSY', 'Simulation is running or an operation is pending'));
       if (!current() || !['paused', 'running'].includes(status)) return Promise.reject(failure('NO_CURRENT_CIRCUIT', 'No simulation matches the desired circuit'));
-      const record = active;
+      const record = active, channels=copy(sampleChannels);
       const previousSequence = lastFrame?.frameSequence || 0;
       const stepGeneration = generation;
       const pending = {};
       status = 'stepping';
       pending.promise = (async () => {
         try {
-          const frame = await Promise.resolve().then(() => record.worker.request('step', {payload: {count}}));
+          const frame = await Promise.resolve().then(() => record.worker.request('step', {payload: {count, ...(channels.length?{channels}:{})}}));
           if (disposed || active !== record || !current(record) || stepGeneration !== generation ||
               !isCurrentFrame(frame, identity(record), previousSequence)) return null;
           lastFrame = copy(frame);
@@ -234,7 +235,7 @@
       publish();
       return pending.promise;
     }
-    return {setDocument, step: count => step(count), getState: state,
+    return {setDocument, setSampleChannels: channels=>{assertOpen();sampleChannels=CircuitDocumentAdapter.normalizeSampleChannels(channels);}, step: count => step(count), getState: state,
       run: () => {
         assertOpen();
         if (status === 'error' || status === 'loading' || !active || active.dead || (!current() && !livePending))

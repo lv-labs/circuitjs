@@ -12,9 +12,18 @@ Revision gating and candidate-worker replacement/reset now run on that boundary;
 see [COORDINATOR.md](COORDINATOR.md). Continuous scheduling and RC live edits are
 also implemented: [RUN-AND-LIVE-EDITS.md](RUN-AND-LIVE-EDITS.md). Editor interaction
 prototype is now implemented in [EDITOR-PROTOTYPE.md](EDITOR-PROTOTYPE.md).
-The latest pass adds grid-aligned pins, ground-at-pin placement, explicit contacts,
-branch-only dots and attached-wire backtracking fixes. Next: clarify separate Move
-and Drag semantics, then inline insertion/wire cleanup. Frontend/platform choice
+The latest pass adds separate Move/Drag commands with atomic undo, a searchable
+component chooser and KiCad-style A/R/M/G/W/E/P shortcuts, building on the
+grid-aligned contacts and local wire cleanup. Inline two-pin insertion now removes
+the bypass span atomically, including spans split by two-way junctions. Next:
+wire-end reconnection and cleanup of rejoined loose wires. The catalog now includes
+three-pin op-amps; X/Y flips, non-loading voltage markers and E/double-click modal
+properties are implemented. Switch bodies single-click to toggle. Sine sources
+with amplitude/frequency/DC offset, selected property values and explicit loose
+wire endings are also implemented. AC/DC sources now have one- and two-terminal
+presets and a waveform selector (including duty for square/pulse). A docked
+oscilloscope now captures per-step worker samples and plots multiple named voltage
+probes together with shared scales, cursor readings and bounded history. Frontend/platform choice
 remains open.
 
 ## Purpose and agreed direction
@@ -107,6 +116,15 @@ Expand models and CircuitJS import compatibility incrementally. Report unsupport
 elements explicitly. Add larger-circuit measurement, error recovery, probes,
 waveform tools, and desktop packaging if selected. Consider Rust engine ports only
 when a demonstrated requirement justifies their validation cost.
+
+## Deferred scope layout request — 2026-11-13
+
+The user wants the future option of multiple independent scope panes arranged
+stacked vertically or side by side. The current single dock already overlays
+multiple voltage probes; separate panes are not implemented. The user explicitly
+deferred this work while ending the session. Probe grouping, linked/independent
+scales and cursors, resizing and layout persistence remain design decisions.
+See the end-of-day section of HANDOFF.md before continuing.
 
 ## Working practices
 

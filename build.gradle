@@ -203,7 +203,7 @@ tasks.register('makeEngineSite', Copy) {
     from(layout.buildDirectory.dir('engine-worker'))
     from('experiments/engine')
     from('docs/new-simulator/examples') {
-        include 'voltage-divider.json', 'switched-rc.json'
+        include 'voltage-divider.json', 'switched-rc.json', 'opamp-noninverting.json', 'opamp-sine.json', 'opamp-ac-rail.json', 'opamp-oscilloscope.json'
         into 'examples'
     }
 }

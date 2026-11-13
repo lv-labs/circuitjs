@@ -1,5 +1,5 @@
 'use strict';
-// Document catalog: resistors, capacitors, DC sources, SPST switches and ground.
+// Document catalog: resistors, capacitors, voltage sources/rails, switches, op-amps and ground.
 // The compiler is pure; only createSession invokes the existing engine.
 (() => {
   const fail = (code, message) => { throw Object.assign(new Error(message), {code}); };
@@ -13,6 +13,8 @@
     ['capacitor', {pins: ['a', 'b'], type: 'c', sign: 1}],
     ['switch', {pins: ['a', 'b'], type: 's', sign: 1}],
     ['voltageSource', {pins: ['n', 'p'], type: 'v', sign: -1}],
+    ['voltageRail', {pins: ['p'], type: 'R', sign: -1}],
+    ['opamp', {pins: ['minus', 'plus', 'out'], type: 'a', sign: -1}],
     ['ground', {pins: ['g'], type: 'g', sign: null}]
   ]);
   function exactFields(value, fields, label) {
@@ -75,17 +77,34 @@
         check(Number.isFinite(capacitance) && capacitance > 0 && Number.isFinite(initialVoltage) &&
           ['trapezoidal', 'backwardEuler'].includes(integration), component.id + ': invalid capacitor');
         parameters = {capacitance, initialVoltage, integration};
+      } else if (component.kind === 'opamp') {
+        exactFields(component.parameters, ['gain', 'minOutput', 'maxOutput'], component.id);
+        const {gain, minOutput, maxOutput} = component.parameters;
+        check(Number.isFinite(gain) && gain > 0 && Number.isFinite(minOutput) && Number.isFinite(maxOutput) &&
+          minOutput < maxOutput && Number.isFinite(maxOutput-minOutput), component.id + ': invalid op-amp gain or output limits');
+        parameters = {gain, minOutput, maxOutput};
       } else if (component.kind === 'switch') {
         exactFields(component.parameters, ['closed'], component.id);
         check(typeof component.parameters.closed === 'boolean', component.id + ': closed must be boolean');
         parameters = {closed: component.parameters.closed};
-      } else if (component.kind === 'voltageSource') {
+      } else if ((component.kind === 'voltageSource' || component.kind === 'voltageRail')) {
         exactFields(component.parameters, ['waveform'], component.id);
         const waveform = component.parameters.waveform;
-        exactFields(waveform, ['kind', 'voltage'], component.id + ' waveform');
-        if (waveform.kind !== 'dc') fail('UNSUPPORTED_MODEL', 'Only DC document sources are supported');
-        check(Number.isFinite(waveform.voltage), component.id + ': invalid voltage');
-        parameters = {waveform: {kind: 'dc', voltage: waveform.voltage}};
+        check(record(waveform), component.id + ': expected waveform');
+        if(waveform.kind === 'dc') {
+          exactFields(waveform, ['kind', 'voltage'], component.id + ' waveform');
+          check(Number.isFinite(waveform.voltage), component.id + ': invalid voltage');
+          parameters = {waveform: {kind: 'dc', voltage: waveform.voltage}};
+        } else if(['sine','square','triangle','sawtooth','pulse'].includes(waveform.kind)) {
+          const duty=['square','pulse'].includes(waveform.kind);
+          exactFields(waveform, ['kind', 'amplitude', 'frequency', 'offset', ...(duty?['dutyCycle']:[])], component.id + ' waveform');
+          const {amplitude, frequency, offset}=waveform;
+          check(Number.isFinite(amplitude) && amplitude >= 0 && Number.isFinite(frequency) && frequency > 0 &&
+            Number.isFinite(2*Math.PI*frequency) && Number.isFinite(offset) && Number.isFinite(offset+amplitude) &&
+            Number.isFinite(offset-amplitude), component.id + ': invalid ' + waveform.kind + ' amplitude, frequency or offset');
+          if(duty)check(Number.isFinite(waveform.dutyCycle)&&waveform.dutyCycle>0&&waveform.dutyCycle<1,component.id+': duty cycle must be between 0 and 1');
+          parameters = {waveform: {kind: waveform.kind, amplitude, frequency, offset, ...(duty?{dutyCycle:waveform.dutyCycle}:{})}};
+        } else fail('UNSUPPORTED_MODEL', 'Unsupported voltage-source waveform');
       } else {
         exactFields(component.parameters, [], component.id); parameters = {}; grounds++;
       }
@@ -95,7 +114,7 @@
       }
       return {id: component.id, kind: component.kind, modelVersion: 1, parameters};
     });
-    check(grounds > 0, 'Explicit ground is required');
+    check(grounds > 0 || devices.some(device=>device.kind==='voltageRail'), 'Explicit ground is required');
     for (const [j, value] of junctions) {
       exactFields(value, ['id'], 'junction');
       add(key(['junction', j]));
@@ -138,7 +157,19 @@
     const adjacency = new Map(nets.map(net => [net.key, new Set()]));
     const sourceParent = new Map(nets.map(net => [net.key, net.key]));
     function sourceRoot(k) { while (sourceParent.get(k) !== k) k = sourceParent.get(k); return k; }
+    const groundNet = nets.find(net => net.ground)?.key || ground;
+    if(!adjacency.has(groundNet)){adjacency.set(groundNet,new Set());sourceParent.set(groundNet,groundNet);}
     for (const device of devices) {
+      if (device.kind === 'voltageRail') {
+        adjacency.get(device.pins.p).add(groundNet);adjacency.get(groundNet).add(device.pins.p);
+        const a=sourceRoot(device.pins.p), b=sourceRoot(groundNet);
+        check(a!==b,'Unsupported ideal source/rail loop: '+device.id);sourceParent.set(a,b);
+      }
+      if (device.kind === 'opamp') {
+        const a=sourceRoot(device.pins.out), b=sourceRoot(groundNet);
+        check(a !== b, 'Unsupported ideal op-amp output/source loop: ' + device.id);
+        sourceParent.set(a,b);
+      }
       const pins = Object.values(device.pins);
       if (pins.length === 2) {
         if (device.kind !== 'switch' || device.parameters.closed) {
@@ -158,11 +189,14 @@
       check(a !== b, 'Unsupported ideal capacitor/source loop: ' + device.id);
       sourceParent.set(a, b);
     }
-    const reached = new Set(nets.filter(net => net.ground).map(net => net.key));
+    // OpAmpElm has an implicit ground-referenced output source, but no input
+    // conductance. Inputs must have an external reference/feedback path.
+    const reached = new Set([groundNet, ...nets.filter(net => net.ground).map(net => net.key),
+      ...devices.filter(device=>device.kind==='opamp').map(device=>device.pins.out)]);
     const queue = [...reached];
     for (let i = 0; i < queue.length; i++) for (const next of adjacency.get(queue[i]))
       if (!reached.has(next)) { reached.add(next); queue.push(next); }
-    check(reached.size === nets.length, 'Floating circuit island is unsupported in this document slice');
+    check(nets.every(net=>reached.has(net.key)), 'Floating circuit island is unsupported in this document slice');
     const diagnostics = nets.filter(net => !net.ground && net.terminals.length === 1).map(net => ({
       code: 'UNCONNECTED_PIN', severity: 'warning', message: 'Pin has no external connection',
       pins: net.terminals.map(([componentId, pinId]) => ({componentId, pinId}))
@@ -188,17 +222,26 @@
       let parameters = '';
       let flags = 0;
       if (device.kind === 'resistor') parameters = ' ' + device.parameters.resistance;
-      if (device.kind === 'voltageSource') parameters = ' 0 40 ' + device.parameters.waveform.voltage + ' 0 0 0.5';
+      if (device.kind === 'voltageSource' || device.kind === 'voltageRail') {
+        const w=device.parameters.waveform;
+        const code={sine:1,square:2,triangle:3,sawtooth:4,pulse:5}[w.kind];
+        if(w.kind==='pulse')flags=4;
+        parameters=w.kind==='dc'?' 0 40 ' + w.voltage + ' 0 0 0.5':` ${code} ${w.frequency} ${w.amplitude} ${w.offset} 0 ${w.dutyCycle??0.5}`;
+      }
       if (device.kind === 'capacitor') {
         flags = device.parameters.integration === 'backwardEuler' ? 2 : 0;
         parameters = ` ${device.parameters.capacitance} ${device.parameters.initialVoltage} ${device.parameters.initialVoltage}`;
       }
       if (device.kind === 'switch') parameters = ` ${device.parameters.closed ? 0 : 1} false`;
-      records.push(`${model.type} ${x} 32 ${x} 64 ${flags}${parameters}`);
+      if (device.kind === 'opamp') {
+        flags=8;parameters=` ${device.parameters.maxOutput} ${device.parameters.minOutput} 1000000 0 0 ${device.parameters.gain}`;
+      }
+      records.push(`${model.type} ${x} 32 ${device.kind==='opamp'?x+32:x} ${device.kind==='opamp'?32:64} ${flags}${parameters}`);
       mapping.push({id: device.id, kind: device.kind, index: engineIndex, pins: [...model.pins], sign: model.sign});
       model.pins.forEach((pin, post) => {
         const [hx, hy] = hubs.get(device.pins[pin]);
-        connections.push(`w ${x} ${32 + post * 32} ${hx} ${hy} 0`);
+        const [px,py]=device.kind==='opamp'?[[x,16],[x,48],[x+32,32]][post]:[x,32+post*32];
+        connections.push(`w ${px} ${py} ${hx} ${hy} 0`);
       });
     });
     return {documentId: document.id, timeStep: document.simulation.timeStep,
@@ -231,6 +274,15 @@
     return compiled;
   }
 
+  function normalizeSampleChannels(channels=[]) {
+    check(Array.isArray(channels)&&channels.length<=32,'Scope supports at most 32 voltage channels');
+    const seen=new Set();
+    const terminal=ref=>{exactFields(ref,['componentId','pinId'],'sample terminal');check(id(ref.componentId)&&id(ref.pinId),'Invalid sample terminal');return {componentId:ref.componentId,pinId:ref.pinId};};
+    return channels.map(channel=>{
+      exactFields(channel,['id','positive','negative'],'sample channel');check(id(channel.id)&&!seen.has(channel.id),'Missing/duplicate sample channel ID');seen.add(channel.id);
+      return {id:channel.id,positive:terminal(channel.positive),negative:channel.negative===null?null:terminal(channel.negative)};
+    }).sort((a,b)=>compare(a.id,b.id));
+  }
   function createSession(engine) {
     let compiled = null, faulted = false, hasFrame = false, sequence = 0;
     function active() {
@@ -277,15 +329,36 @@
         compiled = next; hasFrame = false;
         return {appliedAtTime: raw.time, frameAvailable: false};
       },
-      step: count => {
+      step: (count, channels) => {
         active();
         check(Number.isInteger(count) && count >= 1 && count <= 10000, 'Step count must be 1–10000');
-        return invoke(() => { const raw = engine.step(count); sequence++; hasFrame = true; return frame(raw); });
+        const normalized=normalizeSampleChannels(channels);
+        const locate=ref=>{
+          if(ref===null)return null;
+          const entry=compiled.mapping.find(item=>item.id===ref.componentId),post=entry?.pins.indexOf(ref.pinId);
+          check(entry&&post>=0,'Unknown scope component/pin');return {index:entry.index,post};
+        };
+        // Validate every channel before advancing the solver. Only one batch crosses
+        // the worker boundary; no display-frame downsampling hides intermediate peaks.
+        const targets=normalized.map(channel=>({positive:locate(channel.positive),negative:locate(channel.negative)}));
+        return invoke(() => {
+          if(!normalized.length){const raw=engine.step(count);sequence++;hasFrame=true;return frame(raw);}
+          const times=[],values=normalized.map(()=>[]);let raw;
+          const voltage=ref=>ref===null?0:raw.elements[ref.index]?.voltages[ref.post];
+          for(let i=0;i<count;i++){
+            raw=engine.step(1);
+            check(Number.isFinite(raw.time)&&Number.isFinite(raw.timeStep)&&raw.timeStep>0,'Invalid scope sample time');
+            times.push(Math.max(0,raw.time-raw.timeStep));
+            targets.forEach((target,j)=>{const value=voltage(target.positive)-voltage(target.negative);check(Number.isFinite(value),'Invalid scope sample voltage');values[j].push(value);});
+          }
+          sequence++;hasFrame=true;
+          return {...frame(raw),sampleBatch:{channels:normalized,times,values:Object.fromEntries(normalized.map((channel,i)=>[channel.id,values[i]]))}};
+        });
       },
       snapshot: () => { active(); if (!hasFrame) fail('NO_FRAME', 'Advance simulation before reading results');
         return invoke(() => frame(engine.snapshot())); },
       reset: () => { active(); return install(compiled); }
     };
   }
-  globalThis.CircuitDocumentAdapter = Object.freeze({compile, fromProjection, createSession});
+  globalThis.CircuitDocumentAdapter = Object.freeze({compile, fromProjection, createSession, normalizeSampleChannels});
 })();

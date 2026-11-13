@@ -43,26 +43,36 @@ public class EngineEntryPoint implements EntryPoint {
                 int flags = Integer.parseInt(fields[5]);
                 if (x1 == x2 && y1 == y2)
                     throw new IllegalArgumentException("Zero-length elements are unsupported");
+                boolean voltage = type.equals("v") || type.equals("R");
                 int expected = type.equals("r") ? 7 : type.equals("c") ? 9 :
                     type.equals("l") ? 10 : type.equals("s") ? 8 :
-                    type.equals("v") ? 12 : type.equals("w") || type.equals("g") || type.equals("d") ? 6 : -1;
+                    voltage || type.equals("a") ? 12 : type.equals("w") || type.equals("g") || type.equals("d") ? 6 : -1;
                 if (fields.length != expected)
                     throw new IllegalArgumentException("Unsupported type or field count: " + type);
-                if (flags != 0 && !((type.equals("c") || type.equals("l")) && flags == 2))
+                if (flags != 0 && !((type.equals("c") || type.equals("l")) && flags == 2) && !(type.equals("a") && flags == 8) && !(voltage && flags == 4 && fields[6].equals("5")))
                     throw new IllegalArgumentException("Unsupported flags");
                 for (int i = 6; i < fields.length; i++)
                     if (!(type.equals("s") && i == 7) && !finite(Double.parseDouble(fields[i])))
                         throw new IllegalArgumentException("Non-finite parameter");
                 if ((type.equals("r") || type.equals("c") || type.equals("l")) && Double.parseDouble(fields[6]) <= 0)
                     throw new IllegalArgumentException("Resistance/capacitance must be positive");
-                if (type.equals("v") && !(fields[6].equals("0") || fields[6].equals("1")))
-                    throw new IllegalArgumentException("Only DC and sine voltage sources are supported");
-                if (type.equals("v") && Double.parseDouble(fields[7]) < 0)
+                if (voltage && !(fields[6].equals("0") || fields[6].equals("1") || fields[6].equals("2") ||
+                    fields[6].equals("3") || fields[6].equals("4") || fields[6].equals("5")))
+                    throw new IllegalArgumentException("Unsupported voltage waveform");
+                if (voltage && (Double.parseDouble(fields[11]) <= 0 || Double.parseDouble(fields[11]) >= 1 ||
+                    (fields[6].equals("5") && flags != 4)))
+                    throw new IllegalArgumentException("Expected duty cycle between 0 and 1; pulse requires duty flag");
+                if (voltage && Double.parseDouble(fields[7]) < 0)
                     throw new IllegalArgumentException("Frequency must be nonnegative");
                 if (type.equals("l") && Double.parseDouble(fields[9]) != 0)
                     throw new IllegalArgumentException("Saturating inductors are not supported yet");
                 if (type.equals("s") && (!(fields[6].equals("0") || fields[6].equals("1")) || !fields[7].equals("false")))
                     throw new IllegalArgumentException("Switch requires position 0/1 and momentary=false");
+                if (type.equals("a") && (flags != 8 || x1 == x2 || y1 != y2 ||
+                    Double.parseDouble(fields[6]) <= Double.parseDouble(fields[7]) ||
+                    !finite(Double.parseDouble(fields[6])-Double.parseDouble(fields[7])) ||
+                    Double.parseDouble(fields[11]) <= 0))
+                    throw new IllegalArgumentException("Op-amp requires horizontal geometry, gain flag, ordered limits and positive gain");
                 String parameters = "";
                 for (int i = 6; i < fields.length; i++)
                     parameters += fields[i] + " ";
@@ -71,9 +81,11 @@ public class EngineEntryPoint implements EntryPoint {
                 if (type.equals("r")) elm = new ResistorElm(x1, y1, x2, y2, flags, tokens);
                 else if (type.equals("c")) elm = new CapacitorElm(x1, y1, x2, y2, flags, tokens);
                 else if (type.equals("v")) elm = new VoltageElm(x1, y1, x2, y2, flags, tokens);
+                else if (type.equals("R")) elm = new RailElm(x1, y1, x2, y2, flags, tokens);
                 else if (type.equals("l")) elm = new InductorElm(x1, y1, x2, y2, flags, tokens);
                 else if (type.equals("d")) elm = new DiodeElm(x1, y1, x2, y2, flags, tokens);
                 else if (type.equals("s")) elm = new SwitchElm(x1, y1, x2, y2, flags, tokens);
+                else if (type.equals("a")) elm = new OpAmpElm(x1, y1, x2, y2, flags, tokens);
                 else if (type.equals("w")) elm = new WireElm(x1, y1, x2, y2, flags, tokens);
                 else elm = new GroundElm(x1, y1, x2, y2, flags, tokens);
                 elm.setPoints();

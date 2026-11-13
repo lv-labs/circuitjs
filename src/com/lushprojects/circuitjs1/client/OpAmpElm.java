@@ -118,7 +118,7 @@ import com.google.gwt.xml.client.Document;
 	}
 	void setPoints() {
 	    super.setPoints();
-	    if (dn > 150 && isCreating())
+	    if (app.mouse != null && dn > 150 && isCreating())
 		setSize(2);
 	    int ww = opwidth;
 	    if (ww > dn/2)
@@ -136,7 +136,9 @@ import com.google.gwt.xml.client.Document;
 	    Point tris[] = newPointArray(2);
 	    interpPoint2(lead1,  lead2,  tris[0], tris[1],  0, hs*2);
 	    triangle = createPolygon(tris[0], tris[1], lead2);
-	    plusFont = new Font("SansSerif", 0, opsize == 2 ? 14 : 10);
+	    // Font lookup reads CSS; the editor-free worker only needs pin geometry.
+	    if (app.ui != null)
+	        plusFont = new Font("SansSerif", 0, opsize == 2 ? 14 : 10);
 	}
 	int getPostCount() { return 3; }
 	Point getPost(int n) {

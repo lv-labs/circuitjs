@@ -1,0 +1,364 @@
+{
+  "schemaVersion": 1,
+  "id": "opamp-oscilloscope",
+  "title": "Op-amp oscilloscope \u00b7 input / output",
+  "electrical": {
+    "components": [
+      {
+        "id": "vin",
+        "kind": "voltageRail",
+        "modelVersion": 1,
+        "reference": "V1",
+        "parameters": {
+          "waveform": {
+            "kind": "sine",
+            "amplitude": 0.5,
+            "frequency": 1000,
+            "offset": 0.25
+          }
+        }
+      },
+      {
+        "id": "u1",
+        "kind": "opamp",
+        "modelVersion": 1,
+        "reference": "U1",
+        "parameters": {
+          "gain": 100000,
+          "minOutput": -15,
+          "maxOutput": 15
+        }
+      },
+      {
+        "id": "rf",
+        "kind": "resistor",
+        "modelVersion": 1,
+        "reference": "R1",
+        "parameters": {
+          "resistance": 10000
+        }
+      },
+      {
+        "id": "rg",
+        "kind": "resistor",
+        "modelVersion": 1,
+        "reference": "R2",
+        "parameters": {
+          "resistance": 10000
+        }
+      },
+      {
+        "id": "load",
+        "kind": "resistor",
+        "modelVersion": 1,
+        "reference": "R3",
+        "parameters": {
+          "resistance": 10000
+        }
+      },
+      {
+        "id": "g1",
+        "kind": "ground",
+        "modelVersion": 1,
+        "reference": "GND",
+        "parameters": {}
+      }
+    ],
+    "junctions": [
+      {
+        "id": "feedback"
+      },
+      {
+        "id": "output"
+      },
+      {
+        "id": "return"
+      },
+      {
+        "id": "input"
+      }
+    ],
+    "wires": [
+      {
+        "id": "w1",
+        "from": {
+          "kind": "pin",
+          "componentId": "vin",
+          "pinId": "p"
+        },
+        "to": {
+          "kind": "junction",
+          "junctionId": "input"
+        }
+      },
+      {
+        "id": "w3",
+        "from": {
+          "kind": "pin",
+          "componentId": "u1",
+          "pinId": "minus"
+        },
+        "to": {
+          "kind": "junction",
+          "junctionId": "feedback"
+        }
+      },
+      {
+        "id": "w4",
+        "from": {
+          "kind": "pin",
+          "componentId": "rf",
+          "pinId": "a"
+        },
+        "to": {
+          "kind": "junction",
+          "junctionId": "feedback"
+        }
+      },
+      {
+        "id": "w5",
+        "from": {
+          "kind": "pin",
+          "componentId": "rg",
+          "pinId": "a"
+        },
+        "to": {
+          "kind": "junction",
+          "junctionId": "feedback"
+        }
+      },
+      {
+        "id": "w6",
+        "from": {
+          "kind": "pin",
+          "componentId": "rf",
+          "pinId": "b"
+        },
+        "to": {
+          "kind": "junction",
+          "junctionId": "output"
+        }
+      },
+      {
+        "id": "w7",
+        "from": {
+          "kind": "pin",
+          "componentId": "u1",
+          "pinId": "out"
+        },
+        "to": {
+          "kind": "junction",
+          "junctionId": "output"
+        }
+      },
+      {
+        "id": "w8",
+        "from": {
+          "kind": "pin",
+          "componentId": "load",
+          "pinId": "a"
+        },
+        "to": {
+          "kind": "junction",
+          "junctionId": "output"
+        }
+      },
+      {
+        "id": "w9",
+        "from": {
+          "kind": "pin",
+          "componentId": "load",
+          "pinId": "b"
+        },
+        "to": {
+          "kind": "junction",
+          "junctionId": "return"
+        }
+      },
+      {
+        "id": "w10",
+        "from": {
+          "kind": "pin",
+          "componentId": "rg",
+          "pinId": "b"
+        },
+        "to": {
+          "kind": "junction",
+          "junctionId": "return"
+        }
+      },
+      {
+        "id": "w11",
+        "from": {
+          "kind": "pin",
+          "componentId": "g1",
+          "pinId": "g"
+        },
+        "to": {
+          "kind": "junction",
+          "junctionId": "return"
+        }
+      },
+      {
+        "id": "w-input",
+        "from": {
+          "kind": "junction",
+          "junctionId": "input"
+        },
+        "to": {
+          "kind": "pin",
+          "componentId": "u1",
+          "pinId": "plus"
+        }
+      }
+    ]
+  },
+  "layout": {
+    "components": {
+      "vin": {
+        "x": 128,
+        "y": 192,
+        "rotation": 0,
+        "mirror": false
+      },
+      "u1": {
+        "x": 384,
+        "y": 208,
+        "rotation": 0,
+        "mirror": false
+      },
+      "rf": {
+        "x": 384,
+        "y": 96,
+        "rotation": 0,
+        "mirror": false
+      },
+      "rg": {
+        "x": 256,
+        "y": 352,
+        "rotation": 90,
+        "mirror": false
+      },
+      "load": {
+        "x": 560,
+        "y": 320,
+        "rotation": 90,
+        "mirror": false
+      },
+      "g1": {
+        "x": 128,
+        "y": 432,
+        "rotation": 0,
+        "mirror": false
+      }
+    },
+    "junctions": {
+      "feedback": {
+        "x": 336,
+        "y": 192
+      },
+      "output": {
+        "x": 560,
+        "y": 208
+      },
+      "return": {
+        "x": 128,
+        "y": 400
+      },
+      "input": {
+        "x": 224,
+        "y": 224
+      }
+    },
+    "wires": {
+      "w1": {
+        "bends": []
+      },
+      "w3": {
+        "bends": []
+      },
+      "w4": {
+        "bends": []
+      },
+      "w5": {
+        "bends": [
+          {
+            "x": 256,
+            "y": 192
+          }
+        ]
+      },
+      "w6": {
+        "bends": [
+          {
+            "x": 560,
+            "y": 96
+          }
+        ]
+      },
+      "w7": {
+        "bends": []
+      },
+      "w8": {
+        "bends": []
+      },
+      "w9": {
+        "bends": [
+          {
+            "x": 560,
+            "y": 400
+          }
+        ]
+      },
+      "w10": {
+        "bends": [
+          {
+            "x": 256,
+            "y": 400
+          }
+        ]
+      },
+      "w11": {
+        "bends": []
+      },
+      "w-input": {
+        "bends": []
+      }
+    },
+    "probes": {
+      "probe-output": {
+        "x": 16,
+        "y": -32
+      },
+      "probe-input": {
+        "x": -32,
+        "y": -80
+      }
+    }
+  },
+  "probes": [
+    {
+      "id": "probe-output",
+      "kind": "voltage",
+      "positive": {
+        "kind": "junction",
+        "junctionId": "output"
+      },
+      "reference": "ground",
+      "label": "Vout"
+    },
+    {
+      "id": "probe-input",
+      "kind": "voltage",
+      "positive": {
+        "kind": "junction",
+        "junctionId": "input"
+      },
+      "reference": "ground",
+      "label": "Vin"
+    }
+  ],
+  "simulation": {
+    "timeStep": 1e-05
+  }
+}

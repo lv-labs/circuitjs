@@ -136,6 +136,10 @@ window.oncircuitengineready = async engine => {
     await verifyDocumentWorker(report);
     await verifyCoordinator(report);
     await verifyContinuousSimulation(report);
+    await verifyOpamps(report,engine);
+    await verifySineSources(report,engine);
+    await verifyWaveformsAndRails(report,engine);
+    await verifyScopeSamples(report,engine);
 
     if (new URLSearchParams(location.search).has('baseline')) {
       const api = await loadBaseline();
