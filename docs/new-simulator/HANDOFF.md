@@ -7,16 +7,76 @@ batch-specific verification restrictions are not current instructions.
 
 ## User direction and immediate next step
 
-The user is happy with recent interaction fixes but is cautious about spending
-more time on the current UI because they intend to start fresh later. The current
-SVG/browser editor remains an interaction/reference harness. No final UI toolkit,
-language or target platform has been chosen; Rust/WASM remains an option, not a
-requirement or authorization to port the solver.
+The agreed direction is **React/TypeScript in `wires/`, shadcn/component libraries
+for the application shell, and SVG for the actual circuit sheet**. The user likes
+the working editor experience; they want to style it properly and split its code
+into manageable components. This is an incremental React migration of the existing
+behavior, not a redesign of wiring/dragging rules.
 
-The user authorized step 1 (extract reusable code while preserving the UI). It is
-implemented in [packages/circuit-core](../../packages/circuit-core/README.md).
-The next proposed work is a small fresh frontend comparison using that package;
-no replacement UI/toolkit or additional component family has been selected.
+The user considered Rust/GPUI but now prioritizes fewer runtime language/translation
+layers. Keep the JavaScript core and existing simulator. Desktop packaging remains
+a later goal; no Tauri/Electron choice or solver port is selected. Canvas is a
+possible future renderer only if measured performance warrants it.
+
+The user also chose **one authored TSX file per symbol**, co-locating its metadata
+(kind/pin IDs, local pin positions, defaults/parameter metadata) and React SVG view.
+For example, `resistor.tsx` should be the place to change the resistor body and
+pins. The view must draw its endpoints from that shared metadata. Generate a
+plain-data catalog for the core/worker; do not introduce a React/TSX runtime
+requirement into the headless package or maintain duplicate handwritten pin data.
+This symbol-authoring pipeline has been discussed, not implemented.
+
+**First task tonight:** read [PLAN.md](PLAN.md), inspect current Git changes, then
+prove resistor symbol co-location and data-only metadata generation for one kind.
+After that, connect a small React SVG divider sheet to the existing editing/core
+and worker APIs. Keep the original browser editor running as the behavior reference.
+Do not start by porting all 65 symbols or rebuilding the simulator.
+
+## Concrete continuation guide
+
+1. Work in `circuitjs-new-sim` on branch `new-sim`, not the original `circuitjs` checkout.
+2. Read the [core API guide](../../packages/circuit-core/README.md) and
+   [dragging contract](DRAGGING.md). Confirm existing behavior before changing UI code.
+3. Current drawings are in `experiments/engine/editor.js`, the `symbol()` function;
+   the resistor SVG is near line 111. Local resistor pins/defaults are in
+   `packages/circuit-core/catalog.js` near line 1163. World pin placement is
+   `packages/circuit-core/geometry.js`, `pin()`. These are the migration inputs.
+4. Proposed new authoring package: `packages/circuit-symbols/src/resistor.tsx`.
+   It does not exist yet. The agreed requirement is one authoritative authored
+   definition/view per symbol; the exact package/build implementation is still work.
+5. Use separate React components for the application shell, sheet, wires,
+   symbols, selection/preview overlays, menus, panels and dialogs. A focused hook
+   should adapt the shared document/history/simulation sessions to React.
+6. First working fixture: the existing saved divider; support resistor, voltage
+   source and ground, then capacitor/RC. Preserve saved IDs, pin identities and
+   document format. Keep lead drawing and hit/snapping positions in agreement.
+7. Carry over the existing interactions and one live measurement, then compare
+   against the original app. Add focused checks and migrate other symbols/UI in
+   batches. Do not embed the old page in an iframe or create another monolithic
+   renderer. [PLAN.md](PLAN.md) records acceptance criteria and remaining decisions.
+
+Start the scaffold separately from the reference app:
+
+```sh
+cd ~/Documents/lv-labs/circuitjs-new-sim
+pnpm --dir wires install --frozen-lockfile
+pnpm --dir wires dev
+```
+
+Use the URL Vite prints; it is a separate app from the reference editor on 8765.
+`pnpm --dir wires build` verifies its production build. Worker/core asset serving
+still needs integration into this Vite app. `wires/src/App.tsx` currently contains
+only starter content, so this command does not yet open a circuit editor.
+
+Suggested continuation prompt:
+
+> Read docs/new-simulator/HANDOFF.md and PLAN.md plus the circuit-core README.
+> Preserve current local changes. Continue the React/shadcn/SVG migration in wires/,
+> retaining the existing editor's behavior and keeping its reference app working.
+> Start with one authored resistor.tsx containing metadata/pins/defaults and its
+> React SVG view, with a generated data-only catalog consumed by the headless core.
+> Keep React out of core/worker runtime dependencies. Then connect a divider sheet
+> to the existing commands, history and worker; do not rewrite the simulator.
 
 ## Shared-core extraction — 2026-11-16
 
@@ -55,9 +115,17 @@ no replacement UI/toolkit or additional component family has been selected.
 Work is in the separate `circuitjs-new-sim` worktree on branch `new-sim`.
 The neighboring `circuitjs` checkout is `master`; changing Java editor files there
 does not change the experimental editor served from `build/engine-site` here.
-Recheck Git state before working. There is substantial accumulated uncommitted
-Java, JS, test, fixture and documentation work. Preserve it; this session did not
-commit, push or deploy it.
+Code through commit `1224f84e` was committed and pushed to `origin/new-sim`,
+including the shared core and `wires/` scaffold. The unwanted early wire-merger
+changes in the original `master` checkout were discarded; that checkout was clean
+at the commit checkpoint. `wires/` is tracked as ordinary files in the main repo,
+not as a nested repository/submodule.
+
+Recheck Git state before working. At this documentation update there are local
+changes in `experiments/engine/editor.js`; preserve them. This documentation
+checkpoint excludes that local editor edit. Earlier code verification refers to
+the committed extraction checkpoint; newer local editor changes were not
+revalidated here. Fetch the latest `new-sim` before continuing. Nothing was deployed.
 
 Important runtime files:
 
@@ -165,8 +233,9 @@ The single computational entry command is now `node tools/check_core.mjs`.
 
 A full `makeEngineSite` Java/GWT build passed during the drag replacement. Later
 JS-only changes were packaged with its existing compiled engine/worker artifacts;
-no additional Java changes were needed. The built site matches the current editor
-sources. The extraction also passed a fresh full Java/GWT/site build and repackaging.
+no additional Java changes were needed. The extraction also passed a fresh full
+Java/GWT/site build and repackaging. Those checks describe that code checkpoint,
+not newer local editor changes or the planned React migration.
 
 ## Build and run
 
@@ -196,7 +265,7 @@ changes have been published.
 
 ## Reading order and remaining limits
 
-1. [PLAN.md](PLAN.md): current direction and recommended UI-independent next milestone.
+1. [PLAN.md](PLAN.md): agreed React/SVG direction, one-file symbol contract and next milestone.
 2. [DRAGGING.md](DRAGGING.md): implemented geometry/interaction rules.
 3. [DOCUMENT-ADAPTER.md](DOCUMENT-ADAPTER.md), [COORDINATOR.md](COORDINATOR.md),
    [WORKER-PROTOCOL.md](WORKER-PROTOCOL.md), [RUN-AND-LIVE-EDITS.md](RUN-AND-LIVE-EDITS.md):
@@ -209,5 +278,6 @@ changes have been published.
 No general legacy text importer/example chooser exists. Bus/hierarchical objects
 and many original variants remain outside the current document model. Large-scene
 performance, broad browser/platform coverage, workspace/scope-layout persistence
-and a replacement frontend comparison remain open. The shared-core extraction is now implemented. Further component expansion and a
-fresh UI remain separate future tasks; preserve this package and its checks.
+and desktop packaging remain open. The shared-core extraction is implemented;
+the agreed next work is the incremental React/SVG migration described above.
+The existing behavior tests and simulator remain the reference throughout.

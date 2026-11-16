@@ -10,12 +10,19 @@ Build a new editor while preserving CircuitJS's electrical models and simulation
 algorithms. KiCad is the interaction reference. Stable document identities and
 explicit connectivity must survive a change of frontend.
 
-The current browser/SVG application is a working interaction and integration
-prototype, not a commitment to the final UI. The latest user direction is to avoid
-investing too much further in it because a fresh UI is intended later. Rust/WASM,
-TypeScript, target platforms, toolkit and final repository layout remain undecided.
-The user has authorized the shared-core extraction below; it is now implemented.
-No UI rewrite, toolkit selection or engine port has been selected.
+The agreed starting direction is a **React/TypeScript application in `wires/`,
+with shadcn/component libraries for the surrounding UI and an SVG editor sheet**.
+The user likes the existing editor's behavior and is not asking for a new
+interaction design. Migrate that behavior into an application they can style and
+organize themselves: menus, panels, dialogs and symbols in separate components.
+
+The JavaScript shared core and existing CircuitJS simulator remain in place.
+Keep direct JS/TS calls between the UI and editing core, with simulation in its
+existing asynchronous worker. Minimizing runtime language/translation boundaries
+is a priority. Rust/GPUI and a solver rewrite are not the current workstream.
+Desktop packaging is desired later, but Tauri versus Electron and platform scope
+remain undecided. SVG is the starting renderer; Canvas can be reconsidered if
+representative measurements establish a need.
 
 ## Current checkpoint
 
@@ -44,43 +51,86 @@ share the same implementation. The reference UI uses compatibility adapters.
 
 A standalone consumer imports only this package, edits a divider and drives the
 real retained worker without the prototype renderer/inspector. The numerical,
-worker and history/interaction tests remain the portability boundary. This is not
-a final UI stack decision, and no new UI was built.
+worker and history/interaction tests remain the portability boundary. The subsequent discussion chose React/SVG as the next starting direction.
+`wires/` is still only a scaffold; the migration below has not been implemented.
 
-## Recommended next milestone: a small fresh frontend comparison
+## Next milestone: migrate the working editor into React
 
-Steps 1–3 below describe the now-completed extraction/checkpoint. The next proposed
-implementation is step 4: one small vertical slice. Defer additional cosmetic work
-on the old shell; retain it as a behavior/reference harness.
+This replaces the earlier frontend-comparison recommendation. Build on `wires/`
+and preserve the current sheet behavior. Keep `experiments/engine/editor.html`
+working as the complete reference application throughout the migration; do not
+replace it with an iframe or copy its large renderer/event-handler file wholesale.
+The new sheet should be a real React/SVG view over the existing core.
 
-1. **Define the reusable boundary.** Document the contract for a circuit document,
-   component/pin metadata, edit commands and drag sessions, undo transactions,
-   simulation requests/results and sampled signals. Distinguish electrical pin
-   geometry from SVG symbols and DOM input handling. Reuse existing APIs where
-   they are sufficient; avoid inventing a large abstraction layer.
-2. **Separate and verify that boundary.** Move reusable catalog/geometry/command
-   code out of the prototype shell incrementally. This is now implemented in the
-   shared package; `editor-model.js`
-   and the old adapter entry points delegate to it. Keep metadata/commands shared
-   instead of duplicating them in the next frontend. Document IDs/formats and
-   engine behavior remain unchanged.
-3. **Checkpoint portability.** Maintain one repeatable check command plus saved
-   fixtures for divider/RC simulation, live edits, wires/junctions, drag/cancel,
-   detached rotation/flip, wire-to-pin connection, undo/redo and save/open. Keep
-   numerical/worker tests independent of browser UI tests. The old editor becomes
-   the reference harness that exercises the same core.
-4. **Then compare frontend candidates with one small vertical slice.** Build/open
-   the same saved divider or RC circuit, place/connect a component, perform a
-   connected drag and detached rotation, undo, and plot a probe using the existing
-   worker. Compare input/text handling, trackpad/high-DPI behavior, accessibility,
-   implementation effort and packaging. Choose the stack from evidence before
-   building a replacement full application.
+1. **Prove one-file symbol authoring with the resistor.** A per-symbol TSX file
+   should own its stable kind/pin IDs, local pin positions, defaults and applicable
+   parameter metadata, plus its React SVG component. Draw the lead endpoints from
+   that metadata instead of repeating coordinates in markup. See the contract below.
+   Prove a plain data-only catalog can be generated without loading React in the
+   computational runtime. Do this for one kind before converting the whole catalog.
+2. **Wire the React shell to the core.** Add a focused adapter/hook owning one
+   editing/history session, committed document subscription, separate previews and
+   simulation lifecycle. Use shadcn/components for toolbars, panels, menus, dialogs
+   and forms. Keep styling/tokens separate from electrical/editing behavior.
+3. **Render one existing circuit.** Use the saved divider first; add resistor,
+   voltage-source and ground symbol components, then capacitor for the RC fixture.
+   Use separate sheet, wire, symbol, selection and preview layers. Preserve stable
+   React keys, coordinate transforms, upright labels and core-defined hit/snapping
+   behavior. Leave the original app available for unsupported symbol kinds; never
+   silently discard components from an opened document.
+4. **Carry over interactions incrementally.** Pan/zoom, selection, pointer/G drag,
+   detached M/rotation/flip, wire creation, floating-end routing, wire-to-pin drops,
+   delete and undo/redo must call shared operations. Keep pointer previews local;
+   commit once, then notify autosave/simulation. Do not reimplement circuit rules
+   in React event handlers.
+5. **Connect the real worker and one live measurement.** Reuse the adapter,
+   coordinator and transport, including session/revision guards and native live
+   updates. Configure Vite/build asset paths for core and compiled worker resources;
+   changing the frontend must not require changing solver equations or saved files.
+6. **Expand only after that slice works.** Migrate remaining symbols, chooser,
+   property forms and scopes in manageable batches. Preserve current behavior and
+   make each part easy to style. Measure pan/zoom/drag with simulation running and
+   representative scenes; avoid rebuilding the entire SVG scene on every update.
 
-Exit: a new frontend can load/edit/simulate the same document and run the core
-regressions without importing the old `editor.js`, SVG renderer or inspector.
-The aim is to replace the UI shell while retaining validated domain behavior.
-Full component parity and legacy import are not prerequisites for starting that
-fresh frontend slice.
+First acceptance checkpoint: the React app loads the existing divider, renders the
+same circuit, pans/zooms, selects/drags/rotates, undoes, and shows a correct live
+measurement. Existing core checks pass and the reference UI still works. Full
+library parity, a visual redesign and a desktop wrapper are not prerequisites.
+
+## Symbol authoring contract
+
+**One authored file per symbol** is the user's chosen direction. A file such as
+`resistor.tsx` should co-locate metadata and the React view, so changing the shape,
+lead lengths, pin locations or defaults does not require hand-editing another
+catalog elsewhere. Proposed location: a reusable `packages/circuit-symbols/src/`
+package imported by `wires/`; this package/path and the build tooling do not exist
+yet. Keep ordinary UI components under `wires/src/components/` and sheet/layer code
+under `wires/src/editor/`. The important decision is ownership, not filename case.
+
+The UI imports the view and metadata. A build step emits the **data-only** portion
+for `circuit-core` and workers. This generated artifact is not a second handwritten
+source and adds no runtime Rust/JavaScript bridge. Generated catalog freshness and
+pin/default equivalence need checks. Do not make the core or worker import TSX,
+React, shadcn, a DOM renderer or an SVG component at runtime.
+
+Keep stable component kinds/pin IDs, current metadata shape, schema-v1 files and
+explicit connectivity. Native simulator post order/current conventions remain
+explicit and distinct from SVG/display pin order. Electrical equations remain in
+the retained simulator. For each migrated kind, switch ownership atomically so its
+pin geometry/defaults are not maintained in both the authored file and catalog.
+
+Current source locations, before this migration:
+
+- SVG strings: `experiments/engine/editor.js`, `symbol()` (resistor branch near line 111).
+- Local pin geometry/defaults: `packages/circuit-core/catalog.js`
+  (`basicDefinitions` and `outputSpecs`; resistor definition near line 1163).
+- World-coordinate pin transforms: `packages/circuit-core/geometry.js`, `pin()`.
+- `wires/src/App.tsx`: starter content only; no circuit sheet or symbol TSX files yet.
+
+A renderer-only edit may change the body, stroke, color and labels freely. Editing
+pin positions in the authored definition must change both visible lead endpoints
+and core hit/snapping/connection geometry together. Include a regression check for
+that relationship rather than drawing a second, independently positioned pin.
 
 ## Library work after the boundary checkpoint
 
@@ -117,9 +167,9 @@ all 374 bundled files load because their record types appear in the catalog.
   batch-specific requests to skip browser checks are historical; recent drag,
   orientation and wire-drop work was browser-tested. Broader catalog/UI behavior
   is not thereby certified.
-- Record scope-layout persistence, target platforms, toolkit and migration policy
-  when decided. Multiple scope panes exist; their arrangement/settings are not a
+- Record scope-layout persistence, desktop wrapper/platforms and migration policy
+  when decided. React/SVG is the agreed starting direction. Multiple scope panes exist; their arrangement/settings are not a
   final persistent workspace design.
 - Preserve accumulated uncommitted work in `new-sim`; no reset, commit, push,
-  deployment is implied by the extraction. The core is implemented; a fresh UI
-  comparison remains proposed work.
+  deployment is implied by a documentation update. Code through `1224f84e` is
+  already committed/pushed on `new-sim`; recheck and preserve newer local changes.
