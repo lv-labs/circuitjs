@@ -175,7 +175,7 @@ abstract class GateElm extends CircuitElm {
 	}
 
 	String getGateText() { return null; }
-	static boolean useEuroGates() { return app.menus.euroGatesCheckItem.getState(); }
+	static boolean useEuroGates() { return app.menus != null && app.menus.euroGatesCheckItem.getState(); }
 
 	void drawGatePolygon(Graphics g) {
 	    drawThickPolygon(g, gatePoly);

@@ -432,3 +432,170 @@ Suggested next-session prompt:
 > implemented and verified. Multiple separate scopes stacked or side by side are
 > a recorded future request, explicitly deferred at the end of the session. Ask
 > what the user wants to work on next before starting another feature.
+
+## Wire endpoints, grid and scope panes — 2026-11-14
+
+User authorized endpoint reconnection/cleanup, multiple scope panes, and a background
+ grid. This supersedes the previous deferred-scope instruction. The starting worktree
+was clean at 7e0b4e9c, tracking origin/new-sim; earlier uncommitted warnings are historical.
+
+Implemented:
+- Select-mode drag of a single degree-one junction picks up its wire endpoint.
+  Preview snaps to pins, other junctions and wire interiors, excluding its own wire.
+  Release reconnects atomically; Escape/cancel discards the preview. Empty drops
+  reposition the loose end. Existing Wire-mode continuation remains available.
+- Reconnection removes the redundant source junction, retargets attached voltage
+  probes, and normalizes adjacent bends. Interior drops split the destination wire
+  explicitly. Existing wire IDs and destination junctions/branches remain intact.
+  Two-way graph subdivision is retained deliberately; no global route simplifier
+  or obstacle router was introduced. Own-wire/opposite-endpoint joins are rejected.
+- Lines/Dots/Off background grid selector, default Lines, aligned with pan/zoom and
+  the existing 16-unit snapping. Grid display does not alter snapping/connectivity.
+- Up to four scope panes, added with + Pane and individually removable except the
+  original pane. Stacked/side-by-side responsive layouts, native vertical resize,
+  per-pane channel checkboxes and auto/manual V/div. Shared time/div and cursor;
+  one existing bounded acquisition buffer, no extra stepping. Pane/grid settings
+  remain session-only, excluded from circuit JSON. Side-by-side wraps on narrow views.
+
+Verification: all six Node suites passed, including new endpoint tests for pin,
+loose-end and wire-interior joins, own-wire snap exclusion, stable wire IDs, probe
+retargeting, redundant-junction cleanup and exact undo/redo. JS syntax and git diff
+--check passed. Added browser regression cases for endpoint drag/cancel/history,
+multiple panes, shared capture/cursor, independent channels/scales and grid modes.
+These new browser cases have NOT run: local HTTP bind is denied by this sandbox,
+and the browser-control tool reports Chrome unavailable. makeEngineSite also could
+not run because the Gradle wrapper cache lock is outside writable paths. Existing
+compiled engine output was retained and changed frontend assets copied into
+build/engine-site for preview. No Java/solver changes, commit or deployment.
+
+Next: run makeEngineSite and the editor/engine browser suites outside the restricted
+session, review the multi-pane layout visually, and assess endpoint snapping in use.
+
+## Clipboard, selection and library priority — 2026-11-14
+
+Implemented in editor-model.js/editor.js with toolbar/shortcut additions:
+- In-tab copy/paste (Ctrl/Command C/V), duplicate (Ctrl/Command D), cursor preview,
+  click placement and cancellation. Fresh IDs and unique component references,
+  explicit boundary stubs, copied internal selected wiring and attached probes.
+  Paste/contact detection commits as one undoable edit; previews remain transient.
+- Directional marquee: left-to-right encloses complete bounds/routes; right-to-left
+  intersects bounds/segments; Shift adds. Solid blue versus dashed green outline.
+See EDITOR-PROTOTYPE.md for clipboard scope and selection details.
+
+User's next major priority is the full Falstad component set and all example
+circuits, ahead of further editor polish. Added tools/inventory_legacy_catalog.py
+and generated LEGACY-CATALOG.md/.json: 140 menu class references, 150 source element
+subclasses (including bases/aliases), 125 resolved serialized types, 374 circuit
+files, 368 menu entries, zero missing menu files. This inventories this fork only,
+not upstream parity or runtime compatibility. No importer/new component models
+were added in this pass. Next: legacy text import for existing models, then passive
+and semiconductor model coverage, with the example dependency inventory guiding
+subsequent families. Full migration sequence is in LEGACY-CATALOG.md.
+
+Verification preference supersedes the previous next-task browser recommendation:
+the user explicitly requests build-error checks only for this batch, no browser
+verification, screenshots, visual checks or browser use. JS syntax checks passed.
+makeEngineSite was attempted but failed before compilation on the Gradle wrapper
+cache lock outside the writable sandbox. No functional suites were run this pass.
+Updated frontend files copied to existing build/engine-site; this is not a fresh
+engine build. Earlier uncommitted changes preserved. Nothing committed/deployed.
+
+## Component expansion milestone — 2026-11-14
+
+Latest direction: prioritize components; legacy circuit import can wait. The user
+requested all component checks. Non-browser model/compiler/numerical/worker checks
+were run; browser automation, screenshots and visual QA remain excluded.
+
+Added 16 document/editor models, bringing the supported catalog to 23:
+inductor, default diode, DC current source, potentiometer, NPN/PNP transistors,
+N/P MOSFETs, N/P JFETs, two-input AND/NAND/OR/NOR/XOR gates and inverter. Each has
+placement geometry, symbols, properties where applicable, validation, compiler
+records, stable pin mapping and capability advertisement. Existing graph editing,
+copy/paste, undo, source presets and probes use these definitions. No legacy import.
+
+Java loader additions are explicitly validated. PotElm skips UI slider creation
+when the old UI is absent; its computational position is retained. GateElm's drawing
+style query tolerates absent menus. Engine initializes its private geometry grid.
+CurrentElm's loader historically replaces zero current with 10 mA; the host restores
+the requested zero after construction. Numerical stamping/stepping equations were
+not changed. Synthetic compiler component spacing increased to avoid extra-pin
+coordinate collisions. Ideal current sources without a return path are rejected.
+
+Limits: diode is the default legacy model; transistors/FETs use the base models,
+not the complete named-device library. Gates currently have two inputs and a logic
+high parameter; inverter also has slew rate. Pot position 0..1 is a property edit,
+not a live slider/state-preserving event. BJT/pot expose pin voltages but omit a
+single ambiguous component-current value. MOS/JFET current is the legacy signed
+Ids; logic output uses negative current for delivery (passive output convention).
+No per-terminal current UI was added. Full 140-menu-class coverage is NOT complete.
+
+Build/check results:
+- `python3 tools/build_engine_cached.py` succeeded: Java compilation, browser engine
+  GWT compilation and DOM-free worker GWT compilation, then engine-site assembly.
+  This offline fallback reads existing cached GWT 2.8.2 jars without Gradle locks;
+  ordinary `makeEngineSite` remains the normal build path. No network/downloads.
+- All six existing Node suites passed (editor model, document adapter, coordinator,
+  continuous simulation, scope model, scope sampling). The old unsupported-inductor
+  assertion now checks an explicitly unknown model instead.
+- `node tools/test_component_catalog.mjs` passed: analytic RL, initial states,
+  current-source signs/zero, loaded potentiometer positions/endpoints, diode forward
+  behavior, NPN/PNP gain, MOS/JFET polarity and cutoff, gate truth tables, reset,
+  projections and all six saved numerical baselines at absolute tolerance 1e-12.
+- `node tools/test_component_worker.mjs` passed for all 16 additions using a real
+  Node worker thread, the production revision protocol/adapter and compiled engine:
+  advertised capabilities, guarded install and worker/direct result agreement.
+- Syntax and diff whitespace checks passed. No browser checks/visual QA performed.
+
+The new Node runtime helper loads the generated worker bundle in an isolated VM
+without window/document shims. This validates computation and thread isolation;
+it is not a claim about browser compatibility. The legacy solver prints nonfatal
+cross-matrix diagnostics during potentiometer endpoint checks; the asserted loaded
+voltages/reset checks pass, but wider endpoint topology coverage remains warranted.
+
+Next component families: transformers, switch variants, LEDs/Zeners; then sequential
+logic/chips, composite/behavioral and specialized devices. LEGACY-CATALOG lists the
+remaining source inventory, not a blanket compatibility claim. Full catalogue work
+remains open. Work is uncommitted; prior edits preserved; no deployment.
+
+## Transformers, multipole switches and LEDs/Zeners — 2026-11-14
+
+Added five more models, bringing the document/editor catalog to 28:
+- `transformer@1`: linear coupled windings, primary inductance, secondary/primary
+  turns ratio, coupling strictly between 0 and 1, BE/trapezoidal integration.
+  Pins p1/p2 are primary, s1/s2 secondary. Both winding circuits require a reference;
+  magnetic coupling does not create a conductive path across the isolation barrier.
+- `spdtSwitch@1`: common/a/b, A/B/center-off positions.
+- `dpdtSwitch@1`: two linked poles, common1/a1/b1 and common2/a2/b2, A/B positions.
+  Single-click cycles positions using existing click-vs-double-click discrimination;
+  E/properties also selects position. These edits replace/reset the simulation;
+  state-preserving switch support remains limited to the existing SPST RC path.
+- `led@1`: forward voltage at 1 A and full-brightness current, fixed red symbol with
+  current-dependent fill. Brightness current is a display threshold, not a limiter.
+- `zener@1`: forward voltage at 1 A and reverse breakdown voltage.
+
+New loader records are validated before construction. Existing TransformerElm,
+Switch2Elm, DPDTSwitchElm, LEDElm and ZenerElm electrical models are unchanged.
+Compiler uses actual engine post order and private geometry, including six DPDT
+posts. It checks transformer coefficient finiteness, floating windings and ideal
+switch loops. Transformer/DPDT omit an ambiguous single current; all public pin
+voltages are mapped. No tapped/saturating transformer, variable pole count, linked
+switch groups, momentary push-button or named diode-model library in this slice.
+
+Verification completed without browser/visual checks:
+- `python3 tools/build_engine_cached.py`: Java, GWT browser engine and worker build passed.
+- All nine Node suites passed: six existing suites, test_component_catalog.mjs,
+  test_component_expansion.mjs and test_component_worker.mjs.
+- New checks include transformer analytic first-step responses for both integration
+  methods, three ratios/two coupling coefficients and either driven winding;
+  all SPDT positions, independent DPDT poles, LED/Zener forward/reverse behavior,
+  grid rotations/flips, projection roundtrip, history/copy, invalid loader values,
+  preserved prior state on rejection, floating windings and ideal-loop rejection.
+- Actual Node worker checks cover all 21 added models plus driven switch, diode and
+  transformer variants. Earlier six saved numerical baselines still pass at 1e-12.
+- Syntax/diff checks pass. Earlier legacy pot endpoint diagnostic remains recorded
+  above; this pass changed none of its equations. No browser or visual QA claim.
+
+Source and preview assets updated; accumulated work remains uncommitted and nothing
+was deployed. Next: polarized capacitors and further passive/switch variants, then
+sequential logic/chips. Full Falstad catalog remains incomplete. Legacy import and
+example browsing remain deferred behind component support.

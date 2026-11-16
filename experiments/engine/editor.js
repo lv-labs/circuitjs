@@ -5,12 +5,12 @@
   const clone=value=>structuredClone(value),selection=new Set();
   let model,camera={x:0,y:0,scale:1},size={width:0,height:0},tool='select',rotation=0,mirror=false,mouse={x:0,y:0},hover=null;
   let gesture=null,preview=null,wireDraft=null,space=false,scheduled=false,ready=false,syncToken=0,simState=null;
-  let lastBodyClick=null;
+  let lastBodyClick=null,clipboard=null;
   let compiled=null,compileDocument=null;
   let chooserIndex=0;
   const chooser=$('component-chooser'),search=$('component-search'),propertyDialog=$('component-properties');
-  const icons={resistor:'⊟',capacitor:'⊣',voltageSource:'⊕',voltageRail:'⊕',acSource:'∿',acRail:'∿',switch:'⤴',ground:'⏚',opamp:'▷'};
-  $('parts').innerHTML=Object.entries(P).map(([kind,def])=>{const name=/^(.*) \((.*)\)$/.exec(def.name);return `<button data-tool="${kind}"><span>${icons[kind]}</span><span class="part-name">${name?esc(name[1])+'<small>'+esc(name[2])+'</small>':esc(def.name)}</span></button>`;}).join('');
+  const icons={inductor:'∿',diode:'▷',currentSource:'→',potentiometer:'↗',resistor:'⊟',capacitor:'⊣',voltageSource:'⊕',voltageRail:'⊕',acSource:'∿',acRail:'∿',switch:'⤴',ground:'⏚',opamp:'▷'};
+  $('parts').innerHTML=Object.entries(P).map(([kind,def])=>{const name=/^(.*) \((.*)\)$/.exec(def.name);return `<button data-tool="${kind}"><span>${icons[kind]||'◇'}</span><span class="part-name">${name?esc(name[1])+'<small>'+esc(name[2])+'</small>':esc(def.name)}</span></button>`;}).join('');
   function chooserItems(){return [...$('component-list').querySelectorAll('button')];}
   function chooseComponent(kind){chooser.close();setTool(kind);svg.focus();}
   function filterComponents(){
@@ -34,9 +34,27 @@
   });
   chooser.addEventListener('close',()=>svg.focus());
   $('close-chooser').onclick=()=>chooser.close();$('add-component').onclick=addComponent;
-  function symbol(c) {
+  function symbol(c,current=0) {
     const leads='<path d="M-48 0H-24M24 0H48"/>';
+    if(c.kind==='transformer')return '<path d="M-32-48V-24C-10-24-10-12-32-12C-10-12-10 0-32 0C-10 0-10 12-32 12C-10 12-10 24-32 24V48M32-48V-24C10-24 10-12 32-12C10-12 10 0 32 0C10 0 10 12 32 12C10 12 10 24 32 24V48M-5-28V28M5-28V28"/>';
+    if(['spdtSwitch','dpdtSwitch'].includes(c.kind)){
+      const rows=c.kind==='spdtSwitch'?[0]:[-32,16],reverse=c.kind==='dpdtSwitch'?1:-1;
+      return rows.map(y=>`<path d="M-48 ${y}H-20M20 ${y-16}H48M20 ${y+16}H48M-20 ${y}L18 ${y+(c.parameters.position===2?0:(c.parameters.position===0?16:-16)*reverse)}"/><circle cx="20" cy="${y-16}" r="2"/><circle cx="20" cy="${y+16}" r="2"/>`).join('')+(rows.length===2?'<path d="M0-32V16" stroke-dasharray="3 3"/>':'');
+    }
+    if(c.kind==='led')return leads+`<path d="M-24 0H-16M16 0H24M-16-16V16L16 0ZM16-16V16" fill="rgba(255,80,64,${Math.min(1,Math.max(0,current/c.parameters.maxCurrent))})"/><path d="M0-22L12-34M6-34H12V-28M12-14L24-26M18-26H24V-20"/>`;
+    if(c.kind==='zener')return leads+'<path d="M-24 0H-16M16 0H24M-16-16V16L16 0ZM10-20H16V20H22"/>';
     if(c.kind==='resistor')return leads+'<path d="M-24-8H24V8H-24Z"/>';
+    if(['npn','pnp'].includes(c.kind)){
+      const sign=c.kind==='npn'?1:-1;
+      return `<path d="M-48 0H-12M-12-20V20M-12-8L16 ${-16*sign}H48M-12 8L16 ${16*sign}H48"/><path d="${sign===1?'M7 8L16 16L5 17':'M3 0L-7 8L4 10'}"/>`;
+    }
+    if(['nmos','pmos','njfet','pjfet'].includes(c.kind))return '<path d="M-48 0H-16M-16-20V20M-8-20V20M-8-16H48M-8 16H48"/><text x="0" y="5" stroke="none" fill="currentColor" font-size="9">'+esc(c.kind.toUpperCase())+'</text>';
+    if(c.kind.endsWith('Gate'))return '<path d="M-48-16H-24M-48 16H-24M24 0H48M-24-28H24V28H-24Z"/><text x="0" y="4" text-anchor="middle" stroke="none" fill="#e0e9f6" font-size="11">'+esc(c.kind.slice(0,-4).toUpperCase())+'</text>';
+    if(c.kind==='inverter')return '<path d="M-48 0H-24M-24-24V24L20 0ZM28 0H48"/><circle cx="24" cy="0" r="4"/>';
+    if(c.kind==='inductor')return '<path d="M-48 0H-24C-24-22-12-22-12 0C-12-22 0-22 0 0C0-22 12-22 12 0C12-22 24-22 24 0H48"/>';
+    if(c.kind==='diode')return leads+'<path d="M-24 0H-16M16 0H24M-16-16V16L16 0ZM16-16V16"/>';
+    if(c.kind==='currentSource')return '<circle r="24"/><path d="M-48 0H-24M24 0H48M-12 0H12M4-7L12 0L4 7"/>';
+    if(c.kind==='potentiometer')return leads+'<path d="M-24-8H24V8H-24ZM0 32V12M-6 20L0 12L6 20"/>';
     if(c.kind==='capacitor')return '<path d="M-48 0H-5M5 0H48M-5-16V16M5-16V16"/>';
     if(c.kind==='switch')return '<path d="M-48 0H-20M20 0H48"/><circle cx="-20" cy="0" r="2.5"/><circle cx="20" cy="0" r="2.5"/>'+`<path d="M-18 0L18 ${c.parameters.closed?0:-18}"/>`;
     if(c.kind==='opamp')return '<path d="M-48-16H-24M-48 16H-24M32 0H48M-24-32V32L32 0ZM-18-16H-10M-18 16H-10M-14 12V20"/>';
@@ -57,6 +75,13 @@
   }
   function value(c) {
     if(c.kind==='resistor')return format(c.parameters.resistance,'Ω');
+    if(c.kind==='transformer')return `1:${c.parameters.ratio} · ${format(c.parameters.inductance,'H')}`;
+    if(['spdtSwitch','dpdtSwitch'].includes(c.kind))return c.parameters.position===2?'Off':c.parameters.position===0?'A':'B';
+    if(c.kind==='led')return format(c.parameters.forwardVoltage,'V');
+    if(c.kind==='zener')return format(c.parameters.breakdownVoltage,'V')+' Zener';
+    if(c.kind==='inductor')return format(c.parameters.inductance,'H');
+    if(c.kind==='currentSource')return format(c.parameters.current,'A');
+    if(c.kind==='potentiometer')return format(c.parameters.resistance,'Ω')+' · '+Number((c.parameters.position*100).toPrecision(4))+'%';
     if(c.kind==='capacitor')return format(c.parameters.capacitance,'F');
     if(isSource(c)){const w=c.parameters.waveform;return w.kind!=='dc'?`${format(w.amplitude,'V')} pk · ${format(w.frequency,'Hz')} · ${format(w.offset,'V')} offset`:format(w.voltage,'V');}
     if(c.kind==='switch')return c.parameters.closed?'Closed':'Open';
@@ -113,14 +138,15 @@
     const source=isSource(c),wave=c.parameters.waveform;
     const raw=source?{voltage:String(wave.voltage??0),amplitude:String(wave.amplitude??Math.abs(wave.voltage??1)),frequency:String(wave.frequency??1000),offset:String(wave.offset??0),dutyCycle:String((wave.dutyCycle??.5)*100)}:{};
     const sourceFields=kind=>kind==='dc'?[['voltage','DC voltage · V']]:[['amplitude','Amplitude · V peak'],['frequency','Frequency · Hz'],['offset','DC offset · V'],...(['square','pulse'].includes(kind)?[['dutyCycle','Duty cycle · %']]:[])];
-    let fields=source?sourceFields(wave.kind):c.kind==='resistor'?[['resistance','Resistance · Ω']]:c.kind==='capacitor'?[['capacitance','Capacitance · F'],['initialVoltage','Initial voltage · V']]:
-      c.kind==='opamp'?[['gain','Open-loop gain'],['minOutput','Minimum output · V'],['maxOutput','Maximum output · V']]:[];
+    let fields=source?sourceFields(wave.kind):c.kind==='transformer'?[['inductance','Primary inductance · H'],['ratio','Turns ratio · secondary / primary'],['coupling','Coupling · greater than 0, less than 1']]:c.kind==='led'?[['forwardVoltage','Forward voltage at 1 A · V'],['maxCurrent','Full-brightness current · A']]:c.kind==='zener'?[['forwardVoltage','Forward voltage at 1 A · V'],['breakdownVoltage','Breakdown voltage · V']]:c.kind==='resistor'?[['resistance','Resistance · Ω']]:c.kind==='capacitor'?[['capacitance','Capacitance · F'],['initialVoltage','Initial voltage · V']]:
+      ['npn','pnp'].includes(c.kind)?[['beta','Current gain · β']]:['nmos','pmos','njfet','pjfet'].includes(c.kind)?[['threshold','Threshold · V (signed model value)'],['beta','Transconductance parameter · A/V²']]:c.kind.endsWith('Gate')?[['highVoltage','Logic high · V']]:c.kind==='inverter'?[['highVoltage','Logic high · V'],['slewRate','Slew rate · V/ns']]:c.kind==='inductor'?[['inductance','Inductance · H'],['initialCurrent','Initial current · A']]:c.kind==='currentSource'?[['current','Current a → b · A'],['maxVoltage','Compliance voltage · V (0 = ideal)']]:c.kind==='potentiometer'?[['resistance','Total resistance · Ω'],['position','Wiper position · 0 to 1']]:c.kind==='opamp'?[['gain','Open-loop gain'],['minOutput','Minimum output · V'],['maxOutput','Maximum output · V']]:[];
     const numericFields=(entries,values)=>entries.map(([key,label],i)=>`<label for="${i===0?'value':key}">${label}</label><input id="${i===0?'value':key}" name="${key}" value="${esc(values[key])}" required>`).join('');
     $('properties-title').textContent=`${c.reference} · ${componentName(c)}`;
     $('property-fields').innerHTML=`<label for="reference">Reference</label><input id="reference" name="reference" value="${esc(c.reference)}" maxlength="80" required>`+
       (source?`<label for="waveform">Waveform</label><select id="waveform" name="waveform">${Object.entries(M.waveformNames).map(([kind,name])=>`<option value="${kind}">${name}</option>`).join('')}</select><div id="waveform-fields">${numericFields(fields,raw)}</div><p id="waveform-note"></p>`:numericFields(fields,c.parameters))+
+      (['spdtSwitch','dpdtSwitch'].includes(c.kind)?`<label for="position">Position</label><select id="position" name="position"><option value="0">A</option><option value="1">B</option>${c.kind==='spdtSwitch'?'<option value="2">Off</option>':''}</select>`:'')+
       (c.kind==='switch'?`<label class="checkbox"><input name="closed" type="checkbox" ${c.parameters.closed?'checked':''}>Closed</label>`:'')+
-      (c.kind==='capacitor'?`<label for="integration">Integration</label><select id="integration" name="integration"><option value="backwardEuler">Backward Euler</option><option value="trapezoidal">Trapezoidal</option></select>`:'')+
+      (['capacitor','inductor','transformer'].includes(c.kind)?`<label for="integration">Integration</label><select id="integration" name="integration"><option value="backwardEuler">Backward Euler</option><option value="trapezoidal">Trapezoidal</option></select>`:'')+
       (c.kind==='opamp'?'<p>Three-pin model with implicit supply limits. Input current is zero; output is limited by the minimum and maximum above.</p>':'');
     if(source) {
       $('waveform').value=wave.kind;
@@ -130,7 +156,8 @@
         fields=sourceFields($('waveform').value);$('waveform-fields').innerHTML=numericFields(fields,raw);$('property-error').textContent='';note();$('value').focus();$('value').select();
       };
     }
-    if(c.kind==='capacitor')$('integration').value=c.parameters.integration;
+    if(['spdtSwitch','dpdtSwitch'].includes(c.kind))$('position').value=String(c.parameters.position);
+    if(['capacitor','inductor','transformer'].includes(c.kind))$('integration').value=c.parameters.integration;
     $('property-error').textContent='';
     $('properties').onsubmit=event=>{
       event.preventDefault();try {
@@ -138,8 +165,9 @@
         const parameters=clone(c.parameters);
         if(source){parameters.waveform={kind:form.get('waveform')};for(const [key] of fields)parameters.waveform[key]=parseNumber(String(form.get(key)))/(key==='dutyCycle'?100:1);}
         else for(const [key] of fields)parameters[key]=parseNumber(String(form.get(key)));
+        if(['spdtSwitch','dpdtSwitch'].includes(c.kind))parameters.position=Number(form.get('position'));
         if(c.kind==='switch')parameters.closed=form.get('closed')==='on';
-        if(c.kind==='capacitor')parameters.integration=form.get('integration');
+        if(['capacitor','inductor','transformer'].includes(c.kind))parameters.integration=form.get('integration');
         model.transaction('Edit '+c.reference,next=>{const item=next.electrical.components.find(item=>item.id===id);if(!item)throw new Error('Component no longer exists.');item.reference=reference;item.parameters=parameters;});
         propertyDialog.close();
       }catch(error){$('property-error').textContent=friendly(error);}
@@ -182,10 +210,14 @@
     $('project-title').textContent=d.title;inspector();controls();sync(d,label);requestRender();
   }
   function controls() {$('undo').disabled=!model?.canUndo;$('redo').disabled=!model?.canRedo;$('rotate').disabled=![...selection].some(k=>JSON.parse(k)[0]==='component');$('delete').disabled=!selection.size;}
+  function cancelGesture(){
+    if(gesture?.paste){selection.clear();for(const key of gesture.prior)selection.add(key);}
+    gesture=null;preview=null;
+  }
   function setTool(next) {
-    tool=next;wireDraft=null;gesture=null;preview=null;cancelBodyClick();
+    cancelGesture();tool=next;wireDraft=null;gesture=null;preview=null;cancelBodyClick();
     document.querySelectorAll('[data-tool]').forEach(button=>button.classList.toggle('active',button.dataset.tool===tool));
-    $('tool-hint').textContent=tool==='select'?'Select · Shift adds · drag empty space for box selection':tool==='wire'?'Click a pin/wire to start · click for bends · double-click empty space or Enter to finish · Escape cancels':tool==='pan'?'Drag to pan the workspace':tool==='probe'?'Click a wire, pin or junction to place a voltage probe · Escape finishes':`Place ${P[tool].name.toLowerCase()} · R rotates · Escape finishes`;
+    $('tool-hint').textContent=tool==='select'?'Select · box → encloses · box ← touches · Shift adds':tool==='wire'?'Click a pin/wire to start · click for bends · double-click empty space or Enter to finish · Escape cancels':tool==='pan'?'Drag to pan the workspace':tool==='probe'?'Click a wire, pin or junction to place a voltage probe · Escape finishes':`Place ${P[tool].name.toLowerCase()} · R rotates · Escape finishes`;
     svg.style.cursor=tool==='pan'?'grab':tool==='select'?'default':'crosshair';requestRender();
   }
   function fit() {
@@ -201,13 +233,29 @@
     camera={scale,x:size.width/2-(left+right)/2*scale,y:size.height/2-(top+bottom)/2*scale};requestRender();
   }
   function endpointPoint(target,d) {return target.kind==='wire'?target.point:M.pin(d,target);}
-  function toggle(id) {model.transaction('Toggle switch',d=>{const c=d.electrical.components.find(c=>c.id===id);c.parameters.closed=!c.parameters.closed;});}
+  function toggle(id) {model.transaction('Toggle switch',d=>{const c=d.electrical.components.find(c=>c.id===id);if(c.kind==='switch')c.parameters.closed=!c.parameters.closed;else c.parameters.position=(c.parameters.position+1)%(c.kind==='spdtSwitch'?3:2);});}
   function commandSelection() {
     if(selection.size)return true;
     const found=M.hit(model.document,world(mouse),camera.scale);
     if(!found)return false;
     const kind=found.kind==='pin'?'component':found.kind,id=found.componentId||found.id||found.junctionId;
     selection.add(M.token(kind,id));inspector();controls();return true;
+  }
+  function copyItems(){
+    if(gesture||wireDraft)return false;
+    if(!commandSelection())return false;
+    const fragment=M.copySelection(model.document,selection);
+    if(!fragment.electrical.components.length&&!fragment.electrical.wires.length&&!fragment.electrical.junctions.length){message('Select components or wires to copy. Probes copy with their targets.');return false;}
+    clipboard=fragment;message('Copied selection · Ctrl/⌘ V to paste within this editor.');return true;
+  }
+  function pasteItems(){
+    if(!clipboard||gesture||wireDraft)return;
+    setTool('select');const base=model.document,prior=new Set(selection),copied=M.pasteSelection(base,clipboard);
+    const points=[...clipboard.electrical.components.map(c=>clipboard.layout.components[c.id]),...clipboard.electrical.junctions.map(j=>clipboard.layout.junctions[j.id])];
+    const anchor={x:M.snap(Math.min(...points.map(p=>p.x))),y:M.snap(Math.min(...points.map(p=>p.y)))};
+    selection.clear();for(const key of copied)selection.add(key);
+    gesture={type:'transform',paste:true,prior,base,startWorld:anchor,selection:copied,disconnect:false,rotation:0,orientations:[],dx:0,dy:0};
+    updateTransform(world(mouse));message('Paste · click to place · R rotates · Escape cancels');svg.focus();
   }
   function updateTransform(p) {
     gesture.dx=M.snap(p.x-gesture.startWorld.x);gesture.dy=M.snap(p.y-gesture.startWorld.y);
@@ -228,12 +276,17 @@
   }
   function commitTransform() {
     const operation=gesture;gesture=null;preview=null;
-    try {if(operation&&(operation.dx||operation.dy||operation.rotation||operation.orientations?.length))model.transaction(operation.disconnect?'Move selection':'Drag selection',d=>{
+    try {if(operation?.paste){
+      model.transaction('Paste selection',d=>{
+        const pasted=clone(operation.base);M.transformSelection(pasted,operation.selection,operation.dx,operation.dy,{rotation:operation.rotation,orientations:operation.orientations,contacts:true});
+        Object.assign(d,pasted);
+      });
+    }else if(operation&&(operation.dx||operation.dy||operation.rotation||operation.orientations?.length))model.transaction(operation.disconnect?'Move selection':'Drag selection',d=>{
       if(operation.routeHit)M.moveSegment(d,operation.routeHit.id,operation.routeHit.segment,operation.dx,operation.dy);
       else M.transformSelection(d,operation.selection,operation.dx,operation.dy,{disconnect:operation.disconnect,rotation:operation.rotation,orientations:operation.orientations,contacts:!!(operation.dx||operation.dy||operation.disconnect)});
     });
-    } catch(error){message(friendly(error));}
-    setTool('select');
+    } catch(error){if(operation?.paste){selection.clear();for(const key of operation.prior)selection.add(key);}message(friendly(error));}
+    setTool('select');inspector();controls();
   }
   function rotate(amount=-90) {
     if(P[tool]){rotation=(rotation+amount+360)%360;requestRender();return;}
@@ -257,10 +310,12 @@
     catch(error){message(friendly(error));wireDraft=null;}
     requestRender();
   }
+  $('grid-mode').onchange=()=>requestRender();
   function render() {
     if(!model)return;const d=preview||model.document,frame=simState?.frame;
     const scale=camera.scale,grid=M.grid*scale;
-    const parts=[`<defs><pattern id="dots" width="${grid}" height="${grid}" patternUnits="userSpaceOnUse" x="${camera.x%grid}" y="${camera.y%grid}"><circle cx="0" cy="0" r=".7" fill="#34404f"/></pattern></defs><rect width="100%" height="100%" fill="#11151c"/><rect width="100%" height="100%" fill="url(#dots)"/><g transform="translate(${camera.x} ${camera.y}) scale(${scale})">`];
+    const gridMode=$('grid-mode').value;
+    const parts=[`<defs><pattern id="dots" width="${grid}" height="${grid}" patternUnits="userSpaceOnUse" x="${camera.x%grid}" y="${camera.y%grid}">${gridMode==='lines'?`<path d="M${grid} 0H0V${grid}" fill="none" stroke="#303c4c" stroke-width=".7"/>`:'<circle cx="0" cy="0" r="1" fill="#526174"/>'}</pattern></defs><rect width="100%" height="100%" fill="#11151c"/><rect width="100%" height="100%" fill="${gridMode==='off'?'none':'url(#dots)'}"/><g transform="translate(${camera.x} ${camera.y}) scale(${scale})">`];
     let terminalValues=new Map();
     if(frame&&compiled&&compileDocument===JSON.stringify(d.electrical))for(const net of compiled.nets) {
       const [id,p]=net.terminals[0],voltage=frame.pinVoltages[id]?.[p];
@@ -283,13 +338,13 @@
     for(const c of d.electrical.components) {
       const p=d.layout.components[c.id],active=selected('component',c.id),def=M.definitions[c.kind];
       if(active){const b=M.bounds(d,c);parts.push(`<rect x="${b.x}" y="${b.y}" width="${b.right-b.x}" height="${b.bottom-b.y}" rx="7" fill="#91e8c10b" stroke="#91e8c1" stroke-width="${1/scale}" stroke-dasharray="4 3"/>`);}
-      parts.push(`<g data-component="${esc(c.id)}" transform="translate(${p.x} ${p.y}) rotate(${p.rotation}) scale(${p.mirror?-1:1} 1)" stroke="${active?'#91e8c1':'#e0e9f6'}" stroke-width="2" fill="#11151c" stroke-linecap="round" stroke-linejoin="round">${symbol(c)}</g>`);
+      parts.push(`<g data-component="${esc(c.id)}" transform="translate(${p.x} ${p.y}) rotate(${p.rotation}) scale(${p.mirror?-1:1} 1)" stroke="${active?'#91e8c1':'#e0e9f6'}" stroke-width="2" fill="#11151c" stroke-linecap="round" stroke-linejoin="round">${symbol(c,compileDocument===JSON.stringify(d.electrical)?frame?.componentCurrents[c.id]:0)}</g>`);
       const vertical=isSource(c)?p.rotation%180===0:p.rotation%180!==0;
       const side=vertical||c.kind==='ground';
       const railBelow=c.kind==='voltageRail'&&M.pin(d,{kind:'pin',componentId:c.id,pinId:'p'}).y>=p.y;
-      const x=p.x+(side?31:0),y=p.y+(c.kind==='ground'?5:c.kind==='voltageRail'&&vertical?(railBelow?-38:9):vertical?-7:c.kind==='opamp'?-44:-23),anchor=side?'start':'middle';
+      const x=p.x+(side?31:0),y=p.y+(c.kind==='ground'?5:c.kind==='voltageRail'&&vertical?(railBelow?-38:9):vertical?-7:c.kind==='dpdtSwitch'?-65:c.kind==='transformer'?-65:c.kind==='opamp'?-44:-23),anchor=side?'start':'middle';
       const w=c.parameters.waveform,lines=isSource(c)&&w.kind!=='dc'?[format(w.amplitude,'V')+' pk',format(w.frequency,'Hz'),format(w.offset,'V')+' offset']:[value(c)];
-      if(scale>.45)parts.push(`<text x="${x}" y="${y}" text-anchor="${anchor}" fill="#d1dbea" font-family="system-ui,sans-serif" font-size="12">${esc(c.reference)}</text><text x="${x}" y="${vertical?y+18:p.y+(c.kind==='opamp'?47:31)}" text-anchor="${anchor}" fill="#8292a8" font-family="system-ui,sans-serif" font-size="11">${lines.map((line,i)=>`<tspan x="${x}" dy="${i?15:0}">${esc(line)}</tspan>`).join('')}</text>`);
+      if(scale>.45)parts.push(`<text x="${x}" y="${y}" text-anchor="${anchor}" fill="#d1dbea" font-family="system-ui,sans-serif" font-size="12">${esc(c.reference)}</text><text x="${x}" y="${vertical?y+18:p.y+(c.kind==='transformer'?65:c.kind==='dpdtSwitch'?54:c.kind==='opamp'?47:31)}" text-anchor="${anchor}" fill="#8292a8" font-family="system-ui,sans-serif" font-size="11">${lines.map((line,i)=>`<tspan x="${x}" dy="${i?15:0}">${esc(line)}</tspan>`).join('')}</text>`);
       for(const pinId of Object.keys(def.pins)) {
         const ref={kind:'pin',componentId:c.id,pinId},point=M.pin(d,ref);
         parts.push(`<circle data-pin="${esc(c.id+':'+pinId)}" cx="${point.x}" cy="${point.y}" r="3" fill="transparent" stroke="none" pointer-events="none"/>`);
@@ -321,7 +376,7 @@
       parts.push(`<polyline points="${points.map(p=>`${p.x},${p.y}`).join(' ')}" stroke="#91e8c1" stroke-width="2" fill="none" stroke-dasharray="5 4"/>`);
     }
     if(gesture?.type==='marquee') {
-      const a=gesture.startWorld,b=world(mouse);parts.push(`<rect x="${Math.min(a.x,b.x)}" y="${Math.min(a.y,b.y)}" width="${Math.abs(a.x-b.x)}" height="${Math.abs(a.y-b.y)}" fill="#91e8c110" stroke="#91e8c1" stroke-width="${1/scale}"/>`);
+      const a=gesture.startWorld,b=world(mouse);parts.push(`<rect x="${Math.min(a.x,b.x)}" y="${Math.min(a.y,b.y)}" width="${Math.abs(a.x-b.x)}" height="${Math.abs(a.y-b.y)}" fill="${b.x<a.x?'#91e8c118':'#8abfff10'}" stroke="${b.x<a.x?'#91e8c1':'#8abfff'}" stroke-dasharray="${b.x<a.x?'5 3':'none'}" stroke-width="${1/scale}"/>`);
     }
     parts.push('</g>');svg.innerHTML=parts.join('');
     $('zoom-value').textContent=Math.round(camera.scale*100)+'%';$('empty-hint').hidden=d.electrical.components.length>0;
@@ -357,7 +412,7 @@
     if(found) {
       const collapse=!event.shiftKey&&selection.size>1&&selected(found.kind,found.id||found.junctionId);
       if(!selectHit(found,event.shiftKey))return;
-      gesture={type:found.kind==='wire'?'wire-route':'move',base:d,startWorld:p,hit:found,dx:0,dy:0,collapse};
+      gesture={type:found.kind==='junction'&&selection.size===1&&M.looseEndpoint(d,found.junctionId)?'wire-end':found.kind==='wire'?'wire-route':'move',base:d,startWorld:p,hit:found,dx:0,dy:0,collapse};
     } else {
       const prior=event.shiftKey?new Set(selection):new Set();if(!event.shiftKey)selection.clear();
       gesture={type:'marquee',startWorld:p,prior};inspector();controls();
@@ -368,13 +423,17 @@
     if(!ready)return;mouse=local(event);const p=world(mouse);
     if(gesture?.type==='transform'){updateTransform(p);return;}
     if(gesture?.type==='pan'){camera.x=gesture.camera.x+mouse.x-gesture.start.x;camera.y=gesture.camera.y+mouse.y-gesture.start.y;}
-    else if(gesture && ['move','wire-route'].includes(gesture.type)) {
+    else if(gesture && ['move','wire-route','wire-end'].includes(gesture.type)) {
       const dx=M.snap(p.x-gesture.startWorld.x),dy=M.snap(p.y-gesture.startWorld.y);
       if(dx||dy)cancelBodyClick();
       gesture.dx=dx;gesture.dy=dy;preview=clone(gesture.base);
-      if(gesture.type==='move')M.move(preview,selection,dx,dy);else M.moveSegment(preview,gesture.hit.id,gesture.hit.segment,dx,dy);
+      if(gesture.type==='wire-end'){
+        gesture.target=M.reconnectTarget(gesture.base,gesture.hit.junctionId,p,camera.scale);
+        const dest=gesture.target?endpointPoint(gesture.target,gesture.base):{x:M.snap(p.x),y:M.snap(p.y)},origin=gesture.base.layout.junctions[gesture.hit.junctionId];
+        M.move(preview,new Set([M.token('junction',gesture.hit.junctionId)]),dest.x-origin.x,dest.y-origin.y);
+      }else if(gesture.type==='move')M.move(preview,selection,dx,dy);else M.moveSegment(preview,gesture.hit.id,gesture.hit.segment,dx,dy);
     }
-    hover=gesture?null:M.hit(model.document,p,camera.scale);requestRender();
+    hover=gesture?.type==='wire-end'?gesture.target:gesture?null:M.hit(model.document,p,camera.scale);requestRender();
   });
   svg.addEventListener('pointerup',event=>{
     if(gesture?.type==='transform')return;
@@ -384,7 +443,11 @@
     if(operation?.collapse&&!operation.dx&&!operation.dy) {
       selection.clear();selection.add(M.token(operation.hit.kind,operation.hit.id||operation.hit.junctionId));inspector();controls();
     }
-    try {if(operation?.type==='move'&&(operation.dx||operation.dy))model.transaction('Drag selection',d=>{
+    try {if(operation?.type==='wire-end'&&(operation.dx||operation.dy))model.transaction('Reconnect wire end',d=>{
+      if(operation.target)M.reconnect(d,operation.hit.junctionId,operation.target);
+      else M.move(d,new Set([M.token('junction',operation.hit.junctionId)]),operation.dx,operation.dy);
+    });
+    if(operation?.type==='move'&&(operation.dx||operation.dy))model.transaction('Drag selection',d=>{
       M.move(d,selection,operation.dx,operation.dy);
       M.connectContacts(d,new Set(d.electrical.components.filter(c=>selected('component',c.id)).map(c=>c.id)));
     });
@@ -396,25 +459,19 @@
         cancelBodyClick();editComponent(id);
       } else {
         cancelBodyClick();lastBodyClick={id,time:now,...point};
-        if(model.document.electrical.components.find(c=>c.id===id)?.kind==='switch')lastBodyClick.timer=setTimeout(()=>{
+        if(['switch','spdtSwitch','dpdtSwitch'].includes(model.document.electrical.components.find(c=>c.id===id)?.kind))lastBodyClick.timer=setTimeout(()=>{
           lastBodyClick=null;if(model.document.electrical.components.some(c=>c.id===id))toggle(id);
         },450);
       }
     } else cancelBodyClick();
     if(operation?.type==='marquee') {
-      const a=operation.startWorld,b=world(local(event)),rect={x:Math.min(a.x,b.x),y:Math.min(a.y,b.y),right:Math.max(a.x,b.x),bottom:Math.max(a.y,b.y)};
-      const inside=p=>p.x>=rect.x&&p.x<=rect.right&&p.y>=rect.y&&p.y<=rect.bottom;
-      selection.clear();for(const key of operation.prior)selection.add(key);
-      const d=model.document;
-      for(const c of d.electrical.components){const p=d.layout.components[c.id];if(inside(p))selection.add(M.token('component',c.id));}
-      for(const w of d.electrical.wires)if(M.route(d,w).every(inside))selection.add(M.token('wire',w.id));
-      for(const j of d.electrical.junctions)if(inside(d.layout.junctions[j.id]))selection.add(M.token('junction',j.id));
-      for(const probe of d.probes)if(d.layout.probes?.[probe.id]&&inside(M.probePoint(d,probe)))selection.add(M.token('probe',probe.id));
+      const picked=M.boxSelection(model.document,operation.startWorld,world(local(event)));
+      selection.clear();for(const key of operation.prior)selection.add(key);for(const key of picked)selection.add(key);
       inspector();controls();
     }
     requestRender();
   });
-  svg.addEventListener('pointercancel',()=>{gesture=null;preview=null;requestRender();});
+  svg.addEventListener('pointercancel',()=>{cancelGesture();inspector();controls();requestRender();});
   svg.addEventListener('wheel',event=>{
     event.preventDefault();if(gesture&&gesture.type!=='pan')return;
     if(event.ctrlKey||event.metaKey)camera=M.zoom(camera,local(event),Math.exp(-event.deltaY*.008));
@@ -430,6 +487,7 @@
   $('file').onchange=async()=>{try{const file=$('file').files[0];if(!file)return;model.replace(JSON.parse(await file.text()));selection.clear();inspector();setTool('select');fit();}catch(error){message(friendly(error));}finally{$('file').value='';}};
   $('new').onclick=()=>{selection.clear();model.replace(M.empty());setTool('select');fit();};
   $('undo').onclick=()=>{setTool('select');model.undo();};$('redo').onclick=()=>{setTool('select');model.redo();};
+  $('copy').onclick=copyItems;$('paste').onclick=pasteItems;$('duplicate').onclick=()=>{if(copyItems())pasteItems();};
   $('move').onclick=()=>beginTransform(true);$('drag').onclick=()=>beginTransform(false);
   $('flip-horizontal').onclick=()=>flip('x');$('flip-vertical').onclick=()=>flip('y');
   $('delete').onclick=()=>{setTool('select');model.remove(selection);};$('rotate').onclick=()=>rotate();
@@ -446,9 +504,10 @@
     if(command&&key==='s'){event.preventDefault();save();return;}
     if(command&&key==='o'){event.preventDefault();$('file').click();return;}
     if(command&&key==='z'){event.preventDefault();setTool('select');event.shiftKey?model.redo():model.undo();return;}
+    if(command&&['c','v','d'].includes(key)){event.preventDefault();if(key==='c')copyItems();else if(key==='v')pasteItems();else if(copyItems())pasteItems();return;}
     if(command)return;
     if(key===' '){event.preventDefault();space=true;svg.style.cursor='grab';return;}
-    if(key==='escape'){gesture=null;preview=null;wireDraft=null;setTool('select');return;}
+    if(key==='escape'){setTool('select');inspector();controls();return;}
     if(key==='enter'&&wireDraft){event.preventDefault();finishWire(target(M.hit(model.document,world(mouse),camera.scale)));return;}
     if(key==='delete'||key==='backspace'){event.preventDefault();if(gesture)return;if(commandSelection())model.remove(selection);return;}
     if(event.repeat)return;
@@ -466,7 +525,7 @@
 
   });
   window.addEventListener('keyup',event=>{if(event.key===' '){space=false;svg.style.cursor=tool==='pan'?'grab':tool==='select'?'default':'crosshair';}});
-  window.addEventListener('blur',()=>{space=false;gesture=null;preview=null;cancelBodyClick();requestRender();});
+  window.addEventListener('blur',()=>{space=false;cancelGesture();cancelBodyClick();inspector();controls();requestRender();});
   window.addEventListener('pagehide',()=>simulation.dispose());
   new ResizeObserver(()=>{
     const rect=surface.getBoundingClientRect(),previous=size;size={width:rect.width,height:rect.height};

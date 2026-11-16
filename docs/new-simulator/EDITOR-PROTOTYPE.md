@@ -425,3 +425,86 @@ scope-view.js owns the dock, controls, cursor and SVG rendering. New pure checks
 are tools/test_scope_model.mjs and tools/test_scope_sampling.mjs. Real-worker scope
 checks join the engine verifier; the editor input suite exercises capture, controls,
 renaming, deletion/undo, reset, source edits and label/layout retention.
+
+## Endpoint reconnection, visible grid and scope panes (2026-11-14)
+
+In Select mode, drag a hollow loose-end square onto a pin, junction or wire to
+reconnect it. The highlight previews the snap target. Release commits one undoable
+change; Escape cancels. Dropping in blank space moves the loose endpoint. Endpoint
+pickup applies to a single selected loose junction; group dragging keeps its
+existing behavior. Wire mode still extends a wire from the loose junction.
+Cleanup removes the redundant source junction and local route bends while retaining
+wire IDs, target branches and probe identities. Wire crossings elsewhere do not
+connect. Degree-two destination junctions remain explicit; this is local cleanup.
+
+The canvas Grid selector offers Lines (default), Dots and Off. Grid geometry follows
+pan/zoom and the 16-unit placement grid; hiding it does not disable snapping.
+
+Oscilloscope + Pane adds up to four views of the same synchronized capture. Each
+pane has its own probe checkboxes and voltage scale; the main voltage control is
+labeled Pane 1 voltage. Time/div and hover cursor are linked. Choose Stacked or
+Side by side (wraps when narrow); drag a pane's bottom-right resize handle to change
+its height. Remove deletes a view without clearing captured samples. Clear resets
+capture for all views. Pane layout, channel visibility, scales and grid choice are
+session-only. No independent time scales or saved pane layout in this iteration.
+
+Pure model checks pass. New browser regressions are present but pending execution
+because the current sandbox blocks local server sockets; visual QA is pending too.
+
+## Copy/paste and directional selection (2026-11-14)
+
+Ctrl/Command-C copies the selection (or hovered item when nothing is selected),
+Ctrl/Command-V starts a cursor-following paste, and Ctrl/Command-D duplicates.
+Toolbar buttons expose the same commands. Click to place; R/X/Y use the existing
+pending-transform behavior; Escape, blur or pointer cancellation discard the draft.
+The clipboard is in-memory within this editor tab, not the OS clipboard, and is
+lost on reload. It can be pasted after opening a different JSON in the same tab.
+
+Copies include selected components/junctions/wires, wires with both endpoints
+selected, and probes whose targets are included. Select intermediary wires and
+junctions too when copying a connected section. External endpoints of explicitly
+selected wires become shared loose stubs. Unselected external components are not
+referenced by the pasted graph. Standalone probes need their targets selected.
+Paste allocates new stable IDs, remaps all references and assigns unique component
+reference labels. Placement/contact detection is one history transaction. Preview
+never updates autosave or the simulation. Component parameters and initial values
+copy; simulation state and transient scope capture do not.
+
+Box left-to-right selects fully enclosed component bounds, routes and probe labels;
+right-to-left selects intersected bounds or route segments, including segments with
+both endpoints outside the box. Junctions use point containment. Shift adds to the
+selection. Enclosure uses a solid blue outline; crossing uses dashed green.
+
+Verification for this pass is limited to syntax/build checks per user direction;
+no functional test suites, browser use, screenshots or visual checks were run.
+
+## Expanded component catalog (2026-11-14)
+
+A/chooser and the palette now include inductor, diode, current source, potentiometer,
+NPN/PNP, N/P MOSFETs and JFETs, AND/NAND/OR/NOR/XOR gates, and inverter (23 models total).
+Inductors expose initial current/integration; current sources expose current and
+compliance (0 = ideal); pots expose total resistance and position 0..1; transistors
+expose beta; FETs expose model threshold and beta; gates expose logic high; inverters
+also expose slew rate. The diode uses the default legacy diode parameters.
+
+These are base models, not all Falstad variants/options. Gates currently have two
+inputs. Pot changes use normal replacement/reset, not a live slider. BJT/pot do not
+report an ambiguous single component current. No browser visual verification has
+been performed for these additions, per user preference; numerical and Node worker
+checks pass. Full catalog coverage remains in progress; legacy import is deferred.
+
+## Transformer, multipole switches and light-emitting/Zener diodes (2026-11-14)
+
+Five additional models are available through A and the palette (28 total).
+Transformer exposes primary inductance, secondary/primary turns ratio, coupling
+and integration; its isolated winding circuits each need a reference. SPDT cycles
+A → B → Off; DPDT cycles both poles together A ↔ B. Single-click or use the Position
+property; double-click still edits without toggling. These multipole switch edits
+reset simulation rather than preserving live state.
+
+LED and Zener expose their legacy model's forward voltage at **1 A**. LED also
+exposes full-brightness current and uses a red current-dependent symbol fill;
+this does not limit current. Zener exposes reverse breakdown voltage. Transformer
+and DPDT show pin voltages but no single aggregate current. Winding saturation,
+tapped transformers, named diode models and configurable pole counts are not yet
+implemented. Build/numerical/worker checks pass; no browser/visual checks were run.

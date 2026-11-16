@@ -10,6 +10,8 @@
   function create({onRunToggle}) {
     const $=id=>document.getElementById(id),buffer=S.create(),plot=$('scope-plot'),hidden=new Set();
     let channels=[],unresolved=[],overflow=0,state=null,open=false,scheduled=false,cursor=null,legendSignature='';
+    const panes=[{id:1,plot,hidden,volts:$('scope-volts'),rows:$('scope-channels'),readings:$('scope-cursor-readings')}];
+    let nextPane=2;
     const renderSoon=()=>{if(!scheduled){scheduled=true;requestAnimationFrame(()=>{scheduled=false;render();});}};
     const controls=()=>{
       $('scope-toggle').setAttribute('aria-expanded',String(open));$('scope-body').hidden=!open;
@@ -21,17 +23,34 @@
     $('scope-time').onchange=$('scope-volts').onchange=()=>{cursor=null;renderSoon();};
     $('scope-clear').onclick=()=>{buffer.clear();cursor=null;renderSoon();};
     $('scope-run').onclick=onRunToggle;
-    plot.addEventListener('pointermove',event=>{const r=plot.getBoundingClientRect(),w=r.width;cursor=Math.max(0,Math.min(1,(event.clientX-r.left-55)/(w-72)));renderSoon();});
-    plot.addEventListener('pointerleave',()=>{cursor=null;renderSoon();});
-    new ResizeObserver(renderSoon).observe(plot);
+    const observer=new ResizeObserver(renderSoon);
+    function bindPlot(plot){
+      plot.addEventListener('pointermove',event=>{const r=plot.getBoundingClientRect();cursor=Math.max(0,Math.min(1,(event.clientX-r.left-55)/(r.width-72)));renderSoon();});
+      plot.addEventListener('pointerleave',()=>{cursor=null;renderSoon();});observer.observe(plot);
+    }
+    bindPlot(plot);
+    $('scope-layout').onchange=()=>{$('scope-panes').dataset.layout=$('scope-layout').value;renderSoon();};
+    $('scope-add').onclick=()=>{
+      if(panes.length>=4)return;
+      const id=nextPane++,host=document.createElement('section');host.className='scope-pane';host.dataset.pane=id;
+      host.innerHTML=`<div class="scope-pane-heading">Pane ${id}<label>Voltage <select aria-label="Pane ${id} volts per division">${$('scope-volts').innerHTML}</select></label><button aria-label="Remove pane ${id}">Remove</button></div><div class="scope-content"><svg role="img" aria-label="Pane ${id} voltage waveforms"></svg><div class="scope-channels"></div></div><div class="scope-readings"></div>`;
+      $('scope-panes').append(host);
+      const pane={id,plot:host.querySelector('svg'),hidden:new Set(),volts:host.querySelector('select'),rows:host.querySelector('.scope-channels'),readings:host.querySelector('.scope-readings')};
+      panes.push(pane);bindPlot(pane.plot);pane.volts.onchange=renderSoon;
+      host.querySelector('button').onclick=()=>{observer.unobserve(pane.plot);panes.splice(panes.indexOf(pane),1);host.remove();$('scope-add').disabled=false;renderSoon();};
+      populate(pane);$('scope-add').disabled=panes.length>=4;renderSoon();
+    };
+    function populate(pane){
+      pane.rows.innerHTML=channels.map(c=>`<div class="scope-channel" data-scope-channel="${esc(c.id)}"><label><input type="checkbox" data-channel="${esc(c.id)}" ${pane.hidden.has(c.id)?'':'checked'}><span class="scope-swatch" style="background:${S.color(c.id)}"></span><span>${esc(c.label)}</span></label><span class="scope-last"></span><small class="scope-range"></small></div>`).join('');
+      for(const input of pane.rows.querySelectorAll('input'))input.onchange=()=>{input.checked?pane.hidden.delete(input.dataset.channel):pane.hidden.add(input.dataset.channel);renderSoon();};
+    }
     function setDocument(d){
       const result=M.scopeChannels(d);unresolved=result.unresolved;overflow=Math.max(0,result.channels.length-32);
       channels=result.channels.slice(0,32);const descriptors=buffer.setChannels(channels);
       const signature=JSON.stringify(channels.map(c=>[c.id,c.label]));
       if(signature!==legendSignature){
         legendSignature=signature;
-        $('scope-channels').innerHTML=channels.map(c=>`<div class="scope-channel" data-scope-channel="${esc(c.id)}"><label><input type="checkbox" data-channel="${esc(c.id)}" ${hidden.has(c.id)?'':'checked'}><span class="scope-swatch" style="background:${S.color(c.id)}"></span><span>${esc(c.label)}</span></label><span class="scope-last"></span><small class="scope-range"></small></div>`).join('');
-        for(const input of $('scope-channels').querySelectorAll('input'))input.onchange=()=>{input.checked?hidden.delete(input.dataset.channel):hidden.add(input.dataset.channel);renderSoon();};
+        panes.forEach(populate);
       }
       renderSoon();return descriptors;
     }
@@ -42,8 +61,11 @@
       renderSoon();
     }
     function onFrame(frame){if(buffer.append(frame))renderSoon();}
-    function render(){
-      const view=buffer.window(Number($('scope-time').value)*10),visible=view.channels.filter(c=>!hidden.has(c.id));
+    function render(){const view=buffer.window(Number($('scope-time').value)*10);for(const pane of panes)renderPane(pane,view);}
+    function renderPane(pane,view){
+      const plot=pane.plot,hidden=pane.hidden;
+      const $=id=>id==='scope-volts'?pane.volts:id==='scope-channels'?pane.rows:id==='scope-cursor-readings'?pane.readings:document.getElementById(id);
+      const visible=view.channels.filter(c=>!hidden.has(c.id));
       const running=!!state?.runRequested,invalid=['error','empty','disposed'].includes(state?.status);
       $('scope-run').textContent=running?'Ⅱ Pause':'▶ Run';$('scope-run').disabled=!state?.accepted||invalid||state?.status==='loading';
       $('scope-status').textContent=`${channels.length} voltage ${channels.length===1?'probe':'probes'} · ${view.stored.toLocaleString()} samples · ${invalid?'Waiting for valid circuit':state?.status==='loading'?'Resetting':running?'Running':'Paused'}`;
@@ -52,10 +74,10 @@
         row.querySelector('.scope-last').textContent=format(c.last,'V');row.querySelector('.scope-range').textContent=`min ${format(c.min,'V')} · max ${format(c.max,'V')}`;
       }
       if(!open)return;
-      const width=Math.max(300,plot.getBoundingClientRect().width),height=Math.max(160,plot.getBoundingClientRect().height),left=55,right=width-17,top=14,bottom=height-28,pw=right-left,ph=bottom-top;
+      const width=Math.max(120,plot.getBoundingClientRect().width),height=Math.max(160,plot.getBoundingClientRect().height),left=55,right=width-17,top=14,bottom=height-28,pw=right-left,ph=bottom-top;
       const vdiv=$('scope-volts').value==='auto'?S.autoScale(visible):Number($('scope-volts').value),limit=vdiv*4;
       const x=t=>left+(t-view.start)/(view.end-view.start)*pw,y=v=>Math.max(top-2,Math.min(bottom+2,top+ph/2-v/(limit*2)*ph));
-      const parts=[`<defs><clipPath id="scope-clip"><rect x="${left}" y="${top}" width="${pw}" height="${ph}"/></clipPath></defs><rect width="100%" height="100%" fill="#101720"/>`];
+      const parts=[`<defs><clipPath id="scope-clip-${pane.id}"><rect x="${left}" y="${top}" width="${pw}" height="${ph}"/></clipPath></defs><rect width="100%" height="100%" fill="#101720"/>`];
       for(let i=0;i<=10;i++){
         const gx=left+pw*i/10;parts.push(`<path d="M${gx} ${top}V${bottom}" stroke="#26313e" stroke-width="1"/>`);
         if(i%2===0)parts.push(`<text x="${gx}" y="${height-9}" fill="#8797ab" text-anchor="middle" font-size="10">${esc(format(view.start+(view.end-view.start)*i/10,'s'))}</text>`);
@@ -64,7 +86,7 @@
         const gy=top+ph*i/8;parts.push(`<path d="M${left} ${gy}H${right}" stroke="${i===4?'#526071':'#26313e'}" stroke-width="1"/>`);
         if(i%2===0)parts.push(`<text x="${left-8}" y="${gy+4}" fill="#8797ab" text-anchor="end" font-size="10">${esc(format((4-i)*vdiv,'V'))}</text>`);
       }
-      parts.push('<g clip-path="url(#scope-clip)">');
+      parts.push(`<g clip-path="url(#scope-clip-${pane.id})">`);
       for(const c of visible){const points=S.envelope(view.times,c.values,view.start,view.end,Math.floor(pw));
         if(points.length)parts.push(`<path data-scope-trace="${esc(c.id)}" d="${points.map(([t,v],i)=>`${i?'L':'M'}${x(t).toFixed(2)} ${y(v).toFixed(2)}`).join(' ')}" fill="none" stroke="${c.color}" stroke-width="1.8" stroke-linejoin="round"/><circle cx="${x(points.at(-1)[0])}" cy="${y(points.at(-1)[1])}" r="2" fill="${c.color}"/>`);
       }
@@ -80,7 +102,7 @@
       $('scope-cursor-readings').textContent=index>=0?`${cursor===null?'Latest':'Cursor'} t=${format(view.times[index],'s')}  ·  `+visible.map(c=>`${c.label} ${format(c.values[index],'V')}`).join('  ·  '):'Place a Probe, then Run. Hover the plot for synchronized voltage readings.';
       if(index>=0&&visible.length===2)$('scope-cursor-readings').textContent+=`  ·  Δ (${visible[1].label} − ${visible[0].label}) ${format(visible[1].values[index]-visible[0].values[index],'V')}`;
       const warnings=[overflow?`First 32 probes shown (${overflow} more).`:'',unresolved.length?`${unresolved.length} unconnected probe target(s).`:''];
-      $('scope-info').textContent=`${format(vdiv,'V')}/div · ${format(state?.frame?.timeStep,'s')} sample interval · ${view.capacity.toLocaleString()} sample buffer. ${warnings.join(' ')}`;
+      $('scope-info').textContent=`Linked time/cursor · ${format(state?.frame?.timeStep,'s')} sample interval · ${view.capacity.toLocaleString()} sample buffer. ${warnings.join(' ')}`;
     }
     controls();return {setDocument,onState,onFrame};
   }

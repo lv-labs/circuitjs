@@ -215,6 +215,20 @@ try {
   await key('z','KeyZ',2);assert(JSON.stringify(await doc())===JSON.stringify(looseBefore),'Loose wire one-step undo');
   await key('z','KeyZ',10);assert(JSON.stringify(await doc())===JSON.stringify(looseDoc),'Loose wire redo exact IDs');
   await reload();assert(JSON.stringify(await doc())===JSON.stringify(looseDoc),'Loose wire reload');
+  await key('Escape');
+  end=await worldPoint(640,256);let drop=await worldPoint(256,304);
+  await pointer(end.x,end.y,'mousePressed');await pointer(drop.x,drop.y);await key('Escape');await pointer(drop.x,drop.y,'mouseReleased');
+  assert(JSON.stringify(await doc())===JSON.stringify(looseDoc),'Endpoint Escape discards preview');
+  end=await worldPoint(640,256);drop=await worldPoint(256,304);
+  await pointer(end.x,end.y,'mousePressed');await pointer(drop.x,drop.y);await pointer(drop.x,drop.y,'mouseReleased');
+  const joinedDoc=await doc();
+  assert(joinedDoc.electrical.wires.length===looseDoc.electrical.wires.length,'Endpoint drag reuses the existing wire');
+  assert(!joinedDoc.electrical.junctions.some(j=>j.id===looseJunction),'Endpoint drag removes redundant loose junction');
+  await key('z','KeyZ',2);assert(JSON.stringify(await doc())===JSON.stringify(looseDoc),'Endpoint drag atomic undo');
+  await key('z','KeyZ',10);assert(JSON.stringify(await doc())===JSON.stringify(joinedDoc),'Endpoint drag exact redo');
+  await key('z','KeyZ',2);
+  checks.push('Dedicated endpoint drag, cancellation, local cleanup and exact undo/redo');
+
   end=await worldPoint(640,256);let reconnect=await worldPoint(256,304);
   await key('w','KeyW');await click(end.x,end.y);await click(reconnect.x,reconnect.y);
   assert((await doc()).electrical.wires.length===looseDoc.electrical.wires.length+1,'Loose junction can start another wire: '+await evaluate("document.getElementById('notice').textContent"));
@@ -320,6 +334,29 @@ try {
   await evaluate('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))');
   await waitFor("document.querySelectorAll('[data-scope-trace]').length===2");
   assert(await evaluate("document.getElementById('scope-panel').dataset.samples")===captureCount,'Collapsing/reopening preserves capture');
+
+  const addPane=await center('#scope-add');await click(addPane.x,addPane.y);
+  await waitFor("document.querySelectorAll('[data-scope-trace]').length===4");
+  assert(await evaluate("document.getElementById('scope-panel').dataset.samples")===captureCount,'Adding pane shares capture without advancing simulation');
+  let paneChannel=await center('[data-pane="2"] input');await click(paneChannel.x,paneChannel.y);
+  await waitFor("document.querySelectorAll('[data-pane=\"2\"] [data-scope-trace]').length===1");
+  assert(await evaluate("document.querySelectorAll('#scope-plot [data-scope-trace]').length===2"),'Pane channel grouping independent');
+  await evaluate("document.getElementById('scope-layout').value='side';document.getElementById('scope-layout').dispatchEvent(new Event('change'))");
+  await waitFor("document.getElementById('scope-panes').dataset.layout==='side'");
+  await evaluate("document.querySelector('[data-pane=\"2\"] select').value='2';document.querySelector('[data-pane=\"2\"] select').dispatchEvent(new Event('change'))");
+  assert(await evaluate("document.getElementById('scope-volts').value==='auto'"),'Per-pane voltage scale independent');
+  await evaluate("document.getElementById('scope-plot').dispatchEvent(new PointerEvent('pointermove',{clientX:document.getElementById('scope-plot').getBoundingClientRect().left+100}))");
+  await waitFor("document.querySelectorAll('[data-scope-cursor]').length===2");
+  assert(await evaluate("[...document.querySelectorAll('.scope-readings')].every(el=>el.textContent.startsWith('Cursor'))"),'Cursor synchronized across panes');
+  let removePane=await center('[aria-label="Remove pane 2"]');await click(removePane.x,removePane.y);
+  await waitFor("document.querySelectorAll('.scope-pane').length===1");
+  assert(await evaluate("document.getElementById('scope-panel').dataset.samples")===captureCount,'Removing pane retains capture');
+  for(const mode of ['dots','off','lines']){
+    await evaluate(`document.getElementById('grid-mode').value='${mode}';document.getElementById('grid-mode').dispatchEvent(new Event('change'))`);
+    await evaluate('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))');
+    assert(await evaluate(mode==='lines'?"!!document.querySelector('#dots path')":mode==='dots'?"!!document.querySelector('#dots circle')":"document.querySelectorAll('#canvas > rect')[1].getAttribute('fill')==='none'"),'Grid display mode '+mode);
+  }
+  checks.push('Scope panes share capture/cursor with independent channels/scales, removal, side layout and grid modes');
   p=await center('[data-component="vin"]');await click(p.x,p.y);
 
   if(screenshot){

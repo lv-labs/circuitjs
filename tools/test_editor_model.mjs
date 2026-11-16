@@ -262,3 +262,35 @@ assert.equal(railContactBefore.electrical.wires.length,1,'Rail contact is explic
 railContact.transaction('Drag rail',d=>M.transformSelection(d,new Set([M.token('component',rv)]),0,-64));
 assert.deepEqual(railContact.document.electrical,railContactBefore.electrical);railContact.undo();assert.deepEqual(railContact.document,railContactBefore);
 console.log('AC/rail editor checks passed: all four presets, pin-anchored rotation/mirroring, waveform validation, contact dragging and undo.');
+
+// Endpoint pickup keeps graph IDs, branches and probe references through one history entry.
+{
+  const editor=M.create(M.empty()),a=editor.addComponent('resistor',0,0),b=editor.addComponent('resistor',320,0);
+  editor.connect({kind:'pin',componentId:a,pinId:'b'},{kind:'point',point:{x:128,y:0}},[{x:96,y:0}]);
+  const start=editor.document,wireId=start.electrical.wires[0].id,loose=start.electrical.wires[0].to.junctionId;
+  const probeId=editor.addProbe({kind:'junction',junctionId:loose});
+  const before=editor.document,target={kind:'pin',componentId:b,pinId:'a'};
+  assert.equal(M.reconnectTarget(before,loose,{x:128,y:0}),null,'Own wire cannot be a snap target');
+  assert.equal(M.reconnectTarget(before,loose,M.pin(before,target)).componentId,b);
+  editor.transaction('Reconnect',d=>M.reconnect(d,loose,target));
+  const after=editor.document;
+  assert.equal(after.electrical.wires[0].id,wireId);
+  assert.deepEqual(after.electrical.wires[0].to,target);
+  assert.deepEqual(after.probes.find(p=>p.id===probeId).positive,target);
+  assert.equal(after.electrical.junctions.length,0);
+  assert.deepEqual(after.layout.wires[wireId].bends,[]);
+  editor.undo();assert.deepEqual(editor.document,before);editor.redo();assert.deepEqual(editor.document,after);
+  editor.undo();
+  editor.connect({kind:'pin',componentId:b,pinId:'a'},{kind:'point',point:{x:272,y:128}});
+  const destWire=editor.document.electrical.wires.at(-1),destId=destWire.to.junctionId;
+  editor.transaction('Join loose ends',d=>M.reconnect(d,loose,{kind:'junction',junctionId:destId}));
+  assert.equal(editor.document.electrical.wires.length,2,'Preserve both wire IDs');
+  assert.equal(editor.document.electrical.junctions.length,1,'Remove redundant source junction');
+  assert.equal(M.looseEndpoint(editor.document,destId),false);
+  editor.undo();
+  editor.transaction('Join wire interior',d=>M.reconnect(d,loose,{kind:'wire',id:destWire.id,point:{x:272,y:64}}));
+  assert.equal(editor.document.electrical.wires.length,3,'Wire-interior drop splits exactly once');
+  assert.equal(M.junctionDots(editor.document).some(dot=>dot.degree===3),true);
+  M.validate(editor.document);
+}
+console.log('Wire-end checks passed: snap exclusion, pin/loose/interior joins, IDs, probes, cleanup and exact undo/redo.');

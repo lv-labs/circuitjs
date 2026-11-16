@@ -136,3 +136,55 @@ See the end-of-day section of HANDOFF.md before continuing.
   output and machine-specific paths out of shared instructions.
 - At machine changes, commit and push intended work, then fetch/pull on the other
   machine. Uncommitted local files do not transfer through Git.
+
+## Authorized continuation — 2026-11-14
+
+Endpoint reconnection, background grid modes and multiple scope panes are now
+implemented (superseding their previous deferred status). Scope views share time,
+cursor and acquisition, with independent channel visibility and voltage scales;
+settings remain session-only. See HANDOFF.md for exact limits and verification.
+Next checkpoint: run the new browser cases and visually review the interaction and
+multi-pane layout; sandbox restrictions prevented those checks in this session.
+
+## Full library priority — 2026-11-14
+
+The user considers the editor usable and now prioritizes the full Falstad component
+set and all example circuits. Copy/paste/duplicate and directional box selection
+are implemented as the immediate editing milestone. Further cosmetic/editor
+polish is secondary to library compatibility.
+
+The initial parity baseline is the source bundled in this fork, not a claim about
+the latest upstream release. [LEGACY-CATALOG.md](LEGACY-CATALOG.md) and the generated
+JSON inventory enumerate 140 menu-referenced element classes, 125 statically
+resolved record types, 374 circuit files and 368 menu entries. None of the legacy
+examples is claimed importable yet. Regenerate using
+`python3 tools/inventory_legacy_catalog.py` when the bundled catalog changes.
+
+Next implementation: legacy text importer for existing models with explicit
+connectivity and unsupported-record diagnostics; then inductors, diodes, current
+sources and potentiometers, followed by remaining analog, digital and specialized
+families. Preserve original model equations. Add the categorized example chooser
+alongside import coverage; do not silently omit unsupported records or present
+partial circuits as working originals.
+
+For this batch the user requests build-error checks only: do not run functional
+suites, browser verification, screenshots, visual checks or browser automation.
+
+## Components before import — 2026-11-14 (latest)
+
+User explicitly deferred legacy import and prioritized component coverage/checks.
+The first expansion adds 16 models (23 total), including basic inductive/diode/current/
+potentiometer models, both bipolar polarities, N/P MOS/JFETs and basic logic gates.
+They build and pass non-browser regression/numerical/Node-worker checks. This is
+partial library coverage, not completion. Next: transformers, switches, LEDs/Zeners,
+then sequential logic/chips and specialized families. Import/example browsing follows
+component support. See the latest HANDOFF section for checks and precise limitations.
+
+## 28-model milestone — 2026-11-14
+
+Transformer, center-off SPDT, DPDT, LED and Zener support now joins the earlier
+23-model catalog. Builds and all nine non-browser Node suites pass, including
+analytic winding responses, switch positions, semiconductor behavior and actual
+Node worker/direct agreement. Full component parity is still in progress; next
+are polarized capacitors, additional passive/switch variants and sequential logic.
+Import/examples remain deferred. HANDOFF.md records supported parameters and limits.

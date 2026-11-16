@@ -61,7 +61,7 @@ invalid(d=>d.electrical.components.find(c=>c.id==='r1').parameters.resistance=Na
 invalid(d=>d.electrical.components.find(c=>c.id==='r1').parameters.resistance=0);
 invalid(d=>d.electrical.components.find(c=>c.id==='r1').parameters.unrecognizedElectricalValue=1);
 invalid(d=>d.electrical.components[0].modelVersion=2,'UNSUPPORTED_MODEL');
-invalid(d=>d.electrical.components[0].kind='inductor','UNSUPPORTED_MODEL');
+invalid(d=>d.electrical.components[0].kind='unknown-model','UNSUPPORTED_MODEL');
 invalid(d=>d.simulation.timeStep=Infinity);
 invalid(d=>d.simulation.unrecognizedSolverMode=true);
 invalid(d=>d.electrical.wires[0].resistance=100);

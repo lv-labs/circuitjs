@@ -2,7 +2,28 @@
 (() => {
   const clone=value=>structuredClone(value), grid=16;
   const definitions={
+    npn:{prefix:'Q',name:'NPN transistor',pins:{base:[-48,0],collector:[48,-16],emitter:[48,16]},parameters:{beta:100}},
+    pnp:{prefix:'Q',name:'PNP transistor',pins:{base:[-48,0],collector:[48,16],emitter:[48,-16]},parameters:{beta:100}},
+    nmos:{prefix:'Q',name:'NMOS',pins:{gate:[-48,0],source:[48,16],drain:[48,-16]},parameters:{threshold:1.5,beta:0.02}},
+    pmos:{prefix:'Q',name:'PMOS',pins:{gate:[-48,0],source:[48,16],drain:[48,-16]},parameters:{threshold:1.5,beta:0.02}},
+    njfet:{prefix:'Q',name:'NJFET',pins:{gate:[-48,0],source:[48,16],drain:[48,-16]},parameters:{threshold:-4,beta:0.00125}},
+    pjfet:{prefix:'Q',name:'PJFET',pins:{gate:[-48,0],source:[48,16],drain:[48,-16]},parameters:{threshold:-4,beta:0.00125}},
+    andGate:{prefix:'U',name:'AND gate',pins:{a:[-48,-16],b:[-48,16],out:[48,0]},parameters:{highVoltage:5}},
+    nandGate:{prefix:'U',name:'NAND gate',pins:{a:[-48,-16],b:[-48,16],out:[48,0]},parameters:{highVoltage:5}},
+    orGate:{prefix:'U',name:'OR gate',pins:{a:[-48,-16],b:[-48,16],out:[48,0]},parameters:{highVoltage:5}},
+    norGate:{prefix:'U',name:'NOR gate',pins:{a:[-48,-16],b:[-48,16],out:[48,0]},parameters:{highVoltage:5}},
+    xorGate:{prefix:'U',name:'XOR gate',pins:{a:[-48,-16],b:[-48,16],out:[48,0]},parameters:{highVoltage:5}},
+    inverter:{prefix:'U',name:'Inverter',pins:{input:[-48,0],out:[48,0]},parameters:{highVoltage:5,slewRate:.5}},
+    transformer:{prefix:'T',name:'Transformer',pins:{p1:[-32,-48],s1:[32,-48],p2:[-32,48],s2:[32,48]},parameters:{inductance:4,ratio:1,coupling:.999,integration:'backwardEuler'}},
+    spdtSwitch:{prefix:'S',name:'SPDT switch (center off)',pins:{common:[-48,0],a:[48,-16],b:[48,16]},parameters:{position:0}},
+    dpdtSwitch:{prefix:'S',name:'DPDT switch',pins:{common1:[-48,-32],a1:[48,-16],b1:[48,-48],common2:[-48,16],a2:[48,32],b2:[48,0]},parameters:{position:0}},
+    led:{prefix:'D',name:'LED',pins:{anode:[-48,0],cathode:[48,0]},parameters:{forwardVoltage:2.1,maxCurrent:.01}},
+    zener:{prefix:'D',name:'Zener diode',pins:{anode:[-48,0],cathode:[48,0]},parameters:{forwardVoltage:.805904783,breakdownVoltage:5.6}},
     resistor:{prefix:'R',name:'Resistor',pins:{a:[-48,0],b:[48,0]},parameters:{resistance:1000}},
+    inductor:{prefix:'L',name:'Inductor',pins:{a:[-48,0],b:[48,0]},parameters:{inductance:1,initialCurrent:0,integration:'backwardEuler'}},
+    diode:{prefix:'D',name:'Diode',pins:{anode:[-48,0],cathode:[48,0]},parameters:{}},
+    currentSource:{prefix:'I',name:'DC current source',pins:{a:[-48,0],b:[48,0]},parameters:{current:.01,maxVoltage:0}},
+    potentiometer:{prefix:'RV',name:'Potentiometer',pins:{a:[-48,0],b:[48,0],wiper:[0,32]},parameters:{resistance:1000,position:.5}},
     capacitor:{prefix:'C',name:'Capacitor',pins:{a:[-48,0],b:[48,0]},parameters:{capacitance:1e-6,initialVoltage:0,integration:'backwardEuler'}},
     voltageSource:{prefix:'V',name:'DC source (2 terminals)',pins:{p:[0,-48],n:[0,48]},parameters:{waveform:{kind:'dc',voltage:5}}},
     voltageRail:{prefix:'V',name:'DC source (1 terminal)',pins:{p:[0,32]},parameters:{waveform:{kind:'dc',voltage:5}}},
@@ -145,7 +166,7 @@
     for(const c of [...document.electrical.components].reverse()) {
       const pose=document.layout.components[c.id],r=-pose.rotation*Math.PI/180;
       const dx=point.x-pose.x,dy=point.y-pose.y,x=dx*Math.cos(r)-dy*Math.sin(r),y=dx*Math.sin(r)+dy*Math.cos(r);
-      if(Math.abs(x)<(c.kind==='ground'?25:34) && Math.abs(y)<(['voltageSource','voltageRail','opamp'].includes(c.kind)?36:24))return {kind:'component',id:c.id};
+      if(Math.abs(x)<(c.kind==='ground'?25:34) && Math.abs(y)<(c.kind==='dpdtSwitch'?56:['voltageSource','voltageRail','opamp','transformer'].includes(c.kind)?36:24))return {kind:'component',id:c.id};
     }
     for(const wire of [...document.electrical.wires].reverse()) {
       const points=route(document,wire);
@@ -158,6 +179,67 @@
       }
     }
     return null;
+  }
+  function boxSelection(d,a,b) {
+    const r={x:Math.min(a.x,b.x),y:Math.min(a.y,b.y),right:Math.max(a.x,b.x),bottom:Math.max(a.y,b.y)},crossing=b.x<a.x,result=new Set();
+    const inside=p=>p.x>=r.x&&p.x<=r.right&&p.y>=r.y&&p.y<=r.bottom;
+    const rectangle=q=>crossing?q.x<=r.right&&q.right>=r.x&&q.y<=r.bottom&&q.bottom>=r.y:inside(q)&&inside({x:q.right,y:q.bottom});
+    const segment=(a,b)=>{
+      // Slab clipping also handles segments whose endpoints are both outside.
+      let low=0,high=1;
+      for(const [axis,min,max] of [['x',r.x,r.right],['y',r.y,r.bottom]]){
+        const delta=b[axis]-a[axis];if(!delta){if(a[axis]<min||a[axis]>max)return false;continue;}
+        const t1=(min-a[axis])/delta,t2=(max-a[axis])/delta;low=Math.max(low,Math.min(t1,t2));high=Math.min(high,Math.max(t1,t2));
+        if(low>high)return false;
+      }return true;
+    };
+    for(const c of d.electrical.components)if(rectangle(bounds(d,c)))result.add(token('component',c.id));
+    for(const w of d.electrical.wires){const points=route(d,w);if(crossing?points.some((p,i)=>inside(p)||(i&&segment(points[i-1],p))):points.every(inside))result.add(token('wire',w.id));}
+    for(const j of d.electrical.junctions)if(inside(d.layout.junctions[j.id]))result.add(token('junction',j.id));
+    for(const probe of d.probes)if(d.layout.probes?.[probe.id]){const p=probePoint(d,probe);if(rectangle({x:p.x-5,y:p.y-14,right:p.x+130,bottom:p.y+14}))result.add(token('probe',probe.id));}
+    return result;
+  }
+  function copySelection(d,selection) {
+    const fragment=empty(),e=fragment.electrical,l=fragment.layout;
+    const selected=ref=>selection.has(token(ref.kind==='pin'?'component':'junction',ref.componentId||ref.junctionId));
+    for(const c of d.electrical.components)if(selection.has(token('component',c.id))){e.components.push(clone(c));l.components[c.id]=clone(d.layout.components[c.id]);}
+    for(const j of d.electrical.junctions)if(selection.has(token('junction',j.id))){e.junctions.push(clone(j));l.junctions[j.id]=clone(d.layout.junctions[j.id]);}
+    const stubs=new Map();
+    function endpoint(ref){
+      if(selected(ref))return clone(ref);
+      const key=referenceKey(ref);
+      if(!stubs.has(key)){const id=crypto.randomUUID();e.junctions.push({id});l.junctions[id]=clone(pin(d,ref));stubs.set(key,{kind:'junction',junctionId:id});}
+      return clone(stubs.get(key));
+    }
+    for(const w of d.electrical.wires)if(selection.has(token('wire',w.id))||(selected(w.from)&&selected(w.to))){
+      e.wires.push({...clone(w),from:endpoint(w.from),to:endpoint(w.to)});l.wires[w.id]=clone(d.layout.wires[w.id]);
+    }
+    const included=ref=>selected(ref)||stubs.has(referenceKey(ref));
+    for(const probe of d.probes){
+      const valid=probe.kind==='current'?e.components.some(c=>c.id===probe.componentId):included(probe.positive)&&(probe.reference==='ground'||included(probe.negative));
+      if(!valid)continue;
+      const p=clone(probe);if(p.kind==='voltage'){p.positive=endpoint(p.positive);if(p.reference!=='ground')p.negative=endpoint(p.negative);}
+      fragment.probes.push(p);if(d.layout.probes?.[p.id]){l.probes ||= {};l.probes[p.id]=clone(d.layout.probes[p.id]);}
+    }
+    return validate(fragment);
+  }
+  function pasteSelection(d,fragment) {
+    validate(fragment);
+    const selection=new Set(),maps={component:new Map(),junction:new Map(),wire:new Map(),probe:new Map()};
+    const groups=[['component','components'],['junction','junctions'],['wire','wires'],['probe','probes']];
+    for(const [kind,list] of groups)for(const item of kind==='probe'?fragment.probes:fragment.electrical[list])maps[kind].set(item.id,crypto.randomUUID());
+    const ref=r=>r.kind==='pin'?{...clone(r),componentId:maps.component.get(r.componentId)}:{...clone(r),junctionId:maps.junction.get(r.junctionId)};
+    const references=new Set(d.electrical.components.map(c=>c.reference));
+    for(const [kind,list] of groups)for(const original of kind==='probe'?fragment.probes:fragment.electrical[list]){
+      const item=clone(original);item.id=maps[kind].get(original.id);selection.add(token(kind,item.id));
+      if(kind==='component'){
+        const prefix=definitions[item.kind].prefix;let number=1;while(references.has(prefix+number))number++;item.reference=prefix+number;references.add(item.reference);
+      }else if(kind==='wire'){item.from=ref(item.from);item.to=ref(item.to);}
+      else if(kind==='probe'){if(item.kind==='current')item.componentId=maps.component.get(item.componentId);else{item.positive=ref(item.positive);if(item.reference!=='ground')item.negative=ref(item.negative);}}
+      if(kind==='probe')d.probes.push(item);else d.electrical[list].push(item);
+      if(fragment.layout[list]?.[original.id]){d.layout[list] ||= {};d.layout[list][item.id]=clone(fragment.layout[list][original.id]);}
+    }
+    return selection;
   }
   function move(document,selection,dx,dy) {
     const selected=ref=>selection.has(token(ref.kind==='pin'?'component':'junction',ref.componentId||ref.junctionId));
@@ -271,11 +353,20 @@
     const components=ids(e.components),junctions=ids(e.junctions);ids(e.wires);
     const point=p=>p&&Number.isFinite(p.x)&&Number.isFinite(p.y);
     for(const c of e.components) {
-      assert(Object.hasOwn(definitions,c.kind)&&c.modelVersion===1,'This editor supports R, C, DC source, switch, op-amp and ground models');
+      assert(Object.hasOwn(definitions,c.kind)&&c.modelVersion===1,'Unsupported editor component model');
       const p=l.components?.[c.id];assert(point(p)&&[0,90,180,270].includes(p.rotation)&&typeof p.mirror==='boolean','Invalid component pose');
       assert(typeof c.reference==='string'&&c.parameters&&typeof c.parameters==='object','Missing component reference or parameters');
       const v=c.parameters;
       if(c.kind==='resistor')assert(Number.isFinite(v.resistance)&&v.resistance>0,'Resistance must be positive');
+      if(['npn','pnp'].includes(c.kind))assert(Number.isFinite(v.beta)&&v.beta>0,'Transistor beta must be positive');
+      if(['nmos','pmos','njfet','pjfet'].includes(c.kind))assert(Number.isFinite(v.threshold)&&Number.isFinite(v.beta)&&v.beta>0,'Invalid FET parameters');
+      if(['andGate','nandGate','orGate','norGate','xorGate','inverter'].includes(c.kind))assert(Number.isFinite(v.highVoltage)&&v.highVoltage>0&&(c.kind!=='inverter'||Number.isFinite(v.slewRate)&&v.slewRate>0),'Invalid logic level or slew rate');
+      if(c.kind==='transformer')assert(Number.isFinite(v.inductance)&&v.inductance>0&&Number.isFinite(v.ratio)&&v.ratio>0&&Number.isFinite(v.coupling)&&v.coupling>0&&v.coupling<1&&['backwardEuler','trapezoidal'].includes(v.integration),'Transformer needs positive inductance/ratio and coupling strictly between 0 and 1');
+      if(['spdtSwitch','dpdtSwitch'].includes(c.kind))assert(Number.isInteger(v.position)&&v.position>=0&&v.position<=(c.kind==='spdtSwitch'?2:1),'Invalid switch position');
+      if(['led','zener'].includes(c.kind))assert(Number.isFinite(v.forwardVoltage)&&v.forwardVoltage>0&&Number.isFinite(c.kind==='led'?v.maxCurrent:v.breakdownVoltage)&&(c.kind==='led'?v.maxCurrent:v.breakdownVoltage)>0,'Invalid diode parameters');
+      if(c.kind==='inductor')assert(Number.isFinite(v.inductance)&&v.inductance>0&&Number.isFinite(v.initialCurrent)&&['backwardEuler','trapezoidal'].includes(v.integration),'Invalid inductor parameters');
+      if(c.kind==='currentSource')assert(Number.isFinite(v.current)&&Number.isFinite(v.maxVoltage)&&v.maxVoltage>=0,'Invalid current source parameters');
+      if(c.kind==='potentiometer')assert(Number.isFinite(v.resistance)&&v.resistance>0&&Number.isFinite(v.position)&&v.position>=0&&v.position<=1,'Potentiometer position must be between 0 and 1');
       if(c.kind==='capacitor')assert(Number.isFinite(v.capacitance)&&v.capacitance>0&&Number.isFinite(v.initialVoltage)&&['backwardEuler','trapezoidal'].includes(v.integration),'Invalid capacitor parameters');
       if(c.kind==='voltageSource'||c.kind==='voltageRail')assert(validWaveform(v.waveform),'Expected finite source values, nonnegative amplitude, positive AC frequency and duty cycle between 0 and 100%.');
       if(c.kind==='opamp')assert(Number.isFinite(v.gain)&&v.gain>0&&Number.isFinite(v.minOutput)&&Number.isFinite(v.maxOutput)&&v.minOutput<v.maxOutput&&Number.isFinite(v.maxOutput-v.minOutput),'Invalid op-amp gain or output limits');
@@ -326,6 +417,33 @@
       d.layout.wires[wireId]={bends:clean([target.point,...points.slice(index+1)]).slice(1,-1)};family.push(wireId);return ref;
     }
     return resolve;
+  }
+  function looseEndpoint(d,id) {
+    return d.electrical.wires.filter(w=>w.from.junctionId===id||w.to.junctionId===id).length===1;
+  }
+  function reconnectTarget(d,id,point,scale=1) {
+    const copy=clone(d);
+    copy.electrical.junctions=copy.electrical.junctions.filter(j=>j.id!==id);
+    copy.electrical.wires=copy.electrical.wires.filter(w=>w.from.junctionId!==id&&w.to.junctionId!==id);
+    copy.probes=[];
+    const found=hit(copy,point,scale);
+    return found&&['pin','junction','wire'].includes(found.kind)?found:null;
+  }
+  function reconnect(d,id,target) {
+    if(!looseEndpoint(d,id))throw new Error('Only loose wire ends can be reconnected');
+    const wire=d.electrical.wires.find(w=>w.from.junctionId===id||w.to.junctionId===id);
+    if(target.kind==='wire'&&target.id===wire.id)throw new Error('Cannot reconnect a wire to itself');
+    const ref=connectionResolver(d)(target);
+    if(ref.junctionId===id)return;
+    const other=wire.from.junctionId===id?wire.to:wire.from;
+    if(referenceKey(other)===referenceKey(ref))throw new Error('Cannot join a wire to its own opposite endpoint');
+    const point=pin(d,ref),origin=d.layout.junctions[id];
+    move(d,new Set([token('junction',id)]),point.x-origin.x,point.y-origin.y);
+    if(wire.from.junctionId===id)wire.from=clone(ref);else wire.to=clone(ref);
+    for(const probe of d.probes)for(const key of ['positive','negative'])if(probe[key]?.junctionId===id)probe[key]=clone(ref);
+    d.electrical.junctions=d.electrical.junctions.filter(j=>j.id!==id);delete d.layout.junctions[id];
+    d.layout.wires[wire.id].bends=route(d,wire).slice(1,-1);
+    // Keep existing wire IDs and target junctions: probes and branches may name them.
   }
   function insertInline(document,componentId) {
     const component=document.electrical.components.find(c=>c.id===componentId);
@@ -498,5 +616,5 @@
     const scale=Math.max(.2,Math.min(4,camera.scale*factor));
     return {scale,x:point.x-(point.x-camera.x)*scale/camera.scale,y:point.y-(point.y-camera.y)*scale/camera.scale};
   }
-  globalThis.CircuitEditorModel={definitions,placementDefinitions,waveformNames,validWaveform,grid,snap,token,pin,route,closest,bounds,hit,move,detach,transformSelection,moveSegment,validate,empty,create,zoom,placementPose,flipPose,probePoint,probeVoltage,scopeChannels,alignGrid,insertInline,connectContacts,junctionDots,reshape,referenceKey};
+  globalThis.CircuitEditorModel={boxSelection,copySelection,pasteSelection,looseEndpoint,reconnectTarget,reconnect,definitions,placementDefinitions,waveformNames,validWaveform,grid,snap,token,pin,route,closest,bounds,hit,move,detach,transformSelection,moveSegment,validate,empty,create,zoom,placementPose,flipPose,probePoint,probeVoltage,scopeChannels,alignGrid,insertInline,connectContacts,junctionDots,reshape,referenceKey};
 })();

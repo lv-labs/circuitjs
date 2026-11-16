@@ -1,5 +1,5 @@
 'use strict';
-// Document catalog: resistors, capacitors, voltage sources/rails, switches, op-amps and ground.
+// Explicit document catalog; editor-free legacy models with validated parameters and pin mapping.
 // The compiler is pure; only createSession invokes the existing engine.
 (() => {
   const fail = (code, message) => { throw Object.assign(new Error(message), {code}); };
@@ -9,7 +9,28 @@
   const compare = (a, b) => a < b ? -1 : a > b ? 1 : 0;
   const key = parts => JSON.stringify(parts);
   const catalog = new Map([
+    ['npn', {pins:['base','collector','emitter'],type:'t',sign:null}],
+    ['pnp', {pins:['base','collector','emitter'],type:'t',sign:null}],
+    ['nmos', {pins:['gate','source','drain'],type:'f',sign:1}],
+    ['pmos', {pins:['gate','source','drain'],type:'f',sign:1}],
+    ['njfet', {pins:['gate','source','drain'],type:'j',sign:1}],
+    ['pjfet', {pins:['gate','source','drain'],type:'j',sign:1}],
+    ['andGate', {pins:['a','b','out'],type:'150',sign:-1}],
+    ['nandGate', {pins:['a','b','out'],type:'151',sign:-1}],
+    ['orGate', {pins:['a','b','out'],type:'152',sign:-1}],
+    ['norGate', {pins:['a','b','out'],type:'153',sign:-1}],
+    ['xorGate', {pins:['a','b','out'],type:'154',sign:-1}],
+    ['inverter', {pins:['input','out'],type:'I',sign:-1}],
+    ['transformer', {pins:['p1','s1','p2','s2'],type:'T',sign:null}],
+    ['spdtSwitch', {pins:['common','a','b'],type:'S',sign:1}],
+    ['dpdtSwitch', {pins:['common1','a1','b1','common2','a2','b2'],type:'429',sign:null}],
+    ['led', {pins:['anode','cathode'],type:'162',sign:1}],
+    ['zener', {pins:['anode','cathode'],type:'z',sign:1}],
     ['resistor', {pins: ['a', 'b'], type: 'r', sign: 1}],
+    ['inductor', {pins: ['a','b'], type: 'l', sign: 1}],
+    ['diode', {pins: ['anode','cathode'], type: 'd', sign: 1}],
+    ['currentSource', {pins: ['a','b'], type: 'i', sign: 1}],
+    ['potentiometer', {pins: ['a','b','wiper'], type: '174', sign: null}],
     ['capacitor', {pins: ['a', 'b'], type: 'c', sign: 1}],
     ['switch', {pins: ['a', 'b'], type: 's', sign: 1}],
     ['voltageSource', {pins: ['n', 'p'], type: 'v', sign: -1}],
@@ -17,6 +38,16 @@
     ['opamp', {pins: ['minus', 'plus', 'out'], type: 'a', sign: -1}],
     ['ground', {pins: ['g'], type: 'g', sign: null}]
   ]);
+  const bipolar=kind=>['npn','pnp'].includes(kind);
+  const fet=kind=>['nmos','pmos','njfet','pjfet'].includes(kind);
+  const logic=kind=>['andGate','nandGate','orGate','norGate','xorGate','inverter'].includes(kind);
+  function windingOrSwitchPairs(device){
+    const p=device.pins;
+    if(device.kind==='transformer')return [[p.p1,p.p2],[p.s1,p.s2]];
+    if(device.kind==='spdtSwitch')return device.parameters.position===2?[]:[[p.common,device.parameters.position===0?p.a:p.b]];
+    if(device.kind==='dpdtSwitch')return [[p.common1,device.parameters.position===0?p.a1:p.b1],[p.common2,device.parameters.position===0?p.a2:p.b2]];
+    return [];
+  }
   function exactFields(value, fields, label) {
     check(record(value) && Object.keys(value).length === fields.length &&
       fields.every(field => Object.hasOwn(value, field)), label + ': unexpected or missing fields');
@@ -71,6 +102,44 @@
         const r = component.parameters.resistance;
         check(Number.isFinite(r) && r > 0 && Number.isFinite(1 / r), component.id + ': invalid resistance');
         parameters = {resistance: r};
+      } else if(component.kind==='transformer'){
+        exactFields(component.parameters,['inductance','ratio','coupling','integration'],component.id);
+        const {inductance,ratio,coupling,integration}=component.parameters;
+        const l2=inductance*ratio*ratio,mutual=coupling*Math.sqrt(inductance*l2),det=inductance*l2-mutual*mutual;
+        check(Number.isFinite(inductance)&&inductance>0&&Number.isFinite(ratio)&&ratio>0&&Number.isFinite(coupling)&&coupling>0&&coupling<1&&Number.isFinite(det)&&det>0&&Number.isFinite(1/det)&&['backwardEuler','trapezoidal'].includes(integration),component.id+': invalid transformer inductance, ratio, coupling or integration');
+        parameters={inductance,ratio,coupling,integration};
+      } else if(['spdtSwitch','dpdtSwitch'].includes(component.kind)){
+        exactFields(component.parameters,['position'],component.id);const {position}=component.parameters;
+        check(Number.isInteger(position)&&position>=0&&position<=(component.kind==='spdtSwitch'?2:1),component.id+': invalid switch position');parameters={position};
+      } else if(['led','zener'].includes(component.kind)){
+        const extra=component.kind==='led'?'maxCurrent':'breakdownVoltage';exactFields(component.parameters,['forwardVoltage',extra],component.id);
+        const {forwardVoltage}=component.parameters,value=component.parameters[extra];
+        check(Number.isFinite(forwardVoltage)&&forwardVoltage>0&&Number.isFinite(value)&&value>0,component.id+': invalid diode parameters');parameters={forwardVoltage,[extra]:value};
+      } else if(bipolar(component.kind)){
+        exactFields(component.parameters,['beta'],component.id);const {beta}=component.parameters;
+        check(Number.isFinite(beta)&&beta>0,component.id+': invalid transistor beta');parameters={beta};
+      } else if(fet(component.kind)){
+        exactFields(component.parameters,['threshold','beta'],component.id);const {threshold,beta}=component.parameters;
+        check(Number.isFinite(threshold)&&Number.isFinite(beta)&&beta>0,component.id+': invalid FET parameters');parameters={threshold,beta};
+      } else if(logic(component.kind)){
+        const inverter=component.kind==='inverter';exactFields(component.parameters,inverter?['highVoltage','slewRate']:['highVoltage'],component.id);
+        const {highVoltage,slewRate}=component.parameters;check(Number.isFinite(highVoltage)&&highVoltage>0&&(!inverter||Number.isFinite(slewRate)&&slewRate>0),component.id+': invalid logic parameters');
+        parameters={highVoltage,...(inverter?{slewRate}:{})};
+      } else if (component.kind === 'inductor') {
+        exactFields(component.parameters, ['inductance','initialCurrent','integration'], component.id);
+        const {inductance,initialCurrent,integration}=component.parameters;
+        check(Number.isFinite(inductance)&&inductance>0&&Number.isFinite(initialCurrent)&&['backwardEuler','trapezoidal'].includes(integration),component.id+': invalid inductor');
+        parameters={inductance,initialCurrent,integration};
+      } else if (component.kind === 'diode') {
+        exactFields(component.parameters, [], component.id);parameters={};
+      } else if (component.kind === 'currentSource') {
+        exactFields(component.parameters,['current','maxVoltage'],component.id);
+        const {current,maxVoltage}=component.parameters;
+        check(Number.isFinite(current)&&Number.isFinite(maxVoltage)&&maxVoltage>=0,component.id+': invalid current source');parameters={current,maxVoltage};
+      } else if (component.kind === 'potentiometer') {
+        exactFields(component.parameters,['resistance','position'],component.id);
+        const {resistance,position}=component.parameters;
+        check(Number.isFinite(resistance)&&resistance>0&&Number.isFinite(1/resistance)&&Number.isFinite(position)&&position>=0&&position<=1,component.id+': invalid potentiometer');parameters={resistance,position};
       } else if (component.kind === 'capacitor') {
         exactFields(component.parameters, ['capacitance', 'initialVoltage', 'integration'], component.id);
         const {capacitance, initialVoltage, integration} = component.parameters;
@@ -165,13 +234,34 @@
         const a=sourceRoot(device.pins.p), b=sourceRoot(groundNet);
         check(a!==b,'Unsupported ideal source/rail loop: '+device.id);sourceParent.set(a,b);
       }
-      if (device.kind === 'opamp') {
+      if (device.kind === 'opamp'||logic(device.kind)) {
         const a=sourceRoot(device.pins.out), b=sourceRoot(groundNet);
         check(a !== b, 'Unsupported ideal op-amp output/source loop: ' + device.id);
         sourceParent.set(a,b);
       }
+      for(const [left,right] of windingOrSwitchPairs(device)){
+        adjacency.get(left).add(right);adjacency.get(right).add(left);
+        if(device.kind!=='transformer'){
+          const a=sourceRoot(left),b=sourceRoot(right);check(a!==b,'Unsupported ideal switch loop: '+device.id);sourceParent.set(a,b);
+        }
+      }
+      if(bipolar(device.kind)){
+        for(const end of [device.pins.collector,device.pins.emitter]){adjacency.get(device.pins.base).add(end);adjacency.get(end).add(device.pins.base);}
+      }
+      if(fet(device.kind)){
+        adjacency.get(device.pins.source).add(device.pins.drain);adjacency.get(device.pins.drain).add(device.pins.source);
+        if(device.kind.includes('jfet')){adjacency.get(device.pins.gate).add(device.pins.source);adjacency.get(device.pins.source).add(device.pins.gate);}
+      }
+      if(device.kind==='potentiometer'){
+        const {a,b,wiper}=device.pins;
+        for(const end of [a,b]){adjacency.get(end).add(wiper);adjacency.get(wiper).add(end);}
+        if(device.parameters.position===0||device.parameters.position===1){
+          const end=sourceRoot(device.parameters.position===0?a:b),tap=sourceRoot(wiper);
+          check(end!==tap,'Unsupported ideal potentiometer loop: '+device.id);sourceParent.set(end,tap);
+        }
+      }
       const pins = Object.values(device.pins);
-      if (pins.length === 2) {
+      if (pins.length === 2 && !logic(device.kind)) {
         if (device.kind !== 'switch' || device.parameters.closed) {
           adjacency.get(pins[0]).add(pins[1]); adjacency.get(pins[1]).add(pins[0]);
         }
@@ -181,6 +271,26 @@
           sourceParent.set(a, b);
         }
       }
+    }
+    // An ideal current source needs a return path that excludes current sources.
+    // Otherwise the legacy model silently substitutes a large resistor.
+    for(const source of devices.filter(d=>d.kind==='currentSource'&&d.parameters.maxVoltage===0&&d.parameters.current!==0)){
+      const paths=new Map([...adjacency.keys()].map(k=>[k,new Set()]));
+      const link=(a,b)=>{paths.get(a).add(b);paths.get(b).add(a);};
+      for(const d of devices){
+        if(d.kind==='currentSource')continue;
+        for(const pair of windingOrSwitchPairs(d))link(...pair);
+        const pins=Object.values(d.pins);
+        if(pins.length===2&&!logic(d.kind)&&(d.kind!=='switch'||d.parameters.closed))link(pins[0],pins[1]);
+        if(bipolar(d.kind)){link(d.pins.base,d.pins.collector);link(d.pins.base,d.pins.emitter);}
+        if(fet(d.kind)){link(d.pins.source,d.pins.drain);if(d.kind.includes('jfet'))link(d.pins.gate,d.pins.source);}
+        if(d.kind==='potentiometer'){link(d.pins.a,d.pins.wiper);link(d.pins.b,d.pins.wiper);}
+        if(d.kind==='voltageRail')link(d.pins.p,groundNet);
+        if(d.kind==='opamp'||logic(d.kind))link(d.pins.out,groundNet);
+      }
+      const reached=new Set([source.pins.a]),queue=[source.pins.a];
+      for(let i=0;i<queue.length;i++)for(const next of paths.get(queue[i]))if(!reached.has(next)){reached.add(next);queue.push(next);}
+      check(reached.has(source.pins.b),'Current source requires a return path: '+source.id);
     }
     // The legacy model repairs ideal capacitor/source loops by adding resistance.
     // Reject them here rather than silently changing live-state semantics.
@@ -192,7 +302,7 @@
     // OpAmpElm has an implicit ground-referenced output source, but no input
     // conductance. Inputs must have an external reference/feedback path.
     const reached = new Set([groundNet, ...nets.filter(net => net.ground).map(net => net.key),
-      ...devices.filter(device=>device.kind==='opamp').map(device=>device.pins.out)]);
+      ...devices.filter(device=>device.kind==='opamp'||logic(device.kind)).map(device=>device.pins.out)]);
     const queue = [...reached];
     for (let i = 0; i < queue.length; i++) for (const next of adjacency.get(queue[i]))
       if (!reached.has(next)) { reached.add(next); queue.push(next); }
@@ -204,7 +314,7 @@
     const projection = {devices, nets, simulation: {timeStep: document.simulation.timeStep}};
     const canonical = JSON.stringify(projection);
     const hubs = new Map(nets.map((net, i) => [net.key, [32 + i * 64, -1024]]));
-    check(32 + Math.max(devices.length, nets.length) * 64 < 2147483647, 'Circuit exceeds coordinate limit');
+    check(32 + Math.max(devices.length, nets.length) * 128 < 2147483647, 'Circuit exceeds coordinate limit');
     const records = [], connections = [], mapping = [];
     let groundIndex = null;
     devices.forEach((device, index) => {
@@ -218,7 +328,7 @@
       }
       const engineIndex = records.length;
       if (device.kind === 'ground') groundIndex = engineIndex;
-      const x = 32 + index * 64;
+      const x = 32 + index * 128;
       let parameters = '';
       let flags = 0;
       if (device.kind === 'resistor') parameters = ' ' + device.parameters.resistance;
@@ -232,15 +342,31 @@
         flags = device.parameters.integration === 'backwardEuler' ? 2 : 0;
         parameters = ` ${device.parameters.capacitance} ${device.parameters.initialVoltage} ${device.parameters.initialVoltage}`;
       }
+      if(device.kind==='transformer'){flags=device.parameters.integration==='backwardEuler'?2:0;parameters=` ${device.parameters.inductance} ${device.parameters.ratio} 0 0 ${device.parameters.coupling} 0`;}
+      if(device.kind==='spdtSwitch'){flags=1;parameters=` ${device.parameters.position} false 0 2`;}
+      if(device.kind==='dpdtSwitch')parameters=` ${device.parameters.position} false 2`;
+      if(device.kind==='led'){flags=1;parameters=` ${device.parameters.forwardVoltage} 1 0 0 ${device.parameters.maxCurrent}`;}
+      if(device.kind==='zener'){flags=1;parameters=` ${device.parameters.forwardVoltage} ${device.parameters.breakdownVoltage}`;}
+      if(bipolar(device.kind))parameters=` ${device.kind==='pnp'?-1:1} 0 0 ${device.parameters.beta}`;
+      if(fet(device.kind)){flags=device.kind.startsWith('p')?1:0;parameters=` ${device.parameters.threshold} ${device.parameters.beta}`;}
+      if(logic(device.kind))parameters=device.kind==='inverter'?` ${device.parameters.slewRate} ${device.parameters.highVoltage}`:` 2 0 ${device.parameters.highVoltage}`;
+      if(device.kind==='inductor'){
+        flags=device.parameters.integration==='backwardEuler'?2:0;
+        parameters=` ${device.parameters.inductance} ${device.parameters.initialCurrent} ${device.parameters.initialCurrent} 0`;
+      }
+      if(device.kind==='currentSource')parameters=` ${device.parameters.current} ${device.parameters.maxVoltage}`;
+      if(device.kind==='potentiometer')parameters=` ${device.parameters.resistance} ${device.parameters.position} Resistance`;
       if (device.kind === 'switch') parameters = ` ${device.parameters.closed ? 0 : 1} false`;
       if (device.kind === 'opamp') {
         flags=8;parameters=` ${device.parameters.maxOutput} ${device.parameters.minOutput} 1000000 0 0 ${device.parameters.gain}`;
       }
-      records.push(`${model.type} ${x} 32 ${device.kind==='opamp'?x+32:x} ${device.kind==='opamp'?32:64} ${flags}${parameters}`);
+      const pot=device.kind==='potentiometer',three=bipolar(device.kind)||fet(device.kind)||(logic(device.kind)&&device.kind!=='inverter');
+      const multiSwitch=['spdtSwitch','dpdtSwitch'].includes(device.kind),transformer=device.kind==='transformer';
+      records.push(`${model.type} ${x} 32 ${device.kind==='opamp'?x+32:pot||three||multiSwitch||transformer?x+64:x} ${device.kind==='opamp'||three||multiSwitch?32:pot?0:64} ${flags}${parameters}`);
       mapping.push({id: device.id, kind: device.kind, index: engineIndex, pins: [...model.pins], sign: model.sign});
       model.pins.forEach((pin, post) => {
         const [hx, hy] = hubs.get(device.pins[pin]);
-        const [px,py]=device.kind==='opamp'?[[x,16],[x,48],[x+32,32]][post]:[x,32+post*32];
+        const [px,py]=transformer?[[x,32],[x+64,32],[x,64],[x+64,64]][post]:device.kind==='spdtSwitch'?[[x,32],[x+64,16],[x+64,48]][post]:device.kind==='dpdtSwitch'?[[x,32],[x+64,48],[x+64,16],[x,80],[x+64,96],[x+64,64]][post]:bipolar(device.kind)?[[x,32],[x+64,device.kind==='pnp'?48:16],[x+64,device.kind==='pnp'?16:48]][post]:fet(device.kind)?[[x,32],[x+64,48],[x+64,16]][post]:logic(device.kind)&&three?[[x,48],[x,16],[x+64,32]][post]:device.kind==='opamp'?[[x,16],[x,48],[x+32,32]][post]:pot?[[x,32],[x+64,32],[x+32,0]][post]:[x,32+post*32];
         connections.push(`w ${px} ${py} ${hx} ${hy} 0`);
       });
     });

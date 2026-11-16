@@ -14,7 +14,7 @@ self.onmessage = ({data}) => {
 self.oncircuitengineready = engine => {
   session = CircuitDocumentAdapter.createSession(engine);
   self.postMessage({type: 'ready', documentAdapterVersion: 1,
-    models: ['resistor@1', 'capacitor@1', 'switch@1', 'voltageSource:dc@1', 'voltageSource:periodic@1', 'voltageRail@1', 'opamp@1', 'ground@1'],
+    models: ['resistor@1', 'transformer@1', 'spdtSwitch@1', 'dpdtSwitch@1', 'led@1', 'zener@1', 'npn@1', 'pnp@1', 'nmos@1', 'pmos@1', 'njfet@1', 'pjfet@1', 'andGate@1', 'nandGate@1', 'orGate@1', 'norGate@1', 'xorGate@1', 'inverter@1', 'inductor@1', 'diode@1', 'currentSource@1', 'potentiometer@1', 'capacitor@1', 'switch@1', 'voltageSource:dc@1', 'voltageSource:periodic@1', 'voltageRail@1', 'opamp@1', 'ground@1'],
     perStepSamples: true, maxSampleChannels: 32, dedicatedWorker: self instanceof DedicatedWorkerGlobalScope,
     hasDocument: typeof document !== 'undefined', hasWindow: typeof window !== 'undefined'});
 };

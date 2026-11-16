@@ -196,3 +196,27 @@ voltage/time arrays plus channel descriptors, alongside the normal final frame.
 Omitting channels keeps the existing call/result behavior. This uses the existing
 engine step hook internally and changes no numerical equations. See
 WORKER-PROTOCOL.md for the request/reply shape and EDITOR-PROTOTYPE.md for the viewer.
+
+## Catalog expansion (2026-11-14)
+
+The editor/document catalog now contains 28 model kinds. Recent additions are
+inductor, diode, currentSource, potentiometer, npn, pnp, nmos, pmos, njfet, pjfet,
+andGate, nandGate, orGate, norGate, xorGate, inverter, transformer, spdtSwitch,
+dpdtSwitch, led and zener, all at modelVersion 1. The preceding smaller-catalog
+notes describe earlier milestones; full upstream model/variant parity is not claimed.
+
+For the latest five kinds, parameter/pin contracts are:
+
+| Kind | Public pins in engine post order | Parameters |
+| --- | --- | --- |
+| transformer | p1, s1, p2, s2 | inductance > 0, ratio > 0, 0 < coupling < 1, integration |
+| spdtSwitch | common, a, b | position: 0=A, 1=B, 2=Off |
+| dpdtSwitch | common1, a1, b1, common2, a2, b2 | position: 0=A, 1=B |
+| led | anode, cathode | forwardVoltage > 0 (at 1 A), maxCurrent > 0 (brightness only) |
+| zener | anode, cathode | forwardVoltage > 0 (at 1 A), breakdownVoltage > 0 |
+
+Transformer winding pairs are p1–p2 and s1–s2. The compiler does not use magnetic
+coupling as a ground reference. It rejects floating islands, singular/nonfinite
+coupling coefficients and ideal switch/source loops. Transformer and DPDT have no
+single component-current mapping; all pins retain voltage results. Neither switch
+kind is eligible for the existing state-preserving SPST live-edit path.
