@@ -1,11 +1,16 @@
 # Circuit document and engine adapter
 
-Design and implementation direction, 2026-11-13. Document loading, stable-ID
+Design and implementation direction, originally 2026-11-13; current implementation
+status and priorities are in [HANDOFF.md](HANDOFF.md) and [PLAN.md](PLAN.md). Document loading, stable-ID
 results, revision coordination, continuous RC switching and the first editor are
 implemented; see [DOCUMENT-ADAPTER.md](DOCUMENT-ADAPTER.md) and
 [EDITOR-PROTOTYPE.md](EDITOR-PROTOTYPE.md). Broader model/catalog features and
 unimplemented editing commands below remain proposals. Rust, UI toolkit and target platforms
 remain open. The format is JSON and can be represented in either Rust or TypeScript.
+
+The reusable implementation is now [packages/circuit-core](../../packages/circuit-core/README.md).
+The browser prototype consumes it through compatibility adapters; a new frontend
+should use the package entry rather than copy prototype model code.
 
 ## Ownership
 
@@ -48,7 +53,9 @@ Each entity kind has its own ID namespace. A pin's identity is the tuple
 `(componentId, pinId)`. References such as `R1` are editable display text.
 
 Move/rotate/value edits keep IDs. Copy/paste generates new IDs and rewrites internal
-references. Delete removes incident wires in the same transaction. Undo can restore
+references. Component deletion replaces surviving pin endpoints with loose junction
+stubs, preserving attached wire geometry; explicitly selected wires still delete.
+Undo can restore
 the original entities/IDs; it creates a new revision rather than rewinding counters.
 
 Each component stores `kind`, `modelVersion`, `reference`, and typed `parameters`.

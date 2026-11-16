@@ -30,10 +30,10 @@ own.connect(from,to);const wire=own.document.electrical.wires[0];
 assert.equal(own.document.electrical.junctions.length,0);
 const center={x:160,y:64};
 assert.equal(M.hit(own.document,center).kind,'wire');
-const graph=JSON.stringify(own.document.electrical);
+const graph=CircuitDocumentAdapter.compile(own.document).canonical;
 own.transaction('Drag segment',d=>M.moveSegment(d,wire.id,0,0,32));
-assert.equal(JSON.stringify(own.document.electrical),graph,'Rerouting preserves endpoint graph');
-assert.ok(M.route(own.document,wire).some(p=>p.y===96));
+assert.equal(CircuitDocumentAdapter.compile(own.document).canonical,graph,'Rerouting preserves electrical connectivity');
+assert.ok(M.route(own.document,own.document.electrical.wires.find(w=>w.id===wire.id)).some(p=>p.y===96));
 const unchangedRoute=own.document;
 own.transaction('Along segment',d=>M.moveSegment(d,wire.id,1,0,0));
 assert.deepEqual(own.document,unchangedRoute);
@@ -47,7 +47,8 @@ own.undo();assert.deepEqual(own.document,beforeSplit,'One undo removes branch an
 own.redo();
 const afterSplit=own.document;
 own.remove(new Set([M.token('component',g)]));
-assert.equal(own.document.electrical.wires.length,2);assert.equal(own.document.electrical.components.length,2);
+assert.equal(own.document.electrical.wires.length,3);assert.equal(own.document.electrical.components.length,2);
+assert.ok(own.document.electrical.wires.every(w=>![w.from,w.to].some(ref=>ref.componentId===g)),'Deleting a component leaves detached wires');
 assert.ok(own.document.electrical.junctions.some(j=>j.id===junction),'Shared junction identity survives deleting branch');
 own.undo();assert.deepEqual(own.document,afterSplit);
 // Splitting the same original wire twice must resolve the second point on its new segment.
@@ -63,7 +64,7 @@ for(const [kind,definition] of Object.entries(M.definitions))for(const rotation 
  const d=M.empty(),id='test';d.electrical.components.push({id,kind,parameters:structuredClone(definition.parameters),reference:'X1',modelVersion:1});
  d.layout.components[id]=M.placementPose(kind,{x:64,y:96},rotation);
  for(const pinId of Object.keys(definition.pins)) {
-  const p=M.pin(d,{kind:'pin',componentId:id,pinId});assert.equal(p.x%16,0);assert.equal(p.y%16,0);
+  const p=M.pin(d,{kind:'pin',componentId:id,pinId});assert.equal(Math.abs(p.x%16),0);assert.equal(Math.abs(p.y%16),0);
  }
  if(kind==='ground')assert.deepEqual(M.pin(d,{kind:'pin',componentId:id,pinId:'g'}),{x:64,y:96},'Ground pin is its placement anchor');
 }
@@ -88,7 +89,7 @@ backtrack.connect({kind:'pin',componentId:left,pinId:'b'},{kind:'pin',componentI
 const edge=backtrack.document.electrical.wires[0];
 assert.deepEqual(M.route(backtrack.document,edge).map(p=>[p.x,p.y]),[[48,0],[112,0]]);
 backtrack.transaction('Drag resistor down',d=>M.move(d,new Set([M.token('component',right)]),0,64));
-assert.deepEqual(M.route(backtrack.document,edge).map(p=>[p.x,p.y]),[[48,0],[112,0],[112,64]]);
+assert.deepEqual(M.route(backtrack.document,edge).map(p=>[p.x,p.y]),[[48,0],[96,0],[96,64],[112,64]]);
 const immutable=own.document;immutable.electrical.components=[];assert.notEqual(own.document.electrical.components.length,0);
 const bad=structuredClone(initial);bad.electrical.wires[0].from.pinId='missing';
 assert.throws(()=>model.replace(bad),/Invalid wire/);M.validate(model.document);

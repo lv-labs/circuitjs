@@ -1,190 +1,125 @@
-# New circuit simulator: project plan
+# New circuit simulator: current plan
 
-Status: editor-free/worker proofs, stable-ID document boundary, continuous RC run
-and first editor prototype verified, 2026-11-13. See [PHASE-0.md](PHASE-0.md) for
-results and remaining feasibility work. Frontend/platform choices remain open.
+Updated 2026-11-16. This is the current plan; [PLAN-HISTORY.md](PLAN-HISTORY.md)
+preserves previous milestones and superseded next-task notes.
+[HANDOFF.md](HANDOFF.md) contains the current implementation/build/test checkpoint.
 
-The document/adapter contract is described in [EDITOR-DESIGN.md](EDITOR-DESIGN.md) and
-[WORKER-PROTOCOL.md](WORKER-PROTOCOL.md), with concrete JSON examples. These are
-partly implemented contracts with broader proposed scope. Document loading and stable-ID results are
-implemented separately from the Phase 0 API; see [DOCUMENT-ADAPTER.md](DOCUMENT-ADAPTER.md).
-Revision gating and candidate-worker replacement/reset now run on that boundary;
-see [COORDINATOR.md](COORDINATOR.md). Continuous scheduling and RC live edits are
-also implemented: [RUN-AND-LIVE-EDITS.md](RUN-AND-LIVE-EDITS.md). Editor interaction
-prototype is now implemented in [EDITOR-PROTOTYPE.md](EDITOR-PROTOTYPE.md).
-The latest pass adds separate Move/Drag commands with atomic undo, a searchable
-component chooser and KiCad-style A/R/M/G/W/E/P shortcuts, building on the
-grid-aligned contacts and local wire cleanup. Inline two-pin insertion now removes
-the bypass span atomically, including spans split by two-way junctions. Next:
-wire-end reconnection and cleanup of rejoined loose wires. The catalog now includes
-three-pin op-amps; X/Y flips, non-loading voltage markers and E/double-click modal
-properties are implemented. Switch bodies single-click to toggle. Sine sources
-with amplitude/frequency/DC offset, selected property values and explicit loose
-wire endings are also implemented. AC/DC sources now have one- and two-terminal
-presets and a waveform selector (including duty for square/pulse). A docked
-oscilloscope now captures per-step worker samples and plots multiple named voltage
-probes together with shared scales, cursor readings and bounded history. Frontend/platform choice
-remains open.
+## Direction
 
-## Purpose and agreed direction
+Build a new editor while preserving CircuitJS's electrical models and simulation
+algorithms. KiCad is the interaction reference. Stable document identities and
+explicit connectivity must survive a change of frontend.
 
-Build a modern circuit editor with excellent component placement, wiring,
-selection, navigation, and signal inspection. The main motivation is interaction
-quality; simulation speed on complex circuits is secondary. The user's chosen
-interaction reference is KiCad: quiet pin joins, precise grid contacts and dragging
-that stretches connected wires. This preference does not select the UI toolkit.
+The current browser/SVG application is a working interaction and integration
+prototype, not a commitment to the final UI. The latest user direction is to avoid
+investing too much further in it because a fresh UI is intended later. Rust/WASM,
+TypeScript, target platforms, toolkit and final repository layout remain undecided.
+The user has authorized the shared-core extraction below; it is now implemented.
+No UI rewrite, toolkit selection or engine port has been selected.
 
-Preserve CircuitJS's existing electrical algorithms and models where practical.
-Do not make a simulation rewrite a prerequisite for the new interface. The user
-is willing to undertake a substantial project and is interested in Rust and WASM,
-inspired by https://github.com/tangency-labs/solidcraft.
+## Current checkpoint
 
-Rust, browser-first delivery, the UI toolkit, and repository layout are proposals,
-not final decisions. A separate application and an extracted engine are the
-working architectural direction, subject to a feasibility investigation.
+| Area | Implemented | Still open |
+| --- | --- | --- |
+| Engine boundary | Editor-free Java/GWT engine, dedicated worker, bounded stepping and stable-ID results | Full legacy compatibility, larger-circuit performance and broader platform verification |
+| Continuous editing | Default Run; guarded in-place value/topology/timestep updates retain existing model state and engine time | Unsupported configuration/model variants; exhaustive behavior across the entire legacy library |
+| Document boundary | Schema v1, explicit graph, stable IDs, canonical electrical projection, save/open | Schema migration policy; further separation only when a concrete frontend requires it |
+| Library | 65 document/editor models, including 3 graphics; original model equations reused | Full component/variant coverage; menu availability is not import compatibility |
+| Prototype interactions | Stateful connected dragging; section merge/tail cleanup; detached rotation/flip; wire-to-pin drops; loose-end routing; preserved wires on component deletion | Full native KiCad equivalence; reusable interaction modules are now extracted |
+| Signal inspection | Worker samples, voltage probes, multiple scope panes, output measurements/capture | Broader performance/platform coverage and final UX/layout decisions |
+| Legacy import | Source inventory and coverage mapping | No general legacy text importer or bundled-example chooser |
 
-## Architecture to investigate
+Current menu availability, checked against code on 2026-11-16: Passive Components
+13/24; Inputs and Sources 9/17; Outputs and Labels 20/20. These are menu counts,
+not independent model or fully supported variant counts. See
+[LEGACY-CATALOG.md](LEGACY-CATALOG.md) and [DOCUMENT-ADAPTER.md](DOCUMENT-ADAPTER.md).
 
-- Circuit document: stable component/pin IDs, explicit connectivity, parameters,
-  and visual layout. Simulation results are separate from the saved document.
-- Editor: selection, placement, wire editing, snapping, navigation, and reversible
-  commands for undo/redo.
-- Renderer: symbols, labels, interaction previews, probes, and waveforms.
-- Engine adapter: translates the document into simulator inputs and maps results
-  back to stable IDs. Numerical node indices must not become document identities.
-- Existing CircuitJS engine: retain the Java-to-JavaScript implementation first;
-  investigate background worker execution after identifying browser dependencies.
+## Shared-core extraction — completed 2026-11-16
 
-The existing engine derives connections partly from geometry. Explicit new-editor
-connectivity therefore needs a tested translation; it is not an existing engine API.
-Define parameter changes, switch events, topology changes, reset behaviour, and
-stale-result handling explicitly. Transport results in batches rather than issuing
-one cross-language call per component per simulation step.
+The reusable code now lives in [packages/circuit-core](../../packages/circuit-core/README.md):
+shared catalog/pin/default metadata, geometry, document validation, history,
+commands and drag graphs, compiler/session adapter, revision protocol, simulation
+coordination and sampled-signal state. Native ESM and classic/Node entry points
+share the same implementation. The reference UI uses compatibility adapters.
 
-## Phase 0: feasibility and decisions
+A standalone consumer imports only this package, edits a divider and drives the
+real retained worker without the prototype renderer/inspector. The numerical,
+worker and history/interaction tests remain the portability boundary. This is not
+a final UI stack decision, and no new UI was built.
 
-1. Reproduce the current build and run representative circuits. Record toolchain
-   versions and actual commands. README currently specifies Java 8 and Gradle 8.7.
-2. Map the dependencies between SimulationManager, CircuitElm/component models,
-   UIManager, loading, scopes, timing, and browser APIs. Identify global/static state.
-3. Build the smallest proof that an external caller can load and advance a circuit
-   and read results using the existing maths. A temporarily UI-hosted bridge is
-   acceptable for discovery, but does not prove worker or headless operation.
-4. Investigate deterministic stepping and capture baseline outputs from the
-   unchanged simulator. Fix timestep, initial conditions, parameters, and sample
-   times; choose justified tolerances for comparisons.
-5. Compare frontend options with a small interaction prototype, including a Rust
-   candidate. Check browser text/input, high-DPI rendering, trackpad interaction,
-   accessibility, packaging, and compatibility with the engine bridge.
-6. Record a decision covering target platforms, UI stack, bridge/extraction scope,
-   licensing obligations for reused code, repository layout, and first component set.
+## Recommended next milestone: a small fresh frontend comparison
 
-Exit: a runnable engine bridge, a documented dependency map and limitations,
-repeatable baseline capture, and an architecture decision supported by the spike.
-Avoid broad refactoring before these questions are answered.
+Steps 1–3 below describe the now-completed extraction/checkpoint. The next proposed
+implementation is step 4: one small vertical slice. Defer additional cosmetic work
+on the old shell; retain it as a behavior/reference harness.
 
-## Phase 1: engine boundary and verification
+1. **Define the reusable boundary.** Document the contract for a circuit document,
+   component/pin metadata, edit commands and drag sessions, undo transactions,
+   simulation requests/results and sampled signals. Distinguish electrical pin
+   geometry from SVG symbols and DOM input handling. Reuse existing APIs where
+   they are sufficient; avoid inventing a large abstraction layer.
+2. **Separate and verify that boundary.** Move reusable catalog/geometry/command
+   code out of the prototype shell incrementally. This is now implemented in the
+   shared package; `editor-model.js`
+   and the old adapter entry points delegate to it. Keep metadata/commands shared
+   instead of duplicating them in the next frontend. Document IDs/formats and
+   engine behavior remain unchanged.
+3. **Checkpoint portability.** Maintain one repeatable check command plus saved
+   fixtures for divider/RC simulation, live edits, wires/junctions, drag/cancel,
+   detached rotation/flip, wire-to-pin connection, undo/redo and save/open. Keep
+   numerical/worker tests independent of browser UI tests. The old editor becomes
+   the reference harness that exercises the same core.
+4. **Then compare frontend candidates with one small vertical slice.** Build/open
+   the same saved divider or RC circuit, place/connect a component, perform a
+   connected drag and detached rotation, undo, and plot a probe using the existing
+   worker. Compare input/text handling, trackpad/high-DPI behavior, accessibility,
+   implementation effort and packaging. Choose the stack from evidence before
+   building a replacement full application.
 
-Extract only what the first working circuits require. Keep numerical changes
-separate from structural changes. Expose load/reset, bounded stepping, parameter
-updates, running state, result batches, and structured diagnostics.
+Exit: a new frontend can load/edit/simulate the same document and run the core
+regressions without importing the old `editor.js`, SVG renderer or inspector.
+The aim is to replace the UI shell while retaining validated domain behavior.
+Full component parity and legacy import are not prerequisites for starting that
+fresh frontend slice.
 
-Start reference coverage with a voltage divider, RC transient, RLC transient,
-diode rectifier, and switch event. Add analytic checks where available, alongside
-comparisons with the existing implementation. Existing behaviour is the
-compatibility reference, not proof of physical accuracy for every circuit.
+## Library work after the boundary checkpoint
 
-Exit: agreed sample circuits reproduce baseline results within documented
-tolerances and the boundary can be driven independently of the old editor.
+Full Falstad library coverage remains a goal. The earlier order was components
+before legacy import, with remaining passives later deferred in favor of Variable
+Voltage and Outputs/Labels; that requested slice is complete. There is no newly
+approved next component family.
 
-## Phase 2: first complete editing experience
+Choose a bounded next batch using catalog/example usage and required environments.
+For instance, remaining source entries include sweep, antenna, AM/FM, noise, audio
+input, data input and external JavaScript voltage. They are not equally cheap:
+external input/audio require capabilities and lifecycle decisions beyond another
+numeric device mapping. Pending passive and digital families remain recorded in
+the catalog; do not infer that an enabled menu entry supports every legacy variant.
 
-Support sources, ground, resistors, capacitors, and wires. A user can build a
-voltage divider and RC circuit, edit values, select and move groups, undo/redo,
-save/reopen, run/pause/reset, and inspect voltage and a waveform.
+For each batch, extend metadata, compiler/worker capabilities, parameter validation
+and numerical/worker fixtures before adding minimal exposure in the reference
+harness. Preserve original equations. This work should benefit either frontend.
 
-Specify interaction rules before expanding features: click/Shift-click/marquee,
-hit targets, zoom anchor, snapping, junctions versus crossings, connected movement,
-wire bend editing, Escape, and cancellation. Keep input responsive during simulation.
+Legacy import follows sufficient model/variant support. Start with a measured
+subset and explicit unsupported-record diagnostics; validate original flags,
+parameters, connectivity and sample results. Do not silently drop records or claim
+all 374 bundled files load because their record types appear in the catalog.
 
-Exit: those two circuits are pleasant to build and edit end to end, with verified
-simulation results. Assess actual interaction quality, not just screenshots.
+## Guardrails and decisions still needed
 
-## Phase 3: broaden and harden
-
-Expand models and CircuitJS import compatibility incrementally. Report unsupported
-elements explicitly. Add larger-circuit measurement, error recovery, probes,
-waveform tools, and desktop packaging if selected. Consider Rust engine ports only
-when a demonstrated requirement justifies their validation cost.
-
-## Deferred scope layout request — 2026-11-13
-
-The user wants the future option of multiple independent scope panes arranged
-stacked vertically or side by side. The current single dock already overlays
-multiple voltage probes; separate panes are not implemented. The user explicitly
-deferred this work while ending the session. Probe grouping, linked/independent
-scales and cursors, resizing and layout persistence remain design decisions.
-See the end-of-day section of HANDOFF.md before continuing.
-
-## Working practices
-
-- Keep the deployed fork usable while exploring the new application.
-- Use focused branches and reviewable milestones; no deployment is implied.
-- Update HANDOFF.md at session boundaries with changes, checks, blockers, and the
-  next concrete task. Add dated decisions here or in a linked decision document.
-- Share source, plans, fixtures, and setup instructions through Git. Keep generated
-  output and machine-specific paths out of shared instructions.
-- At machine changes, commit and push intended work, then fetch/pull on the other
-  machine. Uncommitted local files do not transfer through Git.
-
-## Authorized continuation — 2026-11-14
-
-Endpoint reconnection, background grid modes and multiple scope panes are now
-implemented (superseding their previous deferred status). Scope views share time,
-cursor and acquisition, with independent channel visibility and voltage scales;
-settings remain session-only. See HANDOFF.md for exact limits and verification.
-Next checkpoint: run the new browser cases and visually review the interaction and
-multi-pane layout; sandbox restrictions prevented those checks in this session.
-
-## Full library priority — 2026-11-14
-
-The user considers the editor usable and now prioritizes the full Falstad component
-set and all example circuits. Copy/paste/duplicate and directional box selection
-are implemented as the immediate editing milestone. Further cosmetic/editor
-polish is secondary to library compatibility.
-
-The initial parity baseline is the source bundled in this fork, not a claim about
-the latest upstream release. [LEGACY-CATALOG.md](LEGACY-CATALOG.md) and the generated
-JSON inventory enumerate 140 menu-referenced element classes, 125 statically
-resolved record types, 374 circuit files and 368 menu entries. None of the legacy
-examples is claimed importable yet. Regenerate using
-`python3 tools/inventory_legacy_catalog.py` when the bundled catalog changes.
-
-Next implementation: legacy text importer for existing models with explicit
-connectivity and unsupported-record diagnostics; then inductors, diodes, current
-sources and potentiometers, followed by remaining analog, digital and specialized
-families. Preserve original model equations. Add the categorized example chooser
-alongside import coverage; do not silently omit unsupported records or present
-partial circuits as working originals.
-
-For this batch the user requests build-error checks only: do not run functional
-suites, browser verification, screenshots, visual checks or browser automation.
-
-## Components before import — 2026-11-14 (latest)
-
-User explicitly deferred legacy import and prioritized component coverage/checks.
-The first expansion adds 16 models (23 total), including basic inductive/diode/current/
-potentiometer models, both bipolar polarities, N/P MOS/JFETs and basic logic gates.
-They build and pass non-browser regression/numerical/Node-worker checks. This is
-partial library coverage, not completion. Next: transformers, switches, LEDs/Zeners,
-then sequential logic/chips and specialized families. Import/example browsing follows
-component support. See the latest HANDOFF section for checks and precise limitations.
-
-## 28-model milestone — 2026-11-14
-
-Transformer, center-off SPDT, DPDT, LED and Zener support now joins the earlier
-23-model catalog. Builds and all nine non-browser Node suites pass, including
-analytic winding responses, switch positions, semiconductor behavior and actual
-Node worker/direct agreement. Full component parity is still in progress; next
-are polarized capacitors, additional passive/switch variants and sequential logic.
-Import/examples remain deferred. HANDOFF.md records supported parameters and limits.
+- Keep the deployed application usable; the prototype build remains opt-in.
+- Separate solver changes from structural extraction and frontend work.
+- Preserve explicit connectivity: render/load does not join crossings. Editor
+  commands such as wire-to-pin drops create explicit contacts atomically.
+- Rotation and X/Y flip are detached pick-up/put-down operations. M detaches;
+  ordinary pointer/G dragging retains connections. See [DRAGGING.md](DRAGGING.md).
+- Keep browser verification claims scoped to cases actually exercised. Older
+  batch-specific requests to skip browser checks are historical; recent drag,
+  orientation and wire-drop work was browser-tested. Broader catalog/UI behavior
+  is not thereby certified.
+- Record scope-layout persistence, target platforms, toolkit and migration policy
+  when decided. Multiple scope panes exist; their arrangement/settings are not a
+  final persistent workspace design.
+- Preserve accumulated uncommitted work in `new-sim`; no reset, commit, push,
+  deployment is implied by the extraction. The core is implemented; a fresh UI
+  comparison remains proposed work.

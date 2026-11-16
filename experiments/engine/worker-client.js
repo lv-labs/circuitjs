@@ -56,6 +56,7 @@ window.createCircuitWorker = function(url = 'worker.js') {
     reset: () => request('reset'),
     snapshot: () => request('snapshot'),
     setSwitch: (id, closed) => request('setSwitch', id, closed),
+    updateCircuit: (text, dt, retained) => request('updateCircuit', text, dt, retained),
     terminate: () => stop(new Error('Worker terminated'))};
 };
 
@@ -67,5 +68,6 @@ window.createDocumentWorker = function(url = 'document-worker.js') {
     step: (count, channels) => client.request('step', count, channels),
     snapshot: () => client.request('snapshot'),
     reset: () => client.request('reset'),
+    updateProjection: (projection, documentId) => client.request('updateProjection', projection, documentId),
     terminate: client.terminate};
 };

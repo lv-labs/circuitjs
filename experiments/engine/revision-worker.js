@@ -13,7 +13,7 @@ self.oncircuitengineready = engine => {
     hasDocument: typeof document !== 'undefined', hasWindow: typeof window !== 'undefined'});
 };
 try {
-  importScripts('document-adapter.js', 'revision-protocol.js', 'circuitjsworker/engine-worker.js');
+  importScripts('core/catalog.js','core/adapter.js','core/worker-api.js','document-adapter.js', 'core/protocol.js','revision-protocol.js', 'circuitjsworker/engine-worker.js');
 } catch (error) {
   self.postMessage({type: 'fatal', error: {message: String(error.stack || error)}});
 }

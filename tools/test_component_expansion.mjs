@@ -50,7 +50,7 @@ for(const integration of ['backwardEuler','trapezoidal'])for(const ratio of [.5,
 }
 for(const [kind,parameters] of [['transformer',{coupling:1}],['transformer',{coupling:0}],['transformer',{ratio:0}],['transformer',{inductance:1e300}],['spdtSwitch',{position:3}],['dpdtSwitch',{position:2}],['led',{maxCurrent:0}],['zener',{breakdownVoltage:-1}]])assert.throws(()=>A.compile(expansionCircuit(kind,parameters)));
 const isolated=expansionCircuit('transformer');isolated.electrical.wires=isolated.electrical.wires.filter(w=>!(w.from.componentId==='part'&&w.from.pinId==='s2')&&!(w.from.componentId==='load'&&w.from.pinId==='b'));
-isolated.electrical.wires.push({id:'isolated-return',from:{kind:'pin',componentId:'load',pinId:'b'},to:{kind:'pin',componentId:'part',pinId:'s2'}});assert.throws(()=>A.compile(isolated),/Floating/);
+isolated.electrical.wires.push({id:'isolated-return',from:{kind:'pin',componentId:'load',pinId:'b'},to:{kind:'pin',componentId:'part',pinId:'s2'}});assert.ok(A.compile(isolated).diagnostics.some(d=>d.code==='FLOATING_NET'));
 const loop=expansionCircuit('spdtSwitch');loop.electrical.wires.push({id:'short',from:{kind:'pin',componentId:'part',pinId:'common'},to:{kind:'pin',componentId:'part',pinId:'a'}});assert.throws(()=>A.compile(loop),/ideal switch loop/);
 // Loader guards fail before replacing the previously loaded engine.
 session.loadDocument(expansionCircuit('led'));const prior=engine.snapshot();

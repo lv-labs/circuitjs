@@ -94,6 +94,9 @@ class LogicOutputElm extends CircuitElm {
 	    if (needsPullDown())
 		sim.stampResistor(nodes[0], CircuitNode.ground, 1e6);
 	}
+	// The optional pulldown is a real 1 MΩ path to ground; declare it so the
+	// path/closure analyses (e.g. CurrentElm.validate()) can see it.
+	boolean hasGroundConnection(int n1) { return needsPullDown(); }
 	double getVoltageDiff() { return volts[0]; }
 	void getInfo(String arr[]) {
 	    arr[0] = "logic output";

@@ -1,0 +1,153 @@
+{
+  "schemaVersion": 1,
+  "id": "passive-polarizedCapacitor",
+  "title": "Polarized capacitor RC charging",
+  "electrical": {
+    "components": [
+      {
+        "id": "part",
+        "kind": "polarizedCapacitor",
+        "modelVersion": 1,
+        "reference": "part",
+        "parameters": {
+          "capacitance": 0.000001,
+          "initialVoltage": 0,
+          "integration": "backwardEuler",
+          "maxReverseVoltage": 1
+        }
+      },
+      {
+        "id": "g",
+        "kind": "ground",
+        "modelVersion": 1,
+        "reference": "g",
+        "parameters": {}
+      },
+      {
+        "id": "vin",
+        "kind": "voltageRail",
+        "modelVersion": 1,
+        "reference": "vin",
+        "parameters": {
+          "waveform": {
+            "kind": "dc",
+            "voltage": 5
+          }
+        }
+      },
+      {
+        "id": "load",
+        "kind": "resistor",
+        "modelVersion": 1,
+        "reference": "load",
+        "parameters": {
+          "resistance": 1000
+        }
+      }
+    ],
+    "junctions": [],
+    "wires": [
+      {
+        "id": "w0",
+        "from": {
+          "kind": "pin",
+          "componentId": "vin",
+          "pinId": "p"
+        },
+        "to": {
+          "kind": "pin",
+          "componentId": "load",
+          "pinId": "a"
+        }
+      },
+      {
+        "id": "w1",
+        "from": {
+          "kind": "pin",
+          "componentId": "load",
+          "pinId": "b"
+        },
+        "to": {
+          "kind": "pin",
+          "componentId": "part",
+          "pinId": "positive"
+        }
+      },
+      {
+        "id": "w2",
+        "from": {
+          "kind": "pin",
+          "componentId": "part",
+          "pinId": "negative"
+        },
+        "to": {
+          "kind": "pin",
+          "componentId": "g",
+          "pinId": "g"
+        }
+      }
+    ]
+  },
+  "layout": {
+    "components": {
+      "part": {
+        "x": 160,
+        "y": 0,
+        "rotation": 90,
+        "mirror": false
+      },
+      "g": {
+        "x": 160,
+        "y": 128,
+        "rotation": 0,
+        "mirror": false
+      },
+      "vin": {
+        "x": -128,
+        "y": -80,
+        "rotation": 0,
+        "mirror": false
+      },
+      "load": {
+        "x": 0,
+        "y": -48,
+        "rotation": 0,
+        "mirror": false
+      }
+    },
+    "junctions": {},
+    "wires": {
+      "w0": {
+        "bends": []
+      },
+      "w1": {
+        "bends": []
+      },
+      "w2": {
+        "bends": []
+      }
+    },
+    "probes": {
+      "output": {
+        "x": 0,
+        "y": -32
+      }
+    }
+  },
+  "probes": [
+    {
+      "id": "output",
+      "kind": "voltage",
+      "name": "Vcap",
+      "positive": {
+        "kind": "pin",
+        "componentId": "part",
+        "pinId": "positive"
+      },
+      "reference": "ground"
+    }
+  ],
+  "simulation": {
+    "timeStep": 0.00001
+  }
+}

@@ -74,7 +74,7 @@ function factory(options) {
   return w;
 }
 const changed=value=>{const d=structuredClone(document);d.electrical.components.find(c=>c.id==='r2').parameters.resistance=value;return d;};
-const coordinator=CircuitSimulation.create({workerFactory:factory,onFrame:frame=>frames.push(frame)});
+const coordinator=CircuitSimulation.create({autoRun:false,workerFactory:factory,onFrame:frame=>frames.push(frame)});
 await coordinator.setDocument(document);
 const firstIdentity=coordinator.getState().accepted;
 await coordinator.step(10);
@@ -152,7 +152,7 @@ assert.ok((await final).superseded);assert.equal(coordinator.getState().status,'
 assert.equal(workers.filter(w=>!w.terminated).length,0);
 // An editor observer can immediately commit another edit while notified of load.
 let reentrant, followup, triggered=false;
-reentrant=CircuitSimulation.create({workerFactory:factory,onState:state=>{
+reentrant=CircuitSimulation.create({autoRun:false,workerFactory:factory,onState:state=>{
   if(state.status==='loading' && !triggered) {triggered=true;followup=reentrant.setDocument(changed(9000));}
 }});
 const firstLoad=reentrant.setDocument(document);

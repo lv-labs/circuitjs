@@ -1,0 +1,178 @@
+{
+  "schemaVersion": 1,
+  "id": "logic-monitor-divider",
+  "title": "Logic input, output marker and logic probe",
+  "electrical": {
+    "components": [
+      {
+        "id": "g",
+        "kind": "ground",
+        "modelVersion": 1,
+        "reference": "G1",
+        "parameters": {}
+      },
+      {
+        "id": "vin",
+        "kind": "voltageRail",
+        "modelVersion": 1,
+        "reference": "V1",
+        "parameters": {
+          "waveform": {
+            "kind": "dc",
+            "voltage": 5
+          }
+        }
+      },
+      {
+        "id": "r1",
+        "kind": "resistor",
+        "modelVersion": 1,
+        "reference": "R1",
+        "parameters": {
+          "resistance": 1000
+        }
+      },
+      {
+        "id": "r2",
+        "kind": "resistor",
+        "modelVersion": 1,
+        "reference": "R2",
+        "parameters": {
+          "resistance": 1000
+        }
+      },
+      {
+        "id": "logicOutput",
+        "kind": "logicOutput",
+        "modelVersion": 1,
+        "reference": "M1",
+        "parameters": {
+          "threshold": 2.5,
+          "mode": "logic",
+          "pulldown": false
+        }
+      },
+      {
+        "id": "output",
+        "kind": "output",
+        "modelVersion": 1,
+        "reference": "O1",
+        "parameters": {
+          "showVoltage": true
+        }
+      },
+      {
+        "id": "logicInput",
+        "kind": "logicInput",
+        "modelVersion": 1,
+        "reference": "L1",
+        "parameters": {
+          "state": 1,
+          "highVoltage": 5,
+          "lowVoltage": 0,
+          "mode": "logic"
+        }
+      },
+      {
+        "id": "rL",
+        "kind": "resistor",
+        "modelVersion": 1,
+        "reference": "R3",
+        "parameters": {
+          "resistance": 1000
+        }
+      },
+      {
+        "id": "g2",
+        "kind": "ground",
+        "modelVersion": 1,
+        "reference": "G2",
+        "parameters": {}
+      }
+    ],
+    "junctions": [],
+    "wires": [
+      {
+        "id": "w0",
+        "from": {"kind": "pin", "componentId": "vin", "pinId": "p"},
+        "to": {"kind": "pin", "componentId": "r1", "pinId": "a"}
+      },
+      {
+        "id": "w1",
+        "from": {"kind": "pin", "componentId": "r1", "pinId": "b"},
+        "to": {"kind": "pin", "componentId": "r2", "pinId": "a"}
+      },
+      {
+        "id": "w2",
+        "from": {"kind": "pin", "componentId": "r1", "pinId": "b"},
+        "to": {"kind": "pin", "componentId": "logicOutput", "pinId": "in"}
+      },
+      {
+        "id": "w3",
+        "from": {"kind": "pin", "componentId": "r1", "pinId": "b"},
+        "to": {"kind": "pin", "componentId": "output", "pinId": "in"}
+      },
+      {
+        "id": "w4",
+        "from": {"kind": "pin", "componentId": "r2", "pinId": "b"},
+        "to": {"kind": "pin", "componentId": "g", "pinId": "g"}
+      },
+      {
+        "id": "w5",
+        "from": {"kind": "pin", "componentId": "logicInput", "pinId": "out"},
+        "to": {"kind": "pin", "componentId": "rL", "pinId": "a"}
+      },
+      {
+        "id": "w6",
+        "from": {"kind": "pin", "componentId": "rL", "pinId": "b"},
+        "to": {"kind": "pin", "componentId": "g2", "pinId": "g"}
+      }
+    ]
+  },
+  "layout": {
+    "components": {
+      "g": {"x": -16, "y": 160, "rotation": 0, "mirror": false},
+      "vin": {"x": -160, "y": -48, "rotation": 0, "mirror": false},
+      "r1": {"x": -64, "y": 0, "rotation": 0, "mirror": false},
+      "r2": {"x": -16, "y": 64, "rotation": 90, "mirror": false},
+      "logicOutput": {"x": 80, "y": -48, "rotation": 0, "mirror": false},
+      "output": {"x": 80, "y": 48, "rotation": 0, "mirror": false},
+      "logicInput": {"x": 256, "y": 0, "rotation": 0, "mirror": false},
+      "rL": {"x": 384, "y": 0, "rotation": 0, "mirror": false},
+      "g2": {"x": 432, "y": 160, "rotation": 0, "mirror": false}
+    },
+    "junctions": {},
+    "wires": {
+      "w0": {"bends": [{"x": -160, "y": 0}]},
+      "w1": {"bends": []},
+      "w2": {"bends": [{"x": -16, "y": -48}]},
+      "w3": {"bends": [{"x": -16, "y": 48}]},
+      "w4": {"bends": []},
+      "w5": {"bends": []},
+      "w6": {"bends": []}
+    },
+    "probes": {
+      "divider": {"x": 0, "y": -96},
+      "drive": {"x": 304, "y": 48}
+    }
+  },
+  "probes": [
+    {
+      "id": "divider",
+      "kind": "voltage",
+      "name": "Divider",
+      "positive": {"kind": "pin", "componentId": "logicOutput", "pinId": "in"},
+      "reference": "ground"
+    },
+    {
+      "id": "drive",
+      "kind": "voltage",
+      "name": "Logic drive",
+      "positive": {"kind": "pin", "componentId": "logicInput", "pinId": "out"},
+      "reference": "ground"
+    }
+  ],
+  "simulation": {
+    "timeStep": 0.00001
+  }
+}

@@ -50,7 +50,7 @@ for(const integration of ['backwardEuler','trapezoidal']){
   const expected=integration==='backwardEuler'?(.002+5e-5)/(1+.01):(.002+2.5e-5)/(1+.005);
   near(f.componentCurrents.part,expected);
 }
-const open=circuit('currentSource');open.electrical.wires=open.electrical.wires.filter(w=>w.to.componentId!=='r');assert.throws(()=>A.compile(open),/return path/);
+const open=circuit('currentSource');open.electrical.wires=open.electrical.wires.filter(w=>w.to.componentId!=='r');assert.ok(A.compile(open).diagnostics.some(d=>d.code==='OPEN_CURRENT_SOURCE'));
 const reference=JSON.parse(readFileSync('experiments/engine/reference.json','utf8'));
 const ctx=vm.createContext({});vm.runInContext(readFileSync('experiments/engine/cases.js','utf8')+'\nglobalThis.cases=engineCases;',ctx);
 for(const [name,test] of Object.entries(ctx.cases)){

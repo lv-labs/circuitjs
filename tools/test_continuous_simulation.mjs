@@ -53,7 +53,7 @@ function factory(options) {
   },terminate(){worker.terminated=true;}};
  workers.push(worker);return worker;
 }
-const simulation=CircuitSimulation.create({workerFactory:factory,scheduleTask,cancelTask,batchSteps:10,intervalMs:0});
+const simulation=CircuitSimulation.create({autoRun:false,workerFactory:factory,scheduleTask,cancelTask,batchSteps:10,intervalMs:0});
 await simulation.setDocument(circuit);
 const original=simulation.getState().accepted;
 simulation.run();assert.equal(timers.size,1);fire();await tick();
@@ -84,8 +84,8 @@ const replacement=structuredClone(circuit);replacement.electrical.components.fin
 const replacing=simulation.setDocument(replacement);
 assert.equal(workers.length,1);switchGate.resolve();assert.ok((await changing).superseded);await replacing;switchGate=null;
 assert.equal(workers.length,2);assert.ok(workers[0].terminated);assert.equal(simulation.getState().runRequested,false);
-// Reset and disposal stop scheduling; no hidden automatic steps survive.
-simulation.run();await simulation.reset();assert.equal(timers.size,0);assert.equal(simulation.getState().status,'paused');
+// Reset preserves Run intent; disposal cancels all scheduled work.
+simulation.run();await simulation.reset();assert.equal(timers.size,1);assert.equal(simulation.getState().status,'running');
 failStep=true;simulation.run();fire();await tick();
 assert.equal(simulation.getState().status,'error');assert.equal(simulation.getState().runRequested,false);assert.equal(timers.size,0);
 await simulation.reset();simulation.run();failSwitch=true;
@@ -96,7 +96,7 @@ simulation.run();simulation.dispose();assert.equal(timers.size,0);assert.equal(s
 // A switch requested by the activation observer is live, not another reset.
 let early,editOnActivation,once=false;
 const beforeEarly=workers.length;
-early=CircuitSimulation.create({workerFactory:factory,scheduleTask,cancelTask,onState:state=>{
+early=CircuitSimulation.create({autoRun:false,workerFactory:factory,scheduleTask,cancelTask,onState:state=>{
  if(state.status==='paused' && !once){once=true;editOnActivation=early.setSwitch('s1',false);}
 }});
 await early.setDocument(circuit);await editOnActivation;

@@ -31,10 +31,13 @@ async function verifyCoordinator(report) {
 
   const records=[], published=[];
   let failNextInstall=false, holdStep=null;
-  const coordinator=CircuitSimulation.create({onFrame:frame=>published.push(frame),workerFactory:options=>{
+  const coordinator=CircuitSimulation.create({autoRun:false,onFrame:frame=>published.push(frame),workerFactory:options=>{
     const client=createRevisionWorker(options), record={client,terminated:false};
     const request=client.request;
     record.client={...client,
+      // This block exercises candidate replacement/failure isolation for clients
+      // without native updates; native updateCircuit has separate coverage.
+      ready:client.ready.then(ready=>({...ready,capabilities:{...ready.capabilities,liveChanges:ready.capabilities.liveChanges.filter(name=>name!=='updateCircuit')}})),
       request:async(operation,args)=>{
         const result=await request(operation,args);
         if(operation==='installCircuit' && failNextInstall) {

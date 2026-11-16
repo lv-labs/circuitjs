@@ -24,7 +24,7 @@ const orphan=structuredClone(split);orphan.electrical.wires=orphan.electrical.wi
 assert.ok(CircuitEditorModel.scopeChannels(orphan).unresolved.length>0);
 // Coordinator captures channel configuration at request time, independent of changes in flight.
 let workerSession,request=0,state={documentId:null,circuitRevision:0,runEpoch:0};
-const coordinator=CircuitSimulation.create({workerFactory:options=>{
+const coordinator=CircuitSimulation.create({autoRun:false,workerFactory:options=>{
   workerSession=A.createSession(engine());const protocol=CircuitRevisionProtocol.create(workerSession);
   protocol.handle({protocolVersion:1,sessionId:options.sessionId,requestId:++request,operation:'initialize'});
   return {ready:Promise.resolve({}),terminate(){},async request(operation,extra={}){

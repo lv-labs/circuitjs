@@ -2,7 +2,7 @@
 (() => {
   const byId=id=>document.getElementById(id);
   let ready=false,closed=true,epoch=null,samples=[];
-  const simulation=CircuitSimulation.create({batchSteps:10,intervalMs:16,
+  const simulation=CircuitSimulation.create({autoRun:false,batchSteps:10,intervalMs:16,
     onFrame(frame) {
       if(epoch!==frame.runEpoch){samples=[];epoch=frame.runEpoch;}
       samples.push({time:frame.time,voltage:frame.pinVoltages.c1.a,revision:frame.circuitRevision});

@@ -1,8 +1,11 @@
 # Circuit editor canvas prototype
 
-Implemented, 2026-11-13. This is a browser/SVG interaction prototype using the
-existing document model and worker coordinator. It does not choose the final UI
-stack or port the electrical simulation maths.
+Updated 2026-11-16. This is a browser/SVG interaction prototype using the existing
+document model and worker coordinator. It is a reference harness, not the final UI
+stack, and does not port the electrical simulation maths. Current priorities are
+in [PLAN.md](PLAN.md); current implementation/checks are in [HANDOFF.md](HANDOFF.md).
+Detailed dated continuations below preserve the development history. Where they
+conflict, the current handoff and [DRAGGING.md](DRAGGING.md) take precedence.
 
 ## Build and open
 
@@ -12,8 +15,7 @@ node tools/test_editor_model.mjs
 python3 -m http.server 8765 --bind 127.0.0.1 --directory build/engine-site
 ```
 
-Open http://localhost:8765/editor.html. The current session's preview server is
-already running there. The editor initially opens the saved switched-RC example
+Open http://localhost:8765/editor.html. Start the preview server explicitly; it is not guaranteed to be running. The editor initially opens the saved switched-RC example
 with a readable layout. Later loads restore this prototype's local autosave.
 
 Use Save to download the circuit document as JSON for another machine. Open reads
@@ -29,23 +31,23 @@ including stable IDs, layout, explicit connections and initial conditions.
 | Select/drag | Select tool (1); click or drag a component body; attached wires stretch |
 | Multiple selection | Shift-click; drag an empty-area box; Shift-box adds |
 | Move / Drag | M leaves external wires behind; G stretches connected wires; selection or hovered item, click to place |
-| Add component | A opens searchable list; ↑/↓ and Enter choose; click to place, Escape finishes |
+| Add component | A opens the legacy-ordered component menu; arrows and Enter choose; click to place, Escape finishes |
 | Ground / properties | P places ground; E or double-click opens component properties dialog |
-| Flip | X horizontally; Y vertically; selection/hover, placement or pending Move/Drag |
+| Flip | X horizontally; Y vertically; pick up, flip, reconnect at final pin positions; existing wires stay put |
 | Voltage probe | Probe tool or A → Voltage probe; click a pin, wire or junction; name it in Inspector |
 | Oscilloscope | Open bottom dock; Run/Pause, time/div, volts/div, channel toggles and hover cursor |
-| Rotate | R counterclockwise, Shift-R reverse; selection, placement or pending Move/Drag |
-| Wire | W, then click a pin/junction/wire; pin clicks can start directly from Select |
+| Rotate | R counterclockwise, Shift-R reverse; same detached pick-up/put-down behavior as flipping |
+| Wire | W, then click a pin/junction/wire; pin and floating-end clicks can start directly from Select |
 | Add wire bends | Click empty space while wiring; finish on a connection target |
 | Finish a loose wire | Double-click empty space or press Enter at the cursor; Escape cancels the draft |
 | Add a branch | Finish/start on an existing wire; commits an explicit junction and split |
-| Reroute | Select and drag a wire segment perpendicular to itself |
+| Reroute | Drag a segment perpendicular to itself; dropping it onto a component pin creates an explicit contact/junction |
 | Pan | Scroll, Pan tool (H), middle-drag or Space + drag |
 | Zoom | Ctrl/Command scroll (including trackpad pinch), +/− controls/keys |
 | Fit | 0 or Fit |
 | Cancel | Escape cancels gesture/wire preview and returns to Select |
 | Undo/redo | Command/Ctrl Z; Shift Command/Ctrl Z; toolbar buttons |
-| Delete | Delete/Backspace; attached wires/probes are removed with a component |
+| Delete | Delete/Backspace; component wires survive as loose ends; voltage probes follow stubs, component current probes are removed |
 | Edit values | Double-click, E or Inspector → Edit properties; SI prefixes such as 2k or 4.7u |
 | Live switch | Single-click body to toggle; double-click edits without toggling |
 | Simulate | Run/Pause, Step, Reset |
@@ -76,25 +78,26 @@ actual connected branches with at least three incident leads/wire legs. An expli
 junction gets a selection outline when selected, even if it needs no branch dot.
 
 Clicking a selected member without dragging collapses a multiple selection; dragging
-retains the group. Component and junction moves preserve endpoint references.
-Attached routes adjust their adjacent legs when endpoints move; collinear bends,
-including out-and-back spurs, are removed. Wire segment dragging changes route
-bends while retaining both connections. The
-first box-selection implementation selects component centers, contained wires and
-junctions; directional contain/intersect semantics are not implemented yet.
+retains the group. Connected component/junction dragging uses a persistent drag graph; corners slide
+and temporary bends are reused as the pointer changes direction. Wire sections
+merge within a net and obsolete tails are removed. Rotation/flipping leaves the
+old wiring behind, and wire-on-pin drops attach atomically on commit. Directional
+box selection supports contain/intersect behavior. See [DRAGGING.md](DRAGGING.md)
+for the current rules and tests.
 
 ## Worker connection
 
 The editor owns a document/history, camera, tool, selection and pointer gesture.
 Only committed document edits call the existing coordinator. New/incomplete
-circuits are valid editable documents even while they cannot simulate; their
-worker diagnostic becomes an editing hint and Run remains unavailable.
+circuits remain editable. Run is the default intent, retained through temporary
+validation errors; genuine invalid models/ideal loops can suspend solving.
 
-Layout-only commits reuse the worker and can occur during running. A completed
-electrical change uses the established replacement or live-switch policy.
-Successful replacement gets one explicit preview step while paused; layout-only
-changes do not advance simulation. A paused live-switch edit waits for Step/Run
-before displaying new solved readings. The old revision is not rendered as live.
+Layout-only commits reuse the worker and can occur during running. Supported same-document
+electrical edits use guarded native `updateCircuit` and retain existing element
+state/time. Explicit Reset, a different document and fault recovery create a fresh
+session. Run/Pause intent is preserved; a paused edit waits for Step/Run for new
+solved readings. The old revision is not rendered as live. See the latest sections
+of [RUN-AND-LIVE-EDITS.md](RUN-AND-LIVE-EDITS.md) and [HANDOFF.md](HANDOFF.md).
 
 Wire tint and inspector pin/current readings come from accepted stable-ID frames.
 Internal solver indices never become editor identities. The source symbol uses
@@ -107,13 +110,14 @@ stable root SVG during dragging; numeric inspector inputs are not rebuilt on fra
 
 ## Code
 
-- `experiments/engine/editor-model.js`: model catalog/pin geometry, structural
-  validation, document transactions/history, route geometry, hit testing, explicit
-  branching, connected movement/deletion, anchored zoom.
-- `editor.js`: pointer/keyboard interactions, SVG rendering, inspector, autosave,
-  JSON files and the existing coordinator integration.
-- `editor.html` / `editor.css`: desktop workspace, component palette, controls and inspector.
-- `tools/test_editor_model.mjs`: pure graph/history/geometry checks.
+- `packages/circuit-core/`: reusable catalog, geometry, document/history,
+  commands/drag engine, compiler/protocol/coordinator and sampled signals.
+- `experiments/engine/editor-model.js` and related old computational entry files:
+  compatibility adapters for the existing UI globals.
+- `editor.js`: pointer/keyboard handling, SVG rendering, inspector, autosave and
+  integration with the shared core.
+- `editor.html` / `editor.css`: prototype workspace and controls.
+- `tools/check_core.mjs`: one computational regression entry point.
 
 SVG/plain browser code makes the interaction contract concrete without adding
 dependencies. A future Rust UI prototype should exercise the same cases against
@@ -121,7 +125,10 @@ the same JSON/worker boundary before any stack decision. Compare input latency,
 text editing, trackpad/high-DPI behaviour, accessibility, packaging and maintenance;
 do not infer those outcomes from implementation language alone.
 
-## Verification
+## Initial verification history — 2026-11-13
+
+Current focused model/browser verification is recorded in [HANDOFF.md](HANDOFF.md).
+The following paragraphs describe the original prototype checkpoint.
 
 Pure checks cover stable IDs, one-action transactions, undo/redo, connected group
 movement without electrical changes, rotated pin geometry, route-only edits,
@@ -508,3 +515,165 @@ this does not limit current. Zener exposes reverse breakdown voltage. Transforme
 and DPDT show pin voltages but no single aggregate current. Winding saturation,
 tapped transformers, named diode models and configurable pole counts are not yet
 implemented. Build/numerical/worker checks pass; no browser/visual checks were run.
+
+## Passive/controlled-switch additions — 2026-11-16
+
+The searchable A chooser includes Polarized capacitor, Analog switch (SPST) and
+Analog switch (SPDT). Polarized capacitors mark the positive plate with +; control
+leads on analog switch symbols are marked C. E/double-click properties expose the
+capacitance, initial voltage, integration and reverse-voltage limit, or switch
+on/off resistance, threshold, inversion and pulldown settings. These devices use
+normal explicit pin contacts, rotation/flips, graph editing, copying and history.
+Analog switches respond to their control pin rather than click-to-toggle. Editing
+parameters follows the usual replacement/reset policy.
+
+## Display/logic I/O additions — 2026-11-16
+
+The A chooser and palette now include Output marker, Logic output and Logic input
+(34 models total). Output markers render a small "out" box and show the solved
+voltage beside the reference when Show voltage is enabled; this display-only marker
+does not modify the circuit. Logic outputs render an "L/H" box and show the live
+legacy level (L/H, 0/1, or 0/1/2) plus voltage; their optional 1 MΩ pulldown is a
+property checkbox. Logic inputs render a state circle, show their high/low options,
+and cycle state on single click (Off/0, 1, and 2 only in ternary mode). Double-click
+still opens properties without toggling.
+
+Properties expose show-voltage; threshold, mode and pulldown; or state, high/low
+voltage and mode. Validation rejects non-finite levels, invalid modes, states above
+1 outside ternary mode, and a ternary state without ternary mode. These devices use
+normal explicit pin contacts, rotation/flips, graph editing, copying and history.
+Parameter edits replace/reset the simulation. Limits: no OutputElm scale or
+fixed-precision setting, no momentary logic-input button, and no per-terminal
+current UI. No browser/visual checks were run for this batch.
+
+## Flip-flop additions — 2026-11-16
+
+The A chooser and palette now include D, JK and T flip-flops (37 models total).
+Chip symbols label D/T/J/clock/K/Q/Q̄, and each shows live Q as `H/L · voltage`
+plus logic-voltage/initial-state value text. Properties expose High voltage,
+`Q starts high`, and (JK) `Positive-edge clock`. D/T/JK use the legacy base
+variants only: no set/reset pins or small-chip option. Clock-edge behavior is
+the legacy chip model, so tests use static clock rails and see one rising edge
+per load (the D flip-flop defers its first execute after load, while the T
+flip-flop toggles on it). Inputs must be externally referenced. These devices
+use normal explicit pin contacts, rotation/flips, graph editing, copying and
+history; parameter edits replace/reset the simulation. No per-terminal current
+is shown. No browser/visual checks were run for this batch.
+
+## Falstad Add popup and next chip batch — 2026-11-16 (latest)
+
+A or Add… opens the component popup at the last canvas pointer location (clamped
+inside the viewport). Its top-level entries, submenu labels, component names and
+ordering come from this fork's `Menus.composeMainMenu`, generated by
+`python3 tools/generate_component_menu.py` into `legacy-component-menu.js`.
+The flat search chooser is replaced. Categories open by pointer hover/click or
+Right/Enter; Up/Down and Home/End move through a panel, Left returns to the parent,
+and Escape or an outside click closes it. Long panels scroll; narrow windows can
+scroll between panels. Components not implemented yet remain visible with
+`aria-disabled` and an availability explanation; they cannot select a tool.
+Subcircuits retains its original position with an empty-state message: no dynamic
+legacy subcircuit library is imported. Legacy Drag actions without corresponding
+new-editor commands are disabled. Wire and Select/Drag Sel use the existing tools.
+
+Square Wave Source and Clock select existing one-terminal square-wave source
+presets. Clock defaults to 0–5 V at 100 Hz, matching the bundled legacy constructor.
+The alternate ideal op-amp entry places the same model flipped vertically so + is
+on top. Legacy Voltmeter/Scope Probe is still unavailable: the current non-loading
+voltage marker tool remains on the toolbar and is not substituted for that model.
+
+Four additional chips are available in Digital Chips: four-bit Counter, four-bit
+Latch/Register, Half Adder and four-bit Adder. E/double-click exposes logic voltage,
+plus state/reset/edge/modulus options where supported; bit widths are fixed in this
+schema slice. Chip bodies and pin labels scale to their geometry. Hit testing now
+covers the entire tall chip body, including the previously missed JK body ends.
+Existing flips/rotation/copy/history and explicit connectivity are retained.
+
+## Passive-menu continuation — 2026-11-16
+
+Push Switch, Make-Before-Break Switch, Tapped Transformer, Custom Transformer and
+Transmission Line are enabled in their original Passive Components positions.
+Push symbols operate while held with Select; releasing, Escape, losing focus or
+changing tools restores their rest contact. Shift-click selects without operating;
+M/G can move the selected/hovered symbol. E/Inspector or double-click opens its
+normally-open/closed property. A transient document overlay keeps press gestures
+out of history and saved circuit state. Simulation resets on contact changes;
+state-preserving momentary operation is not implemented.
+
+MBB single clicks cycle A → A+B → B → A+B. The four-position property can also be
+edited. Transformer properties expose inductance, ratio/turns, coupling and
+integration. Custom Transformer currently has three fixed windings; its signed
+turns fields select polarity, not a free topology string. Transmission Line exposes
+delay/impedance and needs both return pins grounded. See DOCUMENT-ADAPTER for the
+bounds and electrical limits. Geometry, contacts, transforms, copy and history use
+the existing stable graph. New pointer interaction is not browser-verified under
+the recorded no-browser preference.
+
+## Variable Voltage and Outputs/Labels — 2026-11-16 (latest)
+
+Remaining passives are deferred per latest user direction. Variable Voltage and
+all 20 Outputs and Labels menu entries are now integrated: 65 editor/document models
+including three inert annotations. Sources are 9/17 entries; passives remain 13/24.
+The variable source Inspector slider uses state-preserving worker updates; annotation
+edits preserve electrical identity. New meters, displays, LED array, recorders,
+trigger and motors reuse original Java models. Optional AC phase permits balanced
+three-phase excitation. Inspector includes measurements, probe plotting, CSV and
+audio playback/WAV; stop triggers pause continuous runs. Display widths and array
+size are fixed in this slice; broader variants and legacy import remain deferred.
+See the latest HANDOFF section for parameter/measurement/capture limits and checks.
+No browser or visual verification under the recorded user preference.
+
+## Continuous editing and default Run — 2026-11-16 (latest)
+
+Simulation now runs by default (`autoRun: false` is available for manual stepping).
+Run/Pause survives layout/electrical edits and reset; Pause during installation wins.
+Invalid intermediate documents retain the selected intent and resume when repaired.
+Floating parts no longer block simulation: the original solver supplies its existing
+100 MΩ reference stabilization. Open current sources use its high-resistance fallback.
+Warnings replace the previous floating/return-path rejections. Ideal-loop validation
+and genuine solver-fault stops remain. Topology changes rebuild/reset then resume;
+pure layout changes and live variable-voltage/contact edits preserve solver state.
+Live contacts cover SPST, push, SPDT, DPDT, MBB and logic-input state changes, with
+FIFO revision/epoch guards. See latest HANDOFF for verification and remaining limits.
+
+## Variable-voltage drag continuity — 2026-11-16 (latest)
+
+Dragging now coalesces pending source values and requests a prompt physics batch
+between updates. Last sampled readings remain visible within the same solver epoch,
+avoiding blank/flashing circuit readings on each live revision. Release retains
+range focus and creates one history entry; returning to the starting value still
+restores the physical source. Escape/pointer cancellation reverts; ordinary focus
+loss/tool changes retain the selected value. Native VarRail model, time, charge and
+Run/Pause are preserved. See latest HANDOFF and `tools/test_voltage_slider.mjs`.
+
+## Scope continuity across edits — 2026-11-16 (latest)
+
+The oscilloscope retains history through component placement/moves and transient
+invalid edits. Solver rebuilds append a new segment to the continuous acquisition
+time axis; native engine time and recorded/exported sample times remain unchanged.
+Explicit Reset or changing document still starts a fresh acquisition. This preserves
+scope history without claiming physical state migration across topology rebuilds.
+See latest HANDOFF and `tools/test_scope_continuity.mjs` for checks and details.
+
+## Native in-place circuit edits — 2026-11-16 (latest)
+
+Ordinary same-document electrical edits now update the existing worker and retained
+legacy element instances through guarded `updateCircuit`, followed by original
+Falstad reanalysis. Value edits, component additions/removals and named-net rewiring
+retain simulation time and existing dynamic state. Timestep edits are also in place.
+Editable configuration is copied explicitly; constructor defaults do not overwrite
+live state. Run/Pause and FIFO revision/epoch gates remain. Explicit Reset, a different
+document or actual fault recovery still creates a new session. Native buffer-changing
+options may reset their own buffer as in the original; unrelated models are retained.
+This supersedes earlier topology-edit reset limitations. See latest HANDOFF and
+`tools/test_live_reanalysis.mjs` for contracts, checks and remaining validation limits.
+
+## Wire editing quality of life — 2026-11-16 (latest)
+
+Deleting a component preserves attached wires as loose ends at its former pins.
+Wires explicitly selected for deletion are removed. Connected collinear pieces
+merge into a straight section regardless of creation history; corners, components,
+branch junctions and probe anchors bound independently selectable sections. Existing
+bent paths are normalized when opened in the editor. Crossing wires remain separate
+unless explicitly connected. Changes and normalization share one undo transaction;
+electrical connectivity is preserved by normalization. See latest HANDOFF and
+`tools/test_wire_sections.mjs` for checks and model integration details.

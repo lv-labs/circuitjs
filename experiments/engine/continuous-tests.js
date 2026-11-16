@@ -4,7 +4,7 @@ async function verifyContinuousSimulation(report) {
   assert(response.ok,'Saved switched-RC document available');
   const document=await response.json();
   const reference=await (await fetch('reference.json')).json();
-  const exact=CircuitSimulation.create();
+  const exact=CircuitSimulation.create({autoRun:false});
   try {
     await exact.setDocument(document);
     const original=exact.getState().accepted;
@@ -37,12 +37,14 @@ async function verifyContinuousSimulation(report) {
     initiallyCharged.electrical.components.find(d=>d.id==='s1').parameters.closed=false;
     initiallyCharged.electrical.components.find(d=>d.id==='c1').parameters.initialVoltage=1;
     await exact.setDocument(initiallyCharged);
+    // Native edits retain charge; an initial-value edit takes effect on Reset.
+    await exact.reset();
     near((await exact.step(1)).pinVoltages.c1.a,1/(1+dt/0.01),1e-12,'Explicit nonzero initial charge used');
   } finally {exact.dispose();}
 
   const deferred=()=>{let resolve;const promise=new Promise(done=>resolve=done);return {promise,resolve};};
   let count=0,stopAt=3,finished=deferred(),pausePromise,changePromise,lastClosed=null,livePhase=false;
-  const run=CircuitSimulation.create({batchSteps:20,intervalMs:0,onFrame:frame=>{
+  const run=CircuitSimulation.create({autoRun:false,batchSteps:20,intervalMs:0,onFrame:frame=>{
     count++;
     if(livePhase) {
       if(!changePromise) {

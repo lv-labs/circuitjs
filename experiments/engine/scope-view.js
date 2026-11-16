@@ -56,8 +56,7 @@
     }
     function onState(next){
       state=next;
-      if(['loading','error','empty','disposed'].includes(next.status))buffer.expect(null);
-      else if(next.accepted)buffer.expect(next.accepted);
+      buffer.followState(next);
       renderSoon();
     }
     function onFrame(frame){if(buffer.append(frame))renderSoon();}

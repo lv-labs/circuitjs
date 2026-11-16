@@ -5,6 +5,16 @@ the existing worker engine. This low-level API is retained; the revision/epoch
 protocol and safe editor-facing coordinator now exist separately in
 [COORDINATOR.md](COORDINATOR.md).
 
+## Shared implementation — 2026-11-16
+
+The compiler/session implementation now lives in
+[packages/circuit-core/adapter.js](../../packages/circuit-core/adapter.js), using the
+shared [component catalog](../../packages/circuit-core/catalog.js).
+`experiments/engine/document-adapter.js` preserves the old global API as a thin
+compatibility adapter. New frontends can import `adapter` from the package ESM
+entry without the prototype UI. The saved format, protocol and numerical behavior
+are unchanged. See the [core API guide](../../packages/circuit-core/README.md).
+
 ## Run it
 
 With the Java 8 / Gradle / Node / Python / Chrome setup in PHASE-0.md:
@@ -220,3 +230,220 @@ coupling as a ground reference. It rejects floating islands, singular/nonfinite
 coupling coefficients and ideal switch/source loops. Transformer and DPDT have no
 single component-current mapping; all pins retain voltage results. Neither switch
 kind is eligible for the existing state-preserving SPST live-edit path.
+
+## Polarized capacitors and controlled switches — 2026-11-16
+
+`polarizedCapacitor@1` uses `positive`/`negative` pins and the ordinary capacitor's
+`capacitance`, `initialVoltage` (positive minus negative) and `integration` fields,
+plus nonnegative `maxReverseVoltage` (default 1 V). The legacy `209` model stops
+when its solved voltage is below the negative of that limit. The limit is a stop
+condition, not a breakdown/conduction model. Ideal capacitor/source loops are
+rejected as for ordinary capacitors. ESR is not exposed in this slice.
+
+`analogSwitch@1` has `a`/`b`/`control`; `analogSpdtSwitch@1` has
+`common`/`a`/`b`/`control`. Both expose positive `onResistance` (default 20 Ω) and
+`offResistance` (default 10 GΩ), finite `threshold` (2.5 V), and boolean `inverted`
+(false) and `pulldown` (true). Control voltage is relative to global ground and
+has zero input current. At or above threshold, the non-inverted SPST conducts and
+SPDT selects A; below threshold SPST opens and SPDT selects B. Inversion swaps
+these conditions. Control must have an external reference path.
+
+Without pulldowns, the inactive signal path has `offResistance`. With pulldowns,
+the inactive path disconnects and each SPST signal terminal / each SPDT throw has
+`offResistance` to ground. These are finite-resistance models and do not enter the
+ideal-switch-loop union. Public current is legacy a-to-b current for SPST and
+common-to-selected-throw current for SPDT; it does not include every pulldown or
+inactive-path current. All pin voltages are mapped. No per-terminal current UI.
+
+The compiler emits validated `159`/`160` records with private horizontal geometry
+and the actual legacy post order. Existing constructors and electrical equations
+are retained. Parameter edits replace/reset the worker; control waveforms switch
+the devices naturally during stepping, without a live editor mutation API.
+
+The legacy switch evaluates the previously solved control voltage, so waveform
+transitions appear at the signal output one electrical step after the control
+voltage changes in the solver. This timing behavior is retained and tested.
+
+## Display markers and logic I/O — 2026-11-16
+
+The catalog now contains 34 model kinds. The three additions use the legacy
+single-post display/logic elements:
+
+| Kind | Public pin | Parameters |
+| --- | --- | --- |
+| output | in | showVoltage (boolean, default true) |
+| logicOutput | in | threshold (finite, default 2.5), mode (`logic`/`numeric`/`ternary`), pulldown (boolean) |
+| logicInput | out | state (integer), highVoltage, lowVoltage (finite), mode (`logic`/`numeric`/`ternary`) |
+
+`output@1` emits the legacy `O` marker with only the VALUE flag; it has no stamp or
+current and does not affect the solved circuit. The legacy scale and fixed-precision
+options (`scale`/`FLAG_FIXED`) are not exposed. `logicOutput@1` emits `M` with
+TERNARY=1/NUMERIC=2/PULLDOWN=4 and a trailing threshold. It is a passive marker;
+only the optional 1 MΩ pulldown participates in the circuit. The element declares
+that pulldown as an implicit ground connection, so the legacy path/closure
+analysis counts it as a return path for an ideal current source. `logicInput@1` emits
+`L` with TERNARY=1/NUMERIC=2 and `state false high low`. It is a ground-referenced
+ideal voltage source: logic mode selects low/high, numeric mode uses the same two
+levels as 0/1, and ternary mode computes `lo + state*(hi-lo)/2` for state 0/1/2.
+The legacy momentary push-button option is not exposed; state edits replace/reset.
+
+Compiler preflight treats `logicInput` like `voltageRail`: it provides an implicit
+reference, participates in ideal-source-loop rejection, satisfies the explicit
+ground requirement and counts as a return path for ideal current sources. Its
+public current sign is `-1` (delivery convention, same as a rail). A lone `O`/`M`
+marker is seeded into the floating-island reachability set, so a marker with a
+ground symbol is accepted; attached passive islands are still rejected. `logicInput`
+is reached through its implicit ground link and needs no special seeding. All three
+map one pin, and `O`/`M` have no single component-current mapping. Legacy loader
+validation covers both the old optional field counts (O/M 6 or 7, L 8 or 10) and the
+emitted 6/7/10-field forms, flag ranges, output scale and state/momentary rules.
+
+`examples/logic-monitor-divider.json` combines all three with a resistive divider
+and a driven logic-input load. The build copies it to the preview.
+
+## Base flip-flops — 2026-11-16
+
+The catalog now contains 37 model kinds. The three additions emit the legacy
+base chip records:
+
+| Kind | Public pins in engine post order | Parameters | Record |
+| --- | --- | --- | --- |
+| dFlipFlop | D, Q, Qn, clock | highVoltage > 0, initialState | 155 |
+| jkFlipFlop | J, clock, K, Q, Qn | highVoltage > 0, initialState, positiveEdge | 156 |
+| tFlipFlop | T, Q, Qn, clock | highVoltage > 0, initialState | 193 |
+
+`initialState` is stored as the legacy trailing Q/Q̄ volt pair (high/low);
+`highVoltage` defaults to 5 V and emits ChipElm CUSTOM_VOLTAGE (8192) plus the
+leading voltage field when different. `positiveEdge` defaults to false (the
+legacy JK negative-edge default); true adds POSITIVE_EDGE (4). SMALL (1) is not
+emitted. D-flip-flop set/reset flags, small-chip variants and the remaining chip
+families are outside this slice and rejected by the guarded loader.
+
+Q and Q̄ are implicit ground-referenced ideal voltage sources. Preflight seeds
+both outputs, rejects shorts between them or to ground and ideal-output loops,
+and treats them as return paths/reference reachability for current sources;
+they do not satisfy the explicit-ground requirement for an otherwise floating
+circuit. Inputs are high-impedance and need an external referenced path. There
+is no single component current (`sign: null`). Canonical geometry is
+`x 32 x+64 32`; D/T posts are `(x,32),(x+96,32),(x+96,96),(x,64)` and JK posts
+are `(x,32),(x,64),(x,96),(x+96,32),(x+96,96)`. The loader validates 8/9-field
+forms, allowed flags, finite positive logic voltage, exact horizontal geometry
+and complementary Q/Q̄ state.
+
+## Counter, latch/register and adders — 2026-11-16
+
+The document/editor catalog now has 41 models. Added four base legacy chip models:
+
+| Model | Stable pins | Parameters beyond positive `highVoltage` (default 5 V) |
+| --- | --- | --- |
+| `counter@1` | clock, reset, Q3/Q2/Q1/Q0 | initialValue 0..15 (0); modulus 0..16 (0 = 16); invertReset (true); negativeEdge (false) |
+| `latch@1` | I0..I3, O0..O3, load | initialValue 0..15 (0); edgeTriggered (true) |
+| `halfAdder@1` | A, B, sum, carry | none |
+| `fullAdder@1` | A0..A3, B0..B3, S0..S3, carryIn, carryOut | none |
+
+Counter, latch and full adder have fixed four-bit widths; named bit 0 is the LSB.
+Counter supports asynchronous reset and rising/falling clock selection; modulus
+zero allows the ordinary four-bit wrap. Up/down and loadable counter variants are
+not exposed. Latch load captures on a rising edge in register mode, or follows
+inputs while high in transparent mode. Set/reset/output-enable/bus variants are
+not exposed. The full adder computes A+B+carryIn with S modulo 16 and carryOut;
+half adder exposes XOR and AND. No propagation-delay model is added.
+
+Outputs are implicit grounded ideal voltage sources. The compiler's existing chip
+output loop, reference reachability and current-source-return rules cover every
+output; inputs remain high-impedance. All pin voltages map to stable IDs and the
+ambiguous aggregate chip current is omitted. Parameter edits replace/reset.
+
+Compiler records use legacy 164/168/195/196 with actual MSB-first post geometry
+and bit-index ordering; the guarded host permits only these fixed-width variants.
+CUSTOM_VOLTAGE=8192 adds logic voltage after the bit-count field (or directly for
+half adders); latch STATE=2 and optional NO_EDGE=4, full adder BITS=2, and counter
+NEGATIVE_EDGE=8 are encoded separately. State volts are validated as 0/highVoltage.
+Counter trailing reset-polarity boolean and modulus are validated before mutation.
+The original constructors, stamping and equations are retained.
+
+Chips sample the previously solved inputs at the start of each electrical step.
+An active-low counter reset initially sees zero input before its rail is first
+solved, so it clears even when the saved initialValue was nonzero. This legacy
+startup behavior is retained and tested. Active-high reset allows the saved value
+to persist while reset stays low. No startup priming or state-preserving edits are
+introduced. Existing flip-flop repeated-clock coverage is now retained in its
+regression suite, alongside new counter/load waveform and exhaustive adder checks.
+
+## First missing passive-menu entries — 2026-11-16
+
+The catalog now has 46 models. Added the first five missing Passive Components
+entries, in menu order, using existing electrical implementations:
+
+| Model | Pins | Parameters / supported variant |
+| --- | --- | --- |
+| `pushSwitch@1` | a, b | boolean normallyClosed (false); legacy s record with momentary=true |
+| `mbbSwitch@1` | common, a, b | position 0..3: A, both, B, both; legacy 416, no linked groups |
+| `tappedTransformer@1` | p1, p2, s1, tap, s2 | inductance 4 H, full secondary/primary ratio 1, coupling .99, integration backwardEuler/trapezoidal |
+| `customTransformer@1` | p1a/p1b, p2a/p2b, sa/sb | fixed two primary coils and one secondary; base inductance 4 H, signed nonzero turns1/2/3 (1 each), coupling .999, integration |
+| `transmissionLine@1` | leftReturn, rightReturn, left, right | delay .001 s, impedance 75 Ω; lossless legacy 171 |
+
+All pins map to stable IDs. Push-switch current follows a-to-b; the other models
+omit a single ambiguous current value. Ideal closed-switch loops are rejected,
+including both simultaneous MBB paths. Both transformer models preserve winding
+isolation in reference/return-path validation; magnetic coupling does not ground
+another winding. Initial winding currents are zero in this slice. Coupling must be
+strictly between 0 and 1, with finite coefficients. The tapped model has a centered
+secondary tap. Custom transformer winding count/topology is fixed for schema v1;
+free description editing, extra coils and shared taps are not exposed yet.
+Positive scientific exponents in custom turns are emitted without `+`, because
+legacy custom-transformer descriptions use `+` to indicate taps. The guarded host
+also rejects that ambiguous raw spelling and unsafe winding/coefficient ranges.
+
+Line returns must both explicitly alias global ground, matching the legacy model's
+requirement. Delay is quantized down to a whole number of document timesteps and
+must span 1..100000 steps. The private width is 32 and losses are zero; neither is
+an exposed property. Delay buffers are reset after installing the new timestep,
+preventing the previous circuit's timestep from determining buffer length.
+
+A push press uses a transient copy of the document with its contact inverted;
+saved JSON, autosave and undo history retain normallyClosed. Release, cancellation,
+focus loss and tool changes return to the saved state. Contact changes currently
+use worker replacement/reset, resuming Run when appropriate; charge/time continuity
+and exact short-pulse capture are not claimed. This is not the existing live RC
+SPST path. Other switch/parameter edits also follow replacement/reset behavior.
+
+## Variable Voltage and Outputs/Labels — 2026-11-16 (latest)
+
+Remaining passives are deferred per latest user direction. Variable Voltage and
+all 20 Outputs and Labels menu entries are now integrated: 65 editor/document models
+including three inert annotations. Sources are 9/17 entries; passives remain 13/24.
+The variable source Inspector slider uses state-preserving worker updates; annotation
+edits preserve electrical identity. New meters, displays, LED array, recorders,
+trigger and motors reuse original Java models. Optional AC phase permits balanced
+three-phase excitation. Inspector includes measurements, probe plotting, CSV and
+audio playback/WAV; stop triggers pause continuous runs. Display widths and array
+size are fixed in this slice; broader variants and legacy import remain deferred.
+See the latest HANDOFF section for parameter/measurement/capture limits and checks.
+No browser or visual verification under the recorded user preference.
+
+## Continuous editing and default Run — 2026-11-16 (latest)
+
+Simulation now runs by default (`autoRun: false` is available for manual stepping).
+Run/Pause survives layout/electrical edits and reset; Pause during installation wins.
+Invalid intermediate documents retain the selected intent and resume when repaired.
+Floating parts no longer block simulation: the original solver supplies its existing
+100 MΩ reference stabilization. Open current sources use its high-resistance fallback.
+Warnings replace the previous floating/return-path rejections. Ideal-loop validation
+and genuine solver-fault stops remain. Topology changes rebuild/reset then resume;
+pure layout changes and live variable-voltage/contact edits preserve solver state.
+Live contacts cover SPST, push, SPDT, DPDT, MBB and logic-input state changes, with
+FIFO revision/epoch guards. See latest HANDOFF for verification and remaining limits.
+
+## Native in-place circuit edits — 2026-11-16 (latest)
+
+Ordinary same-document electrical edits now update the existing worker and retained
+legacy element instances through guarded `updateCircuit`, followed by original
+Falstad reanalysis. Value edits, component additions/removals and named-net rewiring
+retain simulation time and existing dynamic state. Timestep edits are also in place.
+Editable configuration is copied explicitly; constructor defaults do not overwrite
+live state. Run/Pause and FIFO revision/epoch gates remain. Explicit Reset, a different
+document or actual fault recovery still creates a new session. Native buffer-changing
+options may reset their own buffer as in the original; unrelated models are retained.
+This supersedes earlier topology-edit reset limitations. See latest HANDOFF and
+`tools/test_live_reanalysis.mjs` for contracts, checks and remaining validation limits.

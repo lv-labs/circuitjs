@@ -6,6 +6,7 @@ Gradle dependency cache; it neither downloads nor updates dependencies.
 """
 import argparse
 import os
+import re
 from pathlib import Path
 import shutil
 import subprocess
@@ -41,6 +42,10 @@ def main():
     site = ROOT / 'build/engine-site'
     for folder in ['build/engine', 'build/engine-worker', 'experiments/engine']:
         shutil.copytree(ROOT / folder, site, dirs_exist_ok=True)
+    shutil.copytree(ROOT / 'packages/circuit-core', site / 'core', dirs_exist_ok=True)
+    modules = re.findall(r"^import './([^']+)';$", (ROOT / 'packages/circuit-core/index.mjs').read_text(), re.M)
+    (site / 'core/browser.js').write_text('// Generated from packages/circuit-core; edit the source modules.\n' +
+        '\n'.join('// ' + name + '\n' + (ROOT / 'packages/circuit-core' / name).read_text() for name in modules))
     shutil.copytree(ROOT / 'docs/new-simulator/examples', site / 'examples', dirs_exist_ok=True)
     print('Built editor-free engine, worker and frontend from cached dependencies.')
 

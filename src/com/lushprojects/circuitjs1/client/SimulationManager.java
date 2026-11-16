@@ -1427,8 +1427,13 @@ public class SimulationManager {
 		timeStepAccum -= maxTimeStep;
 		timeStepCount++;
 	    }
-	    for (i = 0; i != elmArr.length; i++)
+	    for (i = 0; i != elmArr.length; i++) {
 		elmArr[i].stepFinished();
+		// A model may stop here (for example, a reverse-biased polarized cap).
+		// stop() retires the matrices; do not read them or emit a sample afterward.
+		if (app.stopMessage != null)
+		    return;
+	    }
 	    if (!delayWireProcessing)
 		calcWireCurrents();
 	    app.onTimeStep();

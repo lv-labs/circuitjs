@@ -4,6 +4,7 @@ import collections
 import json
 from pathlib import Path
 import re
+import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
 CLIENT = ROOT / 'src/com/lushprojects/circuitjs1/client'
@@ -58,10 +59,11 @@ def main():
         by_file[entry['file']].append(entry)
     examples, usage = [], collections.Counter()
     # Catalog record types are not an import whitelist or support for every variant.
-    adapter = (ROOT / 'experiments/engine/document-adapter.js').read_text()
-    catalog = adapter.split('const catalog = new Map([', 1)[1].split(']);', 1)[0]
-    editor_types = set(re.findall(r"type:\s*'([^']+)'", catalog)) | {'w'}
-    model_count = len(re.findall(r"\['[^']+',\s*\{pins:", catalog))
+    catalog = json.loads(subprocess.check_output(
+        ['node', '-e', "process.stdout.write(JSON.stringify(require('./packages/circuit-core/catalog.js').simulationModels))"],
+        cwd=ROOT, text=True))
+    editor_types = {model['type'] for model in catalog.values()} | {'w'}
+    model_count = len(catalog)
     for path in sorted((PUBLIC / 'circuits').rglob('*.txt')):
         records = collections.Counter(line.split()[0] for line in path.read_text(errors='replace').splitlines()
                                       if line.strip() and not line.lstrip().startswith('#'))
@@ -99,12 +101,11 @@ def main():
     for t in sorted(type_classes, key=lambda t: (-usage[t], t)):
         lines.append(f"| `{t}` | {usage[t]} | {', '.join(type_classes[t])} | {'Base model only' if t in editor_types else 'Pending'} |")
     lines += ['', '## Scope and migration order', '',
-              '1. Components first: retain the verified models and expand remaining component families.',
-              '   Legacy text import is explicitly deferred by user direction (2026-11-14).',
-              '2. Polarized capacitors, remaining switch variants, tapped/saturating transformers and other analog devices.',
-              '3. Broader transistor variants, named model data and configurable model options.',
-              '4. Logic gates, sequential devices, chips and mixed-signal elements.',
-              '5. Custom/composite devices, behavioral sources, specialized and interactive devices.',
+              '1. Latest user direction (2026-11-16): defer remaining passives; Variable Voltage and Outputs/Labels are now integrated.',
+              '2. Outputs/Labels menu coverage is complete for the supported fixed-size variants; broader legacy options remain.',
+              '3. Continue remaining Inputs and Sources when requested; Passive Components remain at 13/24 entries.',
+              '4. Return to remaining digital/mixed-signal, active and composite model families afterward.',
+              '5. Broaden supported variants, named model libraries and configurable options.',
               '6. Deferred: legacy import and example chooser preserving all category paths; retain unavailable entries with explicit',
               '   reasons until their dependencies are supported. Restore saved scopes/annotations where possible.', '',
               'Each family needs document schema, symbol/pin geometry, properties, compiler/result mapping',

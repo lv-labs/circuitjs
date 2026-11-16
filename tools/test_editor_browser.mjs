@@ -80,16 +80,16 @@ try {
   await key('z','KeyZ',2);assert(JSON.stringify(await doc())===JSON.stringify(initial),'Drag undo');checks.push('G stretches connected wires with atomic undo');
   await key('r','KeyR');const rotated=await doc();assert(rotated.layout.components.r1.rotation===(initial.layout.components.r1.rotation+270)%360,'R rotates selected component');await key('z','KeyZ',2);
   await key('a','KeyA');assert(await evaluate("document.getElementById('component-chooser').open"),'A opens chooser');
-  await command('Input.insertText',{text:'capacitor'},sessionId);await delay(40);
-  assert(await evaluate("document.querySelectorAll('#component-list button').length===1"),'Chooser filters');
-  await key('Enter');assert(!(await evaluate("document.getElementById('component-chooser').open")),'Enter chooses');
+  await key('ArrowDown');await key('ArrowDown');await key('ArrowDown');await key('ArrowRight');await key('Enter');assert(!(await evaluate("document.getElementById('component-chooser').open")),'Enter chooses');
   await pointer(950,650);await key('r','KeyR');await click(950,650);await key('Escape');
   const placed=await doc();assert(placed.electrical.components.length===initial.electrical.components.length+1,'Chooser places component');
   assert(placed.electrical.components.at(-1).kind==='capacitor','Chooses capacitor');
   assert(placed.layout.components[placed.electrical.components.at(-1).id].rotation===270,'R rotates placement');
   await key('z','KeyZ',2);assert(JSON.stringify(await doc())===JSON.stringify(initial),'Placement undo');
   await key('a','KeyA');await key('Escape');assert(!(await evaluate("document.getElementById('component-chooser').open")),'Escape closes chooser');
-  checks.push('R rotation; A searchable chooser, Enter, placement rotation, Escape and undo');
+  await key('a','KeyA');for(let i=0;i<3;i++)await key('ArrowDown');await key('ArrowRight');for(let i=0;i<13;i++)await key('ArrowDown');await key('Enter');
+  assert(await evaluate("document.getElementById('component-chooser').open"),'Unavailable relay cannot select a tool');await key('Escape');
+  checks.push('R rotation; A Falstad hierarchy, keyboard submenu selection, unavailable entry, placement, Escape and undo');
   p=await center('[data-component="r1"]');await pointer(p.x,p.y);
   await key('e','KeyE');assert(await evaluate("document.activeElement.id==='value'"),'E focuses value');
   await command('Input.insertText',{text:'1234'},sessionId);await key('m','KeyM');assert(await evaluate("document.activeElement.id==='value'"),'Hotkeys do not steal inspector typing');
@@ -112,7 +112,7 @@ try {
   assert(inserted.kind==='resistor'&&inlineAfter.electrical.components.length===inlineBefore.electrical.components.length+1,'Inline part placed');
   const solved=await evaluate(`(async()=>{
     const d=JSON.parse(localStorage.getItem('circuit-editor-prototype.v1')),id=d.electrical.components.at(-1).id;
-    const simulation=CircuitSimulation.create();try {
+    const simulation=CircuitSimulation.create({autoRun:false});try {
       await simulation.setDocument(d);const frame=await simulation.step(1);
       return {output:frame.pinVoltages.r2.a,current:frame.componentCurrents[id]};
     }finally{simulation.dispose();}
@@ -259,9 +259,9 @@ try {
   assert(JSON.stringify(await doc())===JSON.stringify(waveformBefore),'DC conversion draft cancels');
   checks.push('AC/DC waveform selector, six choices, shared/duty draft preservation, percent conversion, cancellation and one-step undo');
   for(const [preset,model,waveform] of [['acSource','voltageSource','sine'],['acRail','voltageRail','sine'],['voltageRail','voltageRail','dc'],['voltageSource','voltageSource','dc']]){
-    const before=await doc();await key('a','KeyA');await command('Input.insertText',{text:preset},sessionId);
+    const before=await doc();await key('a','KeyA');await evaluate("[...document.querySelectorAll('#component-list button')].find(b=>b.textContent==='Inputs and Sources').click()");
     assert(!(await evaluate("document.getElementById('component-list').textContent.includes('Sine source')")),'Chooser uses AC source naming');
-    await key('Enter');await pointer(1050,750);await click(1050,750);await key('Escape');
+    await evaluate(`document.querySelector('#component-list button[data-kind="${preset}"]').click()`);await pointer(1050,750);await click(1050,750);await key('Escape');
     const after=await doc(),source=after.electrical.components.at(-1);
     assert(source.kind===model&&source.parameters.waveform.kind===waveform,'Correct AC/DC terminal-count preset');
     assert(await evaluate(`Object.keys(CircuitEditorModel.definitions[${JSON.stringify(model)}].pins).length===${model==='voltageRail'?1:2}`),'Correct visible terminal count');

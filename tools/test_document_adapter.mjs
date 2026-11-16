@@ -68,7 +68,7 @@ invalid(d=>d.electrical.wires[0].resistance=100);
 invalid(d=>d.electrical.components[0].unrecognizedElectricalSetting=true);
 invalid(d=>d.schemaVersion=2);
 invalid(d=>{d.electrical.components=d.electrical.components.filter(c=>c.kind!=='ground');});
-invalid(d=>{d.electrical.wires=[];});
+const loose=structuredClone(document);loose.electrical.wires=[];assert.ok(compile(loose).diagnostics.some(d=>d.code==='FLOATING_NET'));
 invalid(d=>d.electrical.wires.push({id:'source-short',from:{kind:'pin',componentId:'v1',pinId:'p'},to:{kind:'pin',componentId:'v1',pinId:'n'}}));
 // Failure after touching a singleton engine cannot be presented as old valid state.
 let calls=0;
@@ -92,14 +92,14 @@ assert.equal(CircuitDocumentAdapter.fromProjection(JSON.parse(opCompiled.canonic
 for(const update of [{gain:0},{gain:Infinity},{minOutput:15},{maxOutput:-15},{minOutput:NaN},{unknown:1}]){
  const bad=structuredClone(opamp);Object.assign(bad.electrical.components.find(c=>c.id==='u1').parameters,update);assert.throws(()=>compile(bad),/op-amp|fields/);
 }
-const floatingInput=structuredClone(opamp);floatingInput.electrical.wires=floatingInput.electrical.wires.filter(w=>w.id!=='w1');assert.throws(()=>compile(floatingInput),/Floating/,'No invented input conductance');
+const floatingInput=structuredClone(opamp);floatingInput.electrical.wires=floatingInput.electrical.wires.filter(w=>w.id!=='w1');assert.ok(compile(floatingInput).diagnostics.some(d=>d.code==='FLOATING_NET'));
 console.log('Op-amp compiler checks passed: post order, output-current sign, worker revalidation and parameter/input validation.');
 
 const sine=JSON.parse(await readFile(new URL('../docs/new-simulator/examples/opamp-sine.json',import.meta.url)));
 const sineCompiled=compile(sine),sourceRecord=sineCompiled.text.split('\n')[sineCompiled.mapping.find(m=>m.id==='vin').index].split(' ');
 assert.deepEqual(sourceRecord.slice(6),['1','1000','0.5','0.25','0','0.5'],'Sine amplitude/frequency/offset encoded without DC shape changes');
 assert.equal(CircuitDocumentAdapter.fromProjection(JSON.parse(sineCompiled.canonical),sine.id).canonical,sineCompiled.canonical);
-for(const update of [{amplitude:-1},{amplitude:Infinity},{frequency:0},{frequency:-100},{frequency:Infinity},{frequency:1e308},{offset:NaN},{offset:Infinity},{phase:1}]){
+for(const update of [{amplitude:-1},{amplitude:Infinity},{frequency:0},{frequency:-100},{frequency:Infinity},{frequency:1e308},{offset:NaN},{offset:Infinity},{unknownPhase:1}]){
  const bad=structuredClone(sine);Object.assign(bad.electrical.components.find(c=>c.id==='vin').parameters.waveform,update);assert.throws(()=>compile(bad),/sine|fields/);
 }
 const zeroSine=structuredClone(sine);zeroSine.electrical.components.find(c=>c.id==='vin').parameters.waveform.amplitude=0;compile(zeroSine);

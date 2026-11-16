@@ -194,16 +194,40 @@ tasks.register('compileEngineWorker', JavaExec) {
          'com.lushprojects.circuitjs1.worker'
 }
 
+// The classic prototype loads one deterministic core asset. The same package
+// also retains its native ESM entry for independent frontend consumers.
+def coreBrowserBundle = layout.buildDirectory.file('core/browser.js')
+tasks.register('bundleCircuitCore') {
+    inputs.dir('packages/circuit-core')
+    outputs.file(coreBrowserBundle)
+    doLast {
+        def modules = file('packages/circuit-core/index.mjs').readLines().findResults { line ->
+            def match = line =~ /^import '\.\/(.+)';$/
+            match.matches() ? match[0][1] : null
+        }
+        def target = coreBrowserBundle.get().asFile
+        target.parentFile.mkdirs()
+        target.text = '// Generated from packages/circuit-core; edit the source modules.\n' +
+            modules.collect { name -> "// ${name}\n" + file("packages/circuit-core/${name}").getText('UTF-8') }.join('\n')
+    }
+}
+
 tasks.register('makeEngineSite', Copy) {
     group 'circuitjs1'
     description 'Assemble the engine prototype and browser verification page'
-    dependsOn 'compileEngine', 'compileEngineWorker'
+    dependsOn 'compileEngine', 'compileEngineWorker', 'bundleCircuitCore'
     into layout.buildDirectory.dir('engine-site')
     from(layout.buildDirectory.dir('engine'))
     from(layout.buildDirectory.dir('engine-worker'))
     from('experiments/engine')
+    from(layout.buildDirectory.dir('core')) {
+        into 'core'
+    }
+    from('packages/circuit-core') {
+        into 'core'
+    }
     from('docs/new-simulator/examples') {
-        include 'voltage-divider.json', 'switched-rc.json', 'opamp-noninverting.json', 'opamp-sine.json', 'opamp-ac-rail.json', 'opamp-oscilloscope.json'
+        include '*.json'
         into 'examples'
     }
 }
