@@ -1,6 +1,6 @@
 # New circuit simulator: current plan
 
-Updated 2026-11-16. This is the current plan; [PLAN-HISTORY.md](PLAN-HISTORY.md)
+Updated 2026-11-17. This is the current plan. [PLAN-HISTORY.md](PLAN-HISTORY.md)
 preserves previous milestones and superseded next-task notes.
 [HANDOFF.md](HANDOFF.md) contains the current implementation/build/test checkpoint.
 
@@ -128,6 +128,35 @@ divider slice is not the migration's finish line. The final acceptance criterion
 is the complete old editor feature set implemented in React, with behavior parity
 and styling the user can customize. Do not call the migration complete based only
 on builds, type checks or a rendered example.
+
+## Simulation tools roadmap
+
+The next new feature is potentiometer automation. Continue tracking React editor
+parity in the [parity inventory](REACT-PARITY.md). The headless worker already
+supports bounded stepping, live circuit updates and time-aligned probe samples.
+Build on those capabilities for modulation, parameter tuning and frequency response.
+
+1. **Automate sliders.** Add an **Automate** action to the Sliders card. Start with
+   one potentiometer, a ramp with a configurable range and duration, and the
+   existing scope. As a first end-to-end check, ramp the pot from 10% to 90% over
+   two simulated seconds and watch the wiper and output trace. Apply parameter
+   changes in the worker at solver step boundaries while retaining circuit state.
+   Use simulation time so pause freezes the ramp and reset starts it over. Save
+   the automation settings with the circuit and keep playback out of undo history.
+   Extend the same controls to looping triangle modulation, variable voltage
+   sources and other supported slider parameters.
+2. **Sweep part values and plot measurements.** Let the user choose a parameter,
+   a range and a measurement. Run the sweep in a separate worker using a snapshot
+   of the circuit. Plot the measurement against the parameter value. For example,
+   sweep a feedback resistor and plot gain against resistance. Let the user pick
+   a result and apply its value to the circuit as one undoable edit.
+3. **Run frequency sweeps and display Bode plots.** Choose an excitation source
+   and input and output probes. Run stepped sine tones with the transient solver,
+   allow the response to settle at each frequency, then measure output gain and
+   phase relative to the input. Plot gain in dB and phase in degrees against log
+   frequency. Validate with an RC low-pass, which should read about −3 dB and
+   −45° at cutoff. SPICE-style small-signal AC analysis is a later solver milestone
+   that requires linearizing the circuit around its DC operating point.
 
 ## Symbol authoring contract
 
