@@ -83,6 +83,27 @@
       if(c.kind==='box')return `<rect x="${-p.width/2}" y="${-p.height/2}" width="${p.width}" height="${p.height}" fill="none" stroke-dasharray="8 4"/>`;
       return `<path d="M${-p.width/2} ${-p.height/2}L${p.width/2} ${p.height/2}"/>`;
     }
+    if(['sweepSource','antennaSource','amSource','fmSource','noiseSource'].includes(c.kind)){
+      const label={sweepSource:'Sweep',antennaSource:'Ant',amSource:'AM',fmSource:'FM',noiseSource:'Noise'}[c.kind];
+      return '<circle r="20"/><path d="M0 20V32"/><text y="4" text-anchor="middle" font-size="12" stroke="none" fill="currentColor">'+label+'</text>';
+    }
+    if(c.kind==='schmittTrigger'||c.kind==='invertingSchmittTrigger'){
+      const inverted=c.kind==='invertingSchmittTrigger';
+      return '<path d="M-48 0H-24M-24-24V24L18 0ZM-15 6H-7L1-6H9M-7-6H1L-7 6"/>'+
+        (inverted?'<circle cx="22" r="4"/><path d="M26 0H48"/>':'<path d="M18 0H48"/>');
+    }
+    if(c.kind==='sparkGap')return '<path d="M-48 0H-6L-2-5M48 0H6L2 5"/>';
+    if(c.kind==='tunnelDiode')return '<path d="M-48 0H-16M16 0H48M-16-14V14L16 0ZM10-14H16V14H10"/>';
+    if(['memristor','thermistor','photoresistor','fuse'].includes(c.kind)){
+      const details={memristor:'M-12-8V8M-6-8V8',thermistor:'M-20 16H-12L12-16',
+        photoresistor:'M-13-24L-4-13M-10-13H-4V-19M3-26L12-15M6-15H12V-21',
+        fuse:measured.blown?'M-24 0H-5L3-5M7 0H24':'M-24 0H24'};
+      return leads+'<path d="M-24-8H24V8H-24Z'+details[c.kind]+'"/>';
+    }
+    if(c.kind==='scr')return '<path d="M-48 0H-16M16 0H48M-16-16V16L16 0ZM16-16V16M16 32L6 11"/>';
+    if(c.kind==='diac'||c.kind==='triac')return '<path d="M-48 0H-16M16 0H48M-16-14V14M16-14V14M-16-12L16-6L-16 0ZM16 0L-16 6L16 12Z'+(c.kind==='triac'?'M16 32L6 11':'')+'"/>';
+    if(c.kind==='varactor')return '<path d="M-48 0H-15M12 0H48M-15-13V13L6 0ZM6-15V15M12-15V15"/>';
+    if(c.kind==='triode')return '<circle r="24"/><path d="M32-48L0-10M-48 0H-20M32 48L7 10M-16-10H16M-16 0H-9M-5 0H2M6 0H13M-10 10H10"/>';
     if(c.kind==='variableVoltage')return '<circle r="20"/><path d="M0 20V32"/><g data-upright-icon><path d="M-12 12L12-12M3-12H12V-3"/></g>';
     if(c.kind==='lamp')return leads+`<circle r="24" fill="rgba(255,175,55,${Math.max(0,Math.min(1,((measured.temperature||300)-700)/2000))})"/><path d="M-16-16L16 16M-16 16L16-16"/>`;
     if(['ammeter','ohmmeter','voltmeter'].includes(c.kind))return leads+`<circle r="24"/><text y="6" text-anchor="middle" font-size="16" stroke="none" fill="currentColor">${{ammeter:'A',ohmmeter:'Ω',voltmeter:'V'}[c.kind]}</text>`;
@@ -268,7 +289,7 @@
     if(c.kind==='transmissionLine')fields=[['delay','Delay · s (1 to 100000 timesteps)'],['impedance','Characteristic impedance · Ω']];
     const extra=M.outputSpecs[c.kind];
     if(extra){fields=Object.entries(extra.fields).map(([key,f])=>[key,f.label]);if(c.kind==='variableVoltage')fields.sort(([a],[b])=>a==='voltage'?-1:b==='voltage'?1:0);}
-    const numericFields = (entries, values) => entries.map(([key,label],i)=>{const id=i===0?'value':key,f=extra?.fields[key];return `<label for="${id}">${esc(label)}</label>`+(f?.type==='string'?`<textarea id="${id}" name="${key}" rows="${['text','lookup'].includes(key)?5:2}" maxlength="${f.maxLength}">${esc(values[key])}</textarea>`:`<input id="${id}" name="${key}" value="${esc(values[key])}" required>`);}).join('');
+    const numericFields = (entries, values) => entries.map(([key,label],i)=>{const id=i===0?'value':key,f=extra?.fields[key];if(f?.type==='boolean')return `<label class="checkbox"><input id="${id}" name="${key}" type="checkbox" ${values[key]?'checked':''}>${esc(label)}</label>`;return `<label for="${id}">${esc(label)}</label>`+(f?.type==='string'?`<textarea id="${id}" name="${key}" rows="${['text','lookup'].includes(key)?5:2}" maxlength="${f.maxLength}">${esc(values[key])}</textarea>`:`<input id="${id}" name="${key}" value="${esc(values[key])}" required>`);}).join('');
     $('properties-title').textContent = `${c.reference} · ${componentName(c)}`;
     $('property-fields').innerHTML = `<label for="reference">Reference</label><input id="reference" name="reference" value="${esc(c.reference)}" maxlength="80" required>` +
       (source ? `<label for="waveform">Waveform</label><select id="waveform" name="waveform">${Object.entries(M.waveformNames).map(([kind, name]) => `<option value="${kind}">${name}</option>`).join('')}</select><div id="waveform-fields">${numericFields(fields, raw)}</div><p id="waveform-note"></p>` : numericFields(fields, c.parameters)) +
@@ -304,7 +325,7 @@
         const form = new FormData($('properties')), reference = String(form.get('reference')).trim(); if (!reference) throw new Error('Enter a component reference.');
         const parameters = clone(c.parameters);
         if (source) { parameters.waveform = { kind: form.get('waveform') }; for (const [key] of fields) parameters.waveform[key] = parseNumber(String(form.get(key))) * (key==='phase'?Math.PI/180:1) / (key === 'dutyCycle' ? 100 : 1); }
-        else for (const [key] of fields) parameters[key] = extra?.fields[key]?.type==='string'?String(form.get(key)):parseNumber(String(form.get(key)));
+        else for (const [key] of fields) parameters[key] = extra?.fields[key]?.type==='boolean'?form.has(key):extra?.fields[key]?.type==='string'?String(form.get(key)):parseNumber(String(form.get(key)));
         if (['spdtSwitch', 'dpdtSwitch', 'mbbSwitch'].includes(c.kind)) parameters.position = Number(form.get('position'));
         if (['logicOutput', 'logicInput'].includes(c.kind)) parameters.mode = form.get('mode');
         if (c.kind === 'logicOutput') parameters.pulldown = form.get('pulldown') === 'on';

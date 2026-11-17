@@ -10,11 +10,20 @@ Build a new editor while preserving CircuitJS's electrical models and simulation
 algorithms. KiCad is the interaction reference. Stable document identities and
 explicit connectivity must survive a change of frontend.
 
-The agreed starting direction is a **React/TypeScript application in `wires/`,
-with shadcn/component libraries for the surrounding UI and an SVG editor sheet**.
-The user likes the existing editor's behavior and is not asking for a new
-interaction design. Migrate that behavior into an application they can style and
-organize themselves: menus, panels, dialogs and symbols in separate components.
+The agreed direction is a **complete migration of the existing editor into the
+React/TypeScript application in `wires/`, with shadcn/component libraries for the
+shell and an SVG editor sheet**. Preserve the old app's features and interaction
+details; the goal is the same editor in React, with its styling easier for the user
+to control. This is not a request for a smaller prototype or a new interaction
+design. Build menus, property dialogs, scope, simulation controls and the sheet
+as React components. The React sheet uses the full workspace width. Double-click
+a symbol or press E to open its properties. Readings and component actions live
+in the dialog. The draggable Sliders panel opens when a variable voltage source
+or potentiometer is placed. Its live controls share a reorderable list. Slider
+labels are saved with the circuit, and the potentiometer wiper follows its
+slider while the user drags it. Use shadcn Base Mira
+components for visible controls and surfaces,
+including buttons, menus, dialogs, cards, sliders and sheets where applicable.
 
 The JavaScript shared core and existing CircuitJS simulator remain in place.
 Keep direct JS/TS calls between the UI and editing core, with simulation in its
@@ -31,14 +40,15 @@ representative measurements establish a need.
 | Engine boundary | Editor-free Java/GWT engine, dedicated worker, bounded stepping and stable-ID results | Full legacy compatibility, larger-circuit performance and broader platform verification |
 | Continuous editing | Default Run; guarded in-place value/topology/timestep updates retain existing model state and engine time | Unsupported configuration/model variants; exhaustive behavior across the entire legacy library |
 | Document boundary | Schema v1, explicit graph, stable IDs, canonical electrical projection, save/open | Schema migration policy; further separation only when a concrete frontend requires it |
-| Library | 65 document/editor models, including 3 graphics; original model equations reused | Full component/variant coverage; menu availability is not import compatibility |
+| Library | 84 document/editor models, including 3 graphics, with original model equations reused | Full component and variant coverage |
 | Prototype interactions | Stateful connected dragging; section merge/tail cleanup; detached rotation/flip; wire-to-pin drops; loose-end routing; preserved wires on component deletion | Full native KiCad equivalence; reusable interaction modules are now extracted |
 | Signal inspection | Worker samples, voltage probes, multiple scope panes, output measurements/capture | Broader performance/platform coverage and final UX/layout decisions |
 | Legacy import | Source inventory and coverage mapping | No general legacy text importer or bundled-example chooser |
 
-Current menu availability, checked against code on 2026-11-16: Passive Components
-13/24; Inputs and Sources 9/17; Outputs and Labels 20/20. These are menu counts,
-not independent model or fully supported variant counts. See
+Current menu availability includes 18/24 Passive Components, 14/17 Inputs and
+Sources, 20/20 Outputs and Labels, 14/17 Active Components, 6/24 Active Building
+Blocks, 9/10 Logic Gates, Input and Output, 7/21 Digital Chips, and 0/6 Analog
+and Hybrid Chips. Menu counts include placement presets. See
 [LEGACY-CATALOG.md](LEGACY-CATALOG.md) and [DOCUMENT-ADAPTER.md](DOCUMENT-ADAPTER.md).
 
 ## Shared-core extraction — completed 2026-11-16
@@ -52,50 +62,72 @@ share the same implementation. The reference UI uses compatibility adapters.
 A standalone consumer imports only this package, edits a divider and drives the
 real retained worker without the prototype renderer/inspector. The numerical,
 worker and history/interaction tests remain the portability boundary. The subsequent discussion chose React/SVG as the next starting direction.
-`wires/` is still only a scaffold; the migration below has not been implemented.
+`wires/` now includes a separately mountable React editor and `/editor.html`
+preview. `wires/src/App.tsx` mounts that React editor; preserve the user's existing
+shell and styling changes while completing parity.
 
-## Next milestone: migrate the working editor into React
+## React migration progress — 2026-11-16
 
-This replaces the earlier frontend-comparison recommendation. Build on `wires/`
-and preserve the current sheet behavior. Keep `experiments/engine/editor.html`
-working as the complete reference application throughout the migration; do not
-replace it with an iframe or copy its large renderer/event-handler file wholesale.
-The new sheet should be a real React/SVG view over the existing core.
+The React app is active in `wires/src/App.tsx` and currently contains a broad but
+incomplete port: common sheet gestures, menus, file actions, probes, properties,
+simulation controls and a multi-pane scope. All 84 supported models use authored
+React SVG views on the sheet and during placement. Preserve the shell and
+styling work and keep `experiments/engine/editor.html` as the behavior reference.
 
-1. **Prove one-file symbol authoring with the resistor.** A per-symbol TSX file
-   should own its stable kind/pin IDs, local pin positions, defaults and applicable
-   parameter metadata, plus its React SVG component. Draw the lead endpoints from
-   that metadata instead of repeating coordinates in markup. See the contract below.
-   Prove a plain data-only catalog can be generated without loading React in the
-   computational runtime. Do this for one kind before converting the whole catalog.
-2. **Wire the React shell to the core.** Add a focused adapter/hook owning one
-   editing/history session, committed document subscription, separate previews and
-   simulation lifecycle. Use shadcn/components for toolbars, panels, menus, dialogs
-   and forms. Keep styling/tokens separate from electrical/editing behavior.
-3. **Render one existing circuit.** Use the saved divider first; add resistor,
-   voltage-source and ground symbol components, then capacitor for the RC fixture.
-   Use separate sheet, wire, symbol, selection and preview layers. Preserve stable
-   React keys, coordinate transforms, upright labels and core-defined hit/snapping
-   behavior. Leave the original app available for unsupported symbol kinds; never
-   silently discard components from an opened document.
-4. **Carry over interactions incrementally.** Pan/zoom, selection, pointer/G drag,
-   detached M/rotation/flip, wire creation, floating-end routing, wire-to-pin drops,
-   delete and undo/redo must call shared operations. Keep pointer previews local;
-   commit once, then notify autosave/simulation. Do not reimplement circuit rules
-   in React event handlers.
-5. **Connect the real worker and one live measurement.** Reuse the adapter,
-   coordinator and transport, including session/revision guards and native live
-   updates. Configure Vite/build asset paths for core and compiled worker resources;
-   changing the frontend must not require changing solver equations or saved files.
-6. **Expand only after that slice works.** Migrate remaining symbols, chooser,
-   property forms and scopes in manageable batches. Preserve current behavior and
-   make each part easy to style. Measure pan/zoom/drag with simulation running and
-   representative scenes; avoid rebuilding the entire SVG scene on every update.
+A real behavior mismatch was found in scope playback: the old editor configures
+`batchSteps: 10, intervalMs: 16`, while the React app inherited the core's default
+of 128 steps per tick. This made simulated time move 12.8x faster at the same
+time/div. React now matches the old cadence and acquires samples from `onFrame`.
+The user reports that the pace is better. A strict sample-channel shape mismatch
+that caused a blank React page was also fixed. These fixes improve the current
+slice; neither establishes whole-app parity.
 
-First acceptance checkpoint: the React app loads the existing divider, renders the
-same circuit, pans/zooms, selects/drags/rotates, undoes, and shows a correct live
-measurement. Existing core checks pass and the reference UI still works. Full
-library parity, a visual redesign and a desktop wrapper are not prerequisites.
+Continue by using the old application as a behavior specification. Maintain a
+[parity inventory](REACT-PARITY.md), then migrate complete feature groups in coherent slices. A
+bounded change is a delivery unit, not a reason to leave an entire old feature
+behind. For each slice, compare the old source and the React implementation,
+preserve the shared core/worker contracts, and record checked versus unchecked
+behavior. Follow the current verification constraints in HANDOFF.md; do not claim
+browser-level parity without browser verification.
+
+## Milestone: migrate the working editor into React
+
+Build on `wires/` and keep `experiments/engine/editor.html` working as the complete
+reference throughout migration. The React app must implement the old behavior in
+React/SVG; do not embed the old application or copy its monolithic renderer and
+event handler wholesale. Keep behavior and styling decoupled.
+
+1. **Inventory parity.** Map each legacy UI feature and shortcut to its source in
+   `editor.js`, `editor.html`, `editor.css`, `scope-view.js`, component menu and
+   property dialog modules. Track implementation and verification separately.
+2. **Complete shell commands.** Keep File/Edit/View/Add menus and wire each action
+   to React-owned state/core commands. Preserve New/Open/Save, autosave, examples,
+   undo/redo, clipboard, duplicate, transform, delete, view and grid behavior. Keep
+   only Start/Stop/Reset always visible for simulation.
+3. **Match the sheet.** Port camera, zoom/fit, directional selection, focus and
+   keyboard semantics, placement previews, connected/detached movement, rotation,
+   flips, switches, momentary controls, wire routing and segment edits, loose-end
+   reconnection, probes, junctions and deletion/undo rules. Continue using the
+   shared editing core for connectivity and transactions.
+4. **Migrate the full component library and property dialogs.** Move each symbol into its
+   authored TSX module with shared pin/default metadata. Port chooser groups,
+   per-kind properties, validation, meters/outputs, variable controls and recorder
+   or audio actions. Keep unsupported models and variants explicit until migrated.
+5. **Match simulation and scopes.** Preserve worker lifecycle, cadence, sample
+   channels, run/step/reset states, trace scaling, cursor readings, channel
+   visibility, pane layout, clear, capture and audio behavior. Compare each against
+   the legacy app, including time progression at equal settings.
+6. **Finish persistence and cutover.** Preserve schema-v1 documents, IDs and
+   connectivity through New/Open/Save/autosave/examples. Check representative
+   circuits and end-to-end workflows. Make React the sole active frontend only
+   after the old app's full feature set has a React counterpart and parity gaps are
+   resolved; keep the old source/reference available until the user accepts it.
+
+Intermediate acceptance checkpoints are useful for each group, but completing the
+divider slice is not the migration's finish line. The final acceptance criterion
+is the complete old editor feature set implemented in React, with behavior parity
+and styling the user can customize. Do not call the migration complete based only
+on builds, type checks or a rendered example.
 
 ## Symbol authoring contract
 
@@ -103,8 +135,7 @@ library parity, a visual redesign and a desktop wrapper are not prerequisites.
 `resistor.tsx` should co-locate metadata and the React view, so changing the shape,
 lead lengths, pin locations or defaults does not require hand-editing another
 catalog elsewhere. Proposed location: a reusable `packages/circuit-symbols/src/`
-package imported by `wires/`; this package/path and the build tooling do not exist
-yet. Keep ordinary UI components under `wires/src/components/` and sheet/layer code
+package imported by `wires/`; this path and initial build tooling now exist. Keep ordinary UI components under `wires/src/components/` and sheet/layer code
 under `wires/src/editor/`. The important decision is ownership, not filename case.
 
 The UI imports the view and metadata. A build step emits the **data-only** portion
@@ -119,13 +150,15 @@ explicit and distinct from SVG/display pin order. Electrical equations remain in
 the retained simulator. For each migrated kind, switch ownership atomically so its
 pin geometry/defaults are not maintained in both the authored file and catalog.
 
-Current source locations, before this migration:
+Source ownership:
 
 - SVG strings: `experiments/engine/editor.js`, `symbol()` (resistor branch near line 111).
-- Local pin geometry/defaults: `packages/circuit-core/catalog.js`
-  (`basicDefinitions` and `outputSpecs`; resistor definition near line 1163).
+- React SVG and metadata: `packages/circuit-symbols/src/<kind>.tsx`; generated
+  plain-data definitions in marked `packages/circuit-core/catalog.js` sections.
+- Symbol registry and catalog order: `packages/circuit-symbols/index.ts`.
 - World-coordinate pin transforms: `packages/circuit-core/geometry.js`, `pin()`.
-- `wires/src/App.tsx`: starter content only; no circuit sheet or symbol TSX files yet.
+- `wires/src/App.tsx`: user-owned shell/menu work.
+- `wires/src/editor/`: mountable React editor and session hook; `/editor.html` is its separate preview.
 
 A renderer-only edit may change the body, stroke, color and labels freely. Editing
 pin positions in the authored definition must change both visible lead endpoints
@@ -134,17 +167,18 @@ that relationship rather than drawing a second, independently positioned pin.
 
 ## Library work after the boundary checkpoint
 
-Full Falstad library coverage remains a goal. The earlier order was components
-before legacy import, with remaining passives later deferred in favor of Variable
-Voltage and Outputs/Labels; that requested slice is complete. There is no newly
-approved next component family.
+The target is full component coverage for the bundled Falstad fork. Audio and
+data import and export workflows are deferred for redesign.
 
-Choose a bounded next batch using catalog/example usage and required environments.
-For instance, remaining source entries include sweep, antenna, AM/FM, noise, audio
-input, data input and external JavaScript voltage. They are not equally cheap:
-external input/audio require capabilities and lifecycle decisions beyond another
-numeric device mapping. Pending passive and digital families remain recorded in
-the catalog; do not infer that an enabled menu entry supports every legacy variant.
+The current batch adds sweep, antenna, AM, FM, noise, XNOR, both Schmitt
+triggers, spark gap, memristor, tunnel diode, fuse, photoresistor, thermistor,
+SCR, DIAC, TRIAC, varactor and triode. All 19 ran and accepted a live circuit
+update in the compiled worker. Browser interaction checks remain open.
+
+The remaining menu entries include relays, crystal, cross switch, gyrator,
+Darlington pairs, unijunction transistor, controlled sources, other active
+building blocks, bus input and digital and hybrid chips. External JavaScript
+voltage requires a decision about its input interface.
 
 For each batch, extend metadata, compiler/worker capabilities, parameter validation
 and numerical/worker fixtures before adding minimal exposure in the reference
@@ -170,6 +204,5 @@ all 374 bundled files load because their record types appear in the catalog.
 - Record scope-layout persistence, desktop wrapper/platforms and migration policy
   when decided. React/SVG is the agreed starting direction. Multiple scope panes exist; their arrangement/settings are not a
   final persistent workspace design.
-- Preserve accumulated uncommitted work in `new-sim`; no reset, commit, push,
-  deployment is implied by a documentation update. Code through `1224f84e` is
-  already committed/pushed on `new-sim`; recheck and preserve newer local changes.
+- Keep the React migration and retained worker changes together on `new-sim`.
+  Check for local edits before updating the worktree.

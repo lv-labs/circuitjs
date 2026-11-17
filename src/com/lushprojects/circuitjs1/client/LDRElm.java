@@ -71,6 +71,7 @@ class LDRElm extends CircuitElm implements Command, MouseWheelHandler {
     }
 
     void createSlider() {
+        if (app.ui == null) return;
 	app.addWidgetToVerticalPanel(label = new Label(sliderText));
 	label.addStyleName("topSpace");
 	int value = (int) (position*100);
@@ -92,7 +93,7 @@ class LDRElm extends CircuitElm implements Command, MouseWheelHandler {
     void setPoints() {
 	super.setPoints();
 	calcLeads(32);
-	position = slider.getValue()*.0099+.0001;
+	if (slider != null) position = slider.getValue()*.0099+.0001;
 	lux = LuxFromSliderPos();
 	resistance = calcResistance(lux); 
 	ps3 = new Point();

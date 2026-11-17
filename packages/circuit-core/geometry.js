@@ -62,7 +62,7 @@
     for (const probe of document.probes) if (probe.kind === 'voltage') {
       const positive = terminal(probe.positive), negative = probe.reference === 'ground' ? null : terminal(probe.negative);
       if (!positive || (probe.reference !== 'ground' && !negative)) { unresolved.push(probe.id); continue; }
-      channels.push({ id: probe.id, label: probe.label || probe.id, positive, negative });
+      channels.push({ id: probe.id, label: probe.label || 'Wire', positive, negative });
     }
     return { channels, unresolved };
   }

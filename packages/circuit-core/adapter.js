@@ -20,7 +20,7 @@
   // probe (plus an optional 1 MΩ pulldown). Standalone markers need no floating warning.
   const displayOnly=kind=>['output','logicOutput','testPoint','labeledNode','decimalDisplay','instructionDisplay','dataExport','audioOutput','stopTrigger'].includes(kind);
   const logicSource=kind=>kind==='logicInput';
-  const railSource=kind=>kind==='voltageRail'||kind==='variableVoltage';
+  const railSource=kind=>['voltageRail','variableVoltage','sweepSource','antennaSource','amSource','fmSource','noiseSource'].includes(kind);
   const logicMode=kind=>kind==='logic'||kind==='numeric'||kind==='ternary';
   const flipFlop=kind=>['dFlipFlop','jkFlipFlop','tFlipFlop'].includes(kind);
   // ChipElm stamps each output as an implicit ground-referenced voltage source.
@@ -43,9 +43,13 @@
   }
   const bipolar=kind=>['npn','pnp'].includes(kind);
   const fet=kind=>['nmos','pmos','njfet','pjfet'].includes(kind);
-  const logic=kind=>['andGate','nandGate','orGate','norGate','xorGate','inverter'].includes(kind);
+  const unaryLogic=kind=>['inverter','schmittTrigger','invertingSchmittTrigger'].includes(kind);
+  const logic=kind=>unaryLogic(kind)||['andGate','nandGate','orGate','norGate','xorGate','xnorGate'].includes(kind);
   function windingOrSwitchPairs(device){
     const p=device.pins;
+    if(device.kind==='scr')return [[p.anode,p.cathode],[p.gate,p.cathode]];
+    if(device.kind==='triac')return [[p.mt2,p.mt1],[p.gate,p.mt1]];
+    if(device.kind==='triode')return [[p.plate,p.cathode]];
     if(device.kind==='ammeter')return [[p.a,p.b]];
     if(device.kind==='wattmeter')return [[p.returnIn,p.returnOut],[p.currentIn,p.currentOut]];
     if(device.kind==='threePhaseMotor')return Object.keys(p).slice(1).map(pin=>[p.U1,p[pin]]);
@@ -82,10 +86,31 @@
     if(kind==='threePhaseMotor')return [[x,0],[x+64,64],[x,32],[x+64,32],[x,64],[x+64,0]];
     return null;
   }
+  function semiconductorPostPoints(kind,x) {
+    if (kind==='scr'||kind==='triac') return [[x,32],[x+64,32],[x+64,0]];
+    if (kind==='triode') return [[x+64,0],[x,32],[x+48,64]];
+    return null;
+  }
   function outputRecord(d,x){
     const p=d.parameters,enc=encodeURIComponent;
     const records={
       variableVoltage:()=>({flags:0,parameters:` 6 ${p.voltage} ${p.maxVoltage} ${p.minVoltage} 0 0.5 ${enc(p.label)||'%00'}`}),
+      sweepSource:()=>({flags:(p.logarithmic?1:0)|(p.bidirectional?2:0),parameters:` ${p.minFrequency} ${p.maxFrequency} ${p.amplitude} ${p.sweepTime}`}),
+      antennaSource:()=>({flags:0,parameters:''}),
+      amSource:()=>({flags:0,parameters:` ${p.carrierFrequency} ${p.signalFrequency} ${p.amplitude}`}),
+      fmSource:()=>({flags:0,parameters:` ${p.carrierFrequency} ${p.signalFrequency} ${p.amplitude} ${p.deviation}`}),
+      noiseSource:()=>({flags:0,parameters:` 6 40 ${p.amplitude} ${p.offset} 0 0.5`}),
+      sparkGap:()=>({flags:0,parameters:` ${p.onResistance} ${p.offResistance} ${p.breakdownVoltage} ${p.holdingCurrent}`}),
+      memristor:()=>({flags:0,parameters:` ${p.onResistance} ${p.offResistance} ${p.initialDopedWidth} ${p.totalWidth} ${p.mobility} 0`}),
+      tunnelDiode:()=>({flags:0,parameters:''}),
+      fuse:()=>({flags:0,parameters:` ${p.resistance} ${p.i2t} 0 false`}),
+      photoresistor:()=>({flags:0,parameters:` ${p.position} Light`}),
+      thermistor:()=>({flags:0,parameters:` ${p.resistance25} ${p.resistance50} ${p.minTemperature} ${p.maxTemperature} ${p.position} Temperature`}),
+      scr:()=>({flags:1,parameters:` 0 0 ${p.triggerCurrent} ${p.holdingCurrent} ${p.gateResistance}`}),
+      diac:()=>({flags:0,parameters:` ${p.onResistance} ${p.offResistance} ${p.breakdownVoltage} ${p.holdingCurrent}`}),
+      triac:()=>({flags:0,parameters:` ${p.triggerCurrent} ${p.holdingCurrent} ${p.gateResistance} false`}),
+      varactor:()=>({flags:0,parameters:` 0 ${p.capacitance}`}),
+      triode:()=>({flags:2,parameters:` ${p.mu} ${p.kg1}`}),
       lamp:()=>({flags:0,parameters:` ${p.initialTemperature} ${p.nominalPower} ${p.nominalVoltage} ${p.warmTime} ${p.coolTime}`}),
       labeledNode:()=>({flags:4,parameters:' '+enc('private-net-'+x)}),
       voltmeter:()=>({flags:3,parameters:` ${p.mode} 0 ${p.resistance}`}),
@@ -102,6 +127,7 @@
       dcMotor:()=>({flags:0,parameters:' '+['inductance','resistance','torqueConstant','backEmfConstant','inertia','friction','gearRatio','loadTorque'].map(k=>p[k]).join(' ')}),
       threePhaseMotor:()=>({flags:0,parameters:' '+['statorResistance','rotorResistance','statorInductance','rotorInductance','mutualInductance','friction','inertia'].map(k=>p[k]).join(' ')})
     };
+    if (unaryLogic(d.kind)) return {flags:0,parameters:` ${p.slewRate} ${p.lowerThreshold} ${p.upperThreshold} ${p.highVoltage} ${p.lowVoltage}`};
     return records[d.kind]();
   }
 
@@ -232,7 +258,9 @@
         const {current,maxVoltage}=component.parameters;
         check(Number.isFinite(current)&&Number.isFinite(maxVoltage)&&maxVoltage>=0,component.id+': invalid current source');parameters={current,maxVoltage};
       } else if (component.kind === 'potentiometer') {
-        exactFields(component.parameters,['resistance','position'],component.id);
+        const hasLabel = record(component.parameters) && Object.hasOwn(component.parameters, 'label');
+        exactFields(component.parameters, hasLabel ? ['resistance', 'position', 'label'] : ['resistance', 'position'], component.id);
+        check(!hasLabel || typeof component.parameters.label === 'string', component.id + ': invalid potentiometer slider label');
         const {resistance,position}=component.parameters;
         check(Number.isFinite(resistance)&&resistance>0&&Number.isFinite(1/resistance)&&Number.isFinite(position)&&position>=0&&position<=1,component.id+': invalid potentiometer');parameters={resistance,position};
       } else if (capacitor(component.kind)) {
@@ -508,7 +536,7 @@
       }
       if(bipolar(device.kind))parameters=` ${device.kind==='pnp'?-1:1} 0 0 ${device.parameters.beta}`;
       if(fet(device.kind)){flags=device.kind.startsWith('p')?1:0;parameters=` ${device.parameters.threshold} ${device.parameters.beta}`;}
-      if(logic(device.kind))parameters=device.kind==='inverter'?` ${device.parameters.slewRate} ${device.parameters.highVoltage}`:` 2 0 ${device.parameters.highVoltage}`;
+      if(logic(device.kind)&&!outputSpecs[device.kind])parameters=device.kind==='inverter'?` ${device.parameters.slewRate} ${device.parameters.highVoltage}`:` 2 0 ${device.parameters.highVoltage}`;
       if(device.kind==='inductor'){
         flags=device.parameters.integration==='backwardEuler'?2:0;
         parameters=` ${device.parameters.inductance} ${device.parameters.initialCurrent} ${device.parameters.initialCurrent} 0`;
@@ -519,15 +547,16 @@
       if (device.kind === 'opamp') {
         flags=8;parameters=` ${device.parameters.maxOutput} ${device.parameters.minOutput} 1000000 0 0 ${device.parameters.gain}`;
       }
-      const pot=device.kind==='potentiometer',three=bipolar(device.kind)||fet(device.kind)||(logic(device.kind)&&device.kind!=='inverter');
+      const semiconductorPosts=semiconductorPostPoints(device.kind,x);
+      const pot=device.kind==='potentiometer',three=bipolar(device.kind)||fet(device.kind)||(logic(device.kind)&&!unaryLogic(device.kind));
       const multiSwitch=['spdtSwitch','dpdtSwitch','mbbSwitch','tappedTransformer','customTransformer','transmissionLine'].includes(device.kind)||analog(device.kind),transformer=device.kind==='transformer';
       const chip=flipFlop(device.kind)||nextChip(device.kind)||['wattmeter','decimalDisplay','instructionDisplay','ledArray','threePhaseMotor'].includes(device.kind);
-      records.push(`${model.type} ${x} 32 ${chip?x+64:device.kind==='opamp'?x+32:pot||three||multiSwitch||transformer?x+64:x} ${chip?32:device.kind==='opamp'||three||multiSwitch?32:pot?0:64} ${flags}${parameters}`);
+      records.push(`${model.type} ${x} 32 ${chip?x+64:device.kind==='opamp'?x+32:pot||three||multiSwitch||transformer||semiconductorPosts?x+64:x} ${chip?32:device.kind==='opamp'||three||multiSwitch||semiconductorPosts?32:pot?0:64} ${flags}${parameters}`);
       mapping.push({id: device.id, kind: device.kind, index: engineIndex, pins: [...model.pins], sign: model.sign});
       const chipPosts=outputPostPoints(device.kind,x)|| (chip?chipPostPoints(device.kind,x):null);
       model.pins.forEach((pin, post) => {
         const [hx, hy] = hubs.get(device.pins[pin]);
-        const [px,py]=device.kind==='tappedTransformer'?[[x,32],[x,96],[x+64,32],[x+64,64],[x+64,96]][post]:device.kind==='customTransformer'?[[x,32],[x,64],[x,80],[x,112],[x+64,32],[x+64,112]][post]:device.kind==='transmissionLine'?[[x,64],[x+64,64],[x,32],[x+64,32]][post]:device.kind==='mbbSwitch'?[[x,32],[x+64,16],[x+64,48]][post]:chipPosts?chipPosts[post]:device.kind==='analogSwitch'?[[x,32],[x+64,32],[x+32,48]][post]:device.kind==='analogSpdtSwitch'?[[x,32],[x+64,16],[x+64,48],[x+32,16]][post]:transformer?[[x,32],[x+64,32],[x,64],[x+64,64]][post]:device.kind==='spdtSwitch'?[[x,32],[x+64,16],[x+64,48]][post]:device.kind==='dpdtSwitch'?[[x,32],[x+64,48],[x+64,16],[x,80],[x+64,96],[x+64,64]][post]:bipolar(device.kind)?[[x,32],[x+64,device.kind==='pnp'?48:16],[x+64,device.kind==='pnp'?16:48]][post]:fet(device.kind)?[[x,32],[x+64,48],[x+64,16]][post]:logic(device.kind)&&three?[[x,48],[x,16],[x+64,32]][post]:device.kind==='opamp'?[[x,16],[x,48],[x+32,32]][post]:pot?[[x,32],[x+64,32],[x+32,0]][post]:[x,32+post*32];
+        const [px,py]=semiconductorPosts?semiconductorPosts[post]:device.kind==='tappedTransformer'?[[x,32],[x,96],[x+64,32],[x+64,64],[x+64,96]][post]:device.kind==='customTransformer'?[[x,32],[x,64],[x,80],[x,112],[x+64,32],[x+64,112]][post]:device.kind==='transmissionLine'?[[x,64],[x+64,64],[x,32],[x+64,32]][post]:device.kind==='mbbSwitch'?[[x,32],[x+64,16],[x+64,48]][post]:chipPosts?chipPosts[post]:device.kind==='analogSwitch'?[[x,32],[x+64,32],[x+32,48]][post]:device.kind==='analogSpdtSwitch'?[[x,32],[x+64,16],[x+64,48],[x+32,16]][post]:transformer?[[x,32],[x+64,32],[x,64],[x+64,64]][post]:device.kind==='spdtSwitch'?[[x,32],[x+64,16],[x+64,48]][post]:device.kind==='dpdtSwitch'?[[x,32],[x+64,48],[x+64,16],[x,80],[x+64,96],[x+64,64]][post]:bipolar(device.kind)?[[x,32],[x+64,device.kind==='pnp'?48:16],[x+64,device.kind==='pnp'?16:48]][post]:fet(device.kind)?[[x,32],[x+64,48],[x+64,16]][post]:logic(device.kind)&&three?[[x,48],[x,16],[x+64,32]][post]:device.kind==='opamp'?[[x,16],[x,48],[x+32,32]][post]:pot?[[x,32],[x+64,32],[x+32,0]][post]:[x,32+post*32];
         connections.push(`w ${px} ${py} ${hx} ${hy} 0`);
       });
     });

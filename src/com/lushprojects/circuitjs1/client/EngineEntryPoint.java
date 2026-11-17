@@ -46,12 +46,18 @@ public class EngineEntryPoint implements EntryPoint {
                 int flags = Integer.parseInt(fields[5]);
                 if (x1 == x2 && y1 == y2)
                     throw new IllegalArgumentException("Zero-length elements are unsupported");
+                CircuitElm signal = EngineSourceSupport.construct(fields, x1, y1, x2, y2, flags, timeStep);
+                if (signal != null) { signal.setPoints(); elements.add(signal); continue; }
+                CircuitElm passiveModel = EnginePassiveSupport.construct(fields, x1, y1, x2, y2, flags, timeStep);
+                if (passiveModel != null) { passiveModel.setPoints(); elements.add(passiveModel); continue; }
+                CircuitElm semiconductor = EngineSemiconductorSupport.construct(fields, x1, y1, x2, y2, flags, timeStep);
+                if (semiconductor != null) { semiconductor.setPoints(); elements.add(semiconductor); continue; }
                 CircuitElm output = EngineOutputSupport.construct(fields,timeStep);
                 if (output != null) { output.setPoints(); elements.add(output); continue; }
                 boolean voltage = type.equals("v") || type.equals("R");
                 boolean analog = type.equals("159") || type.equals("160");
                 boolean capacitor = type.equals("c") || type.equals("209");
-                boolean gate = type.equals("150") || type.equals("151") || type.equals("152") || type.equals("153") || type.equals("154");
+                boolean gate = type.equals("150") || type.equals("151") || type.equals("152") || type.equals("153") || type.equals("154") || type.equals("431");
                 boolean fet = type.equals("f") || type.equals("j");
                 // Display-only markers (O, M) and the ground-referenced logic source (L)
                 // have optional trailing parameters in the legacy text format.
@@ -239,6 +245,7 @@ public class EngineEntryPoint implements EntryPoint {
                 else if (type.equals("152")) elm = new OrGateElm(x1, y1, x2, y2, flags, tokens);
                 else if (type.equals("153")) elm = new NorGateElm(x1, y1, x2, y2, flags, tokens);
                 else if (type.equals("154")) elm = new XorGateElm(x1, y1, x2, y2, flags, tokens);
+                else if (type.equals("431")) elm = new XnorGateElm(x1, y1, x2, y2, flags, tokens);
                 else if (type.equals("I")) elm = new InverterElm(x1, y1, x2, y2, flags, tokens);
                 else if (type.equals("174")) elm = new PotElm(x1, y1, x2, y2, flags, tokens);
                 else if (type.equals("l")) elm = new InductorElm(x1, y1, x2, y2, flags, tokens);
@@ -281,7 +288,7 @@ public class EngineEntryPoint implements EntryPoint {
         // Delay buffers must use this document's timestep, not the previously loaded circuit's.
         for (CircuitElm element : elements)
             if (element instanceof TransLineElm) element.reset();
-        for (CircuitElm element : elements) EngineOutputSupport.initialize(element);
+        for (CircuitElm element : elements) initializeElement(element);
         app.sim.adjustTimeStep = false;
         app.sim.lastIterTime = 0;
         app.sim.analyzeCircuit();
@@ -312,12 +319,16 @@ public class EngineEntryPoint implements EntryPoint {
             old.x=fresh.x;old.y=fresh.y;old.x2=fresh.x2;old.y2=fresh.y2;
             old.setPoints();next.set(n,old);
         }
-        for(int i=0;i<next.size();i++)if(!seenNew[i])EngineOutputSupport.initialize(next.get(i));
+        for(int i=0;i<next.size();i++)if(!seenNew[i])initializeElement(next.get(i));
         app.elmList=next;
         app.sim.maxTimeStep=app.sim.minTimeStep=app.sim.timeStep=timeStep;
         if(timeStep!=loadedTimeStep)for(CircuitElm elm:next)if(elm instanceof TransLineElm)elm.reset();
         app.sim.analyzeCircuit();app.sim.preStampAndStampCircuit();
         loadedText=text;loadedTimeStep=timeStep;checkStopped();
+    }
+    private static void initializeElement(CircuitElm element) {
+        EngineSourceSupport.initialize(element);
+        EngineOutputSupport.initialize(element);
     }
     private static native int retainedCount(JavaScriptObject a) /*-{
         if(!Array.isArray(a)||a.length>100000)throw new Error('Invalid retained elements');

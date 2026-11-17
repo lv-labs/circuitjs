@@ -13,6 +13,7 @@ import {flipFlopKinds,flipFlopCircuit} from './flip_flop_fixtures.mjs';
 import {chipBatchKinds,chipBatchCircuit} from './chip_batch_fixtures.mjs';
 import {passiveMenuKinds,passiveMenuCircuit} from './passive_menu_fixtures.mjs';
 import {outputFamilyKinds,outputFamilyCircuit} from './output_family_fixtures.mjs';
+import {coverageKinds,coverageCircuit} from './falstad_coverage_fixtures.mjs';
 const kinds=['inductor','diode','currentSource','potentiometer','npn','pnp','nmos','pmos','njfet','pjfet','andGate','nandGate','orGate','norGate','xorGate','inverter'];
 if(!isMainThread){
   let protocol;
@@ -38,6 +39,8 @@ if(!isMainThread){
   try{
     const cases=[...kinds.map(kind=>({kind})),...expansionKinds.map(kind=>({kind})),...passiveSwitchKinds.map(kind=>({kind})),
       ...logicDisplayKinds.map(kind=>({kind})),...flipFlopKinds.map(kind=>({kind})),...chipBatchKinds.map(kind=>({kind})),...passiveMenuKinds.map(kind=>({kind})),...outputFamilyKinds.map(kind=>({kind})),
+      ...coverageKinds.map(kind=>({kind,steps:32})),
+      {kind:'sweepSource',parameters:{logarithmic:true,bidirectional:false},steps:64},
       {kind:'dataExport',parameters:{capacity:7},steps:25},{kind:'audioOutput',parameters:{duration:.01},steps:2000},
       {kind:'pushSwitch',parameters:{normallyClosed:true}},...[1,2,3].map(position=>({kind:'mbbSwitch',parameters:{position}})),
       {kind:'tappedTransformer',parameters:{ratio:2,coupling:.8,integration:'trapezoidal'}},
@@ -55,7 +58,7 @@ if(!isMainThread){
       {kind:'transformer',parameters:{ratio:2,coupling:.8,integration:'trapezoidal'}},
       {kind:'led',voltage:-5},{kind:'zener',voltage:-10}];
     for(const {kind,parameters,voltage,control,levels,steps} of cases){
-      const M=CircuitEditorModel,isExpansion=expansionKinds.includes(kind)||passiveSwitchKinds.includes(kind)||logicDisplayKinds.includes(kind)||flipFlopKinds.includes(kind)||chipBatchKinds.includes(kind)||passiveMenuKinds.includes(kind)||outputFamilyKinds.includes(kind),d=outputFamilyKinds.includes(kind)?outputFamilyCircuit(kind,parameters,voltage):passiveMenuKinds.includes(kind)?passiveMenuCircuit(kind,parameters):chipBatchKinds.includes(kind)?chipBatchCircuit(kind,parameters,levels):flipFlopKinds.includes(kind)?flipFlopCircuit(kind,parameters):logicDisplayKinds.includes(kind)?logicDisplayCircuit(kind,parameters,voltage):passiveSwitchKinds.includes(kind)?passiveSwitchCircuit(kind,parameters,voltage,control):isExpansion?expansionCircuit(kind,parameters,voltage):M.empty();d.id='worker-'+kind;
+      const M=CircuitEditorModel,isExpansion=expansionKinds.includes(kind)||passiveSwitchKinds.includes(kind)||logicDisplayKinds.includes(kind)||flipFlopKinds.includes(kind)||chipBatchKinds.includes(kind)||passiveMenuKinds.includes(kind)||outputFamilyKinds.includes(kind)||coverageKinds.includes(kind),d=coverageKinds.includes(kind)?coverageCircuit(kind,parameters):outputFamilyKinds.includes(kind)?outputFamilyCircuit(kind,parameters,voltage):passiveMenuKinds.includes(kind)?passiveMenuCircuit(kind,parameters):chipBatchKinds.includes(kind)?chipBatchCircuit(kind,parameters,levels):flipFlopKinds.includes(kind)?flipFlopCircuit(kind,parameters):logicDisplayKinds.includes(kind)?logicDisplayCircuit(kind,parameters,voltage):passiveSwitchKinds.includes(kind)?passiveSwitchCircuit(kind,parameters,voltage,control):isExpansion?expansionCircuit(kind,parameters,voltage):M.empty();d.id='worker-'+kind;
       if(!isExpansion){
       d.electrical.components.push({id:'part',kind,modelVersion:1,reference:'part',parameters:structuredClone(M.definitions[kind].parameters)},
         {id:'g',kind:'ground',modelVersion:1,reference:'G',parameters:{}});

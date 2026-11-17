@@ -58,7 +58,9 @@ stubs, preserving attached wire geometry; explicitly selected wires still delete
 Undo can restore
 the original entities/IDs; it creates a new revision rather than rewinding counters.
 
-Each component stores `kind`, `modelVersion`, `reference`, and typed `parameters`.
+Each component stores an ID, `kind`, `modelVersion`, and typed `parameters`.
+React saves omit component designators. The shared validator also accepts a
+legacy `reference` string for the JavaScript prototype.
 A versioned model catalog defines pin keys, parameter validation, symbols and
 engine mappings. Symbol rendering can evolve separately from electrical models.
 
@@ -205,7 +207,7 @@ dialog is required for routine editing.
 
 | Action | Document action | Initial worker policy |
 | --- | --- | --- |
-| Drag/rotate without new contacts, select, pan/zoom, bend a wire, edit display reference | Layout/session change | No engine mutation |
+| Drag/rotate without new contacts, select, pan/zoom, bend a wire, rename a trace | Layout/session change | No engine mutation |
 | Place/drop/rotate onto another connection target | Explicit contact edges/splits in the same transaction | Reuse or replace according to canonical electrical comparison |
 | Add/remove a probe | Measurement configuration | Read existing results; no restart |
 | Split/reroute edges with identical connected pin sets | Graph/layout transaction | No restart after canonical comparison |

@@ -4,6 +4,9 @@ package com.lushprojects.circuitjs1.client;
 final class EngineCircuitUpdate {
     static void configure(CircuitElm old, CircuitElm fresh) {
         old.flags=fresh.flags;
+        EngineSourceSupport.configure(old,fresh);
+        EnginePassiveSupport.configure(old,fresh);
+        EngineSemiconductorSupport.configure(old,fresh);
         if(old instanceof VoltageElm && !(old instanceof VarRailElm)){
             VoltageElm a=(VoltageElm)old,b=(VoltageElm)fresh;
             if(a.frequency!=b.frequency)a.freqTimeZero=b.frequency==0?0:CircuitElm.sim.t-a.frequency*(CircuitElm.sim.t-a.freqTimeZero)/b.frequency;

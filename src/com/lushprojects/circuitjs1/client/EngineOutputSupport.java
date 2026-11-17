@@ -79,6 +79,20 @@ final class EngineOutputSupport {
         else if(elm instanceof StopTriggerElm)flag(result,"stopped",((StopTriggerElm)elm).stopped);
         else if(elm instanceof DCMotorElm){DCMotorElm e=(DCMotorElm)elm;put(result,"speed",e.speed);put(result,"angle",e.angle);put(result,"current",e.coilCurrent);}
         else if(elm instanceof ThreePhaseMotorElm){ThreePhaseMotorElm e=(ThreePhaseMotorElm)elm;put(result,"speed",e.speed);put(result,"angle",e.angle);}
+        else if (elm instanceof SweepElm) put(result,"frequency",((SweepElm) elm).frequency);
+        else if (elm instanceof SparkGapElm) flag(result,"conducting",((SparkGapElm) elm).state);
+        else if (elm instanceof FuseElm) flag(result,"blown",((FuseElm) elm).blown);
+        else if (elm instanceof MemristorElm) put(result,"resistance",((MemristorElm) elm).resistance);
+        else if (elm instanceof LDRElm) {
+            LDRElm e = (LDRElm) elm; put(result,"lux",e.lux); put(result,"resistance",e.resistance);
+        } else if (elm instanceof ThermistorNTCElm) {
+            ThermistorNTCElm e = (ThermistorNTCElm) elm;
+            put(result,"temperature",e.temperature); put(result,"resistance",e.resistance);
+        }
+        else if (elm instanceof SCRElm) put(result,"anodeCurrent",((SCRElm) elm).ia);
+        else if (elm instanceof DiacElm) flag(result,"conducting",((DiacElm) elm).state);
+        else if (elm instanceof TriacElm) flag(result,"conducting",((TriacElm) elm).state);
+        else if (elm instanceof VaractorElm) put(result,"capacitance",((VaractorElm) elm).capacitance);
         return result;
     }
     static double meter(int mode,double v,double rms,double max,double min,double binary){return mode==0?v:mode==1?rms:mode==2?max:mode==3?min:mode==4?max-min:binary;}

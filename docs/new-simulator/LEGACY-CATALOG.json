@@ -4924,9 +4924,7 @@
         "r",
         "w"
       ],
-      "missingEditorTypes": [
-        "170"
-      ],
+      "missingEditorTypes": [],
       "otherRecordTypes": [
         "$",
         "o"
@@ -5084,9 +5082,7 @@
         "w",
         "x"
       ],
-      "missingEditorTypes": [
-        "A"
-      ],
+      "missingEditorTypes": [],
       "otherRecordTypes": [
         "$",
         "h",
@@ -5653,9 +5649,7 @@
         "r",
         "w"
       ],
-      "missingEditorTypes": [
-        "170"
-      ],
+      "missingEditorTypes": [],
       "otherRecordTypes": [
         "$",
         "h",
@@ -5800,9 +5794,7 @@
         "r",
         "w"
       ],
-      "missingEditorTypes": [
-        "170"
-      ],
+      "missingEditorTypes": [],
       "otherRecordTypes": [
         "$",
         "o"
@@ -5878,9 +5870,7 @@
         "r",
         "w"
       ],
-      "missingEditorTypes": [
-        "170"
-      ],
+      "missingEditorTypes": [],
       "otherRecordTypes": [
         "$",
         "o"
@@ -5956,9 +5946,7 @@
         "r",
         "w"
       ],
-      "missingEditorTypes": [
-        "170"
-      ],
+      "missingEditorTypes": [],
       "otherRecordTypes": [
         "$",
         "o"
@@ -7702,9 +7690,7 @@
         "r",
         "w"
       ],
-      "missingEditorTypes": [
-        "170"
-      ],
+      "missingEditorTypes": [],
       "otherRecordTypes": [
         "$",
         "o"
@@ -8652,9 +8638,7 @@
         "r",
         "w"
       ],
-      "missingEditorTypes": [
-        "183"
-      ],
+      "missingEditorTypes": [],
       "otherRecordTypes": [
         "$",
         "o"
@@ -9398,9 +9382,7 @@
         "l",
         "r"
       ],
-      "missingEditorTypes": [
-        "170"
-      ],
+      "missingEditorTypes": [],
       "otherRecordTypes": [
         "$",
         "h",
@@ -9436,9 +9418,7 @@
         "g",
         "r"
       ],
-      "missingEditorTypes": [
-        "170"
-      ],
+      "missingEditorTypes": [],
       "otherRecordTypes": [
         "$",
         "h",
@@ -9474,9 +9454,7 @@
         "l",
         "r"
       ],
-      "missingEditorTypes": [
-        "170"
-      ],
+      "missingEditorTypes": [],
       "otherRecordTypes": [
         "$",
         "h",
@@ -9512,9 +9490,7 @@
         "g",
         "r"
       ],
-      "missingEditorTypes": [
-        "170"
-      ],
+      "missingEditorTypes": [],
       "otherRecordTypes": [
         "$",
         "h",
@@ -9555,9 +9531,7 @@
         "r",
         "w"
       ],
-      "missingEditorTypes": [
-        "170"
-      ],
+      "missingEditorTypes": [],
       "otherRecordTypes": [
         "$",
         "o"
@@ -9597,9 +9571,7 @@
         "r",
         "w"
       ],
-      "missingEditorTypes": [
-        "170"
-      ],
+      "missingEditorTypes": [],
       "otherRecordTypes": [
         "$",
         "o"
@@ -11956,9 +11928,7 @@
         "r",
         "w"
       ],
-      "missingEditorTypes": [
-        "m"
-      ],
+      "missingEditorTypes": [],
       "otherRecordTypes": [
         "$",
         "o"
@@ -11989,9 +11959,7 @@
         "g",
         "m"
       ],
-      "missingEditorTypes": [
-        "m"
-      ],
+      "missingEditorTypes": [],
       "otherRecordTypes": [
         "$",
         "o"
@@ -12022,9 +11990,7 @@
         "g",
         "m"
       ],
-      "missingEditorTypes": [
-        "m"
-      ],
+      "missingEditorTypes": [],
       "otherRecordTypes": [
         "$",
         "o"
@@ -12055,9 +12021,7 @@
         "g",
         "m"
       ],
-      "missingEditorTypes": [
-        "m"
-      ],
+      "missingEditorTypes": [],
       "otherRecordTypes": [
         "$",
         "o"
@@ -12088,9 +12052,7 @@
         "g",
         "m"
       ],
-      "missingEditorTypes": [
-        "m"
-      ],
+      "missingEditorTypes": [],
       "otherRecordTypes": [
         "$",
         "o"
@@ -12121,9 +12083,7 @@
         "g",
         "m"
       ],
-      "missingEditorTypes": [
-        "m"
-      ],
+      "missingEditorTypes": [],
       "otherRecordTypes": [
         "$",
         "o"
@@ -12156,9 +12116,7 @@
         "m",
         "w"
       ],
-      "missingEditorTypes": [
-        "m"
-      ],
+      "missingEditorTypes": [],
       "otherRecordTypes": [
         "$",
         "o"
@@ -12809,9 +12767,7 @@
         "l",
         "r"
       ],
-      "missingEditorTypes": [
-        "170"
-      ],
+      "missingEditorTypes": [],
       "otherRecordTypes": [
         "$",
         "h",
@@ -14328,7 +14284,6 @@
       "missingEditorTypes": [
         "166",
         "167",
-        "182",
         "212",
         "213",
         "403"
@@ -15496,9 +15451,7 @@
         "r",
         "s"
       ],
-      "missingEditorTypes": [
-        "177"
-      ],
+      "missingEditorTypes": [],
       "otherRecordTypes": [
         "$"
       ],
@@ -15536,9 +15489,7 @@
         "r",
         "w"
       ],
-      "missingEditorTypes": [
-        "177"
-      ],
+      "missingEditorTypes": [],
       "otherRecordTypes": [
         "$",
         "o"
@@ -15683,9 +15634,7 @@
         "r",
         "w"
       ],
-      "missingEditorTypes": [
-        "187"
-      ],
+      "missingEditorTypes": [],
       "otherRecordTypes": [
         "$",
         "o"
@@ -15722,9 +15671,7 @@
         "r",
         "w"
       ],
-      "missingEditorTypes": [
-        "187"
-      ],
+      "missingEditorTypes": [],
       "otherRecordTypes": [
         "$",
         "o"
@@ -15844,9 +15791,7 @@
         "p",
         "w"
       ],
-      "missingEditorTypes": [
-        "170"
-      ],
+      "missingEditorTypes": [],
       "otherRecordTypes": [
         "$",
         "o"
@@ -16472,9 +16417,7 @@
         "R",
         "g"
       ],
-      "missingEditorTypes": [
-        "175"
-      ],
+      "missingEditorTypes": [],
       "otherRecordTypes": [
         "$",
         "o"
@@ -16515,9 +16458,7 @@
         "r",
         "w"
       ],
-      "missingEditorTypes": [
-        "175"
-      ],
+      "missingEditorTypes": [],
       "otherRecordTypes": [
         "$",
         "o"
@@ -16554,9 +16495,7 @@
         "l",
         "r"
       ],
-      "missingEditorTypes": [
-        "175"
-      ],
+      "missingEditorTypes": [],
       "otherRecordTypes": [
         "$",
         "o"
@@ -16595,9 +16534,7 @@
         "r",
         "w"
       ],
-      "missingEditorTypes": [
-        "187"
-      ],
+      "missingEditorTypes": [],
       "otherRecordTypes": [
         "$",
         "o"
@@ -16695,9 +16632,7 @@
         "r",
         "w"
       ],
-      "missingEditorTypes": [
-        "170"
-      ],
+      "missingEditorTypes": [],
       "otherRecordTypes": [
         "$",
         "o"
@@ -16767,9 +16702,7 @@
         "r",
         "w"
       ],
-      "missingEditorTypes": [
-        "170"
-      ],
+      "missingEditorTypes": [],
       "otherRecordTypes": [
         "$",
         "o"
@@ -17392,10 +17325,7 @@
         "r",
         "w"
       ],
-      "missingEditorTypes": [
-        "203",
-        "206"
-      ],
+      "missingEditorTypes": [],
       "otherRecordTypes": [
         "$",
         "38",
@@ -17509,9 +17439,7 @@
         "g",
         "w"
       ],
-      "missingEditorTypes": [
-        "173"
-      ],
+      "missingEditorTypes": [],
       "otherRecordTypes": [
         "$",
         "o"
@@ -17550,9 +17478,7 @@
         "r",
         "w"
       ],
-      "missingEditorTypes": [
-        "173"
-      ],
+      "missingEditorTypes": [],
       "otherRecordTypes": [
         "$",
         "o"
@@ -17699,9 +17625,7 @@
         "r",
         "w"
       ],
-      "missingEditorTypes": [
-        "170"
-      ],
+      "missingEditorTypes": [],
       "otherRecordTypes": [
         "$",
         "o"
@@ -17856,9 +17780,7 @@
         "g",
         "r"
       ],
-      "missingEditorTypes": [
-        "176"
-      ],
+      "missingEditorTypes": [],
       "otherRecordTypes": [
         "$",
         "o"
@@ -17901,9 +17823,7 @@
         "t",
         "w"
       ],
-      "missingEditorTypes": [
-        "176"
-      ],
+      "missingEditorTypes": [],
       "otherRecordTypes": [
         "$",
         "o"

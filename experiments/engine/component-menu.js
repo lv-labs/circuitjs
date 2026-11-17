@@ -2,6 +2,10 @@
 // Menu availability is separate from the generated legacy names and hierarchy.
 (() => {
   const tools = {
+    SweepElm:'sweepSource', AntennaElm:'antennaSource', AMElm:'amSource', FMElm:'fmSource', NoiseElm:'noiseSource',
+    SchmittElm:'schmittTrigger', InvertingSchmittElm:'invertingSchmittTrigger', XnorGateElm:'xnorGate',
+    SparkGapElm:'sparkGap', MemristorElm:'memristor', TunnelDiodeElm:'tunnelDiode', FuseElm:'fuse', LDRElm:'photoresistor', ThermistorNTCElm:'thermistor',
+    SCRElm:'scr', DiacElm:'diac', TriacElm:'triac', VaractorElm:'varactor', TriodeElm:'triode',
     VarRailElm:'variableVoltage', LampElm:'lamp', TextElm:'text', BoxElm:'box', LineElm:'line', LabeledNodeElm:'labeledNode', ProbeElm:'voltmeter', OhmMeterElm:'ohmmeter', AmmeterElm:'ammeter', WattmeterElm:'wattmeter', TestPointElm:'testPoint', DecimalDisplayElm:'decimalDisplay', InstructionDisplayElm:'instructionDisplay', LEDArrayElm:'ledArray', DataRecorderElm:'dataExport', AudioOutputElm:'audioOutput', StopTriggerElm:'stopTrigger', DCMotorElm:'dcMotor', ThreePhaseMotorElm:'threePhaseMotor', WireElm:'wire', ResistorElm:'resistor', CapacitorElm:'capacitor', PolarCapacitorElm:'polarizedCapacitor',
     InductorElm:'inductor', PushSwitchElm:'pushSwitch', MBBSwitchElm:'mbbSwitch', TappedTransformerElm:'tappedTransformer', CustomTransformerElm:'customTransformer', TransLineElm:'transmissionLine', SwitchElm:'switch', Switch2Elm:'spdtSwitch', DPDTSwitchElm:'dpdtSwitch',
     PotElm:'potentiometer', TransformerElm:'transformer', GroundElm:'ground', DCVoltageElm:'voltageSource',

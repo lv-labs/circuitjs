@@ -408,11 +408,10 @@ use worker replacement/reset, resuming Run when appropriate; charge/time continu
 and exact short-pulse capture are not claimed. This is not the existing live RC
 SPST path. Other switch/parameter edits also follow replacement/reset behavior.
 
-## Variable Voltage and Outputs/Labels — 2026-11-16 (latest)
+## Variable Voltage and Outputs/Labels — 2026-11-16
 
-Remaining passives are deferred per latest user direction. Variable Voltage and
-all 20 Outputs and Labels menu entries are now integrated: 65 editor/document models
-including three inert annotations. Sources are 9/17 entries; passives remain 13/24.
+This batch integrated Variable Voltage and all 20 Outputs and Labels menu entries.
+See [PLAN.md](PLAN.md) for current menu coverage.
 The variable source Inspector slider uses state-preserving worker updates; annotation
 edits preserve electrical identity. New meters, displays, LED array, recorders,
 trigger and motors reuse original Java models. Optional AC phase permits balanced

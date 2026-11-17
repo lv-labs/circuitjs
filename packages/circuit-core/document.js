@@ -16,12 +16,12 @@
     for (const c of e.components) {
       assert(Object.hasOwn(definitions, c.kind) && c.modelVersion === 1, 'Unsupported editor component model');
       const p = l.components?.[c.id]; assert(point(p) && [0, 90, 180, 270].includes(p.rotation) && typeof p.mirror === 'boolean', 'Invalid component pose');
-      assert(typeof c.reference === 'string' && c.parameters && typeof c.parameters === 'object', 'Missing component reference or parameters');
+      assert((!Object.hasOwn(c, 'reference') || typeof c.reference === 'string') && c.parameters && typeof c.parameters === 'object', 'Invalid component reference or parameters');
       const v = c.parameters;
       if (c.kind === 'resistor') assert(Number.isFinite(v.resistance) && v.resistance > 0, 'Resistance must be positive');
       if (['npn', 'pnp'].includes(c.kind)) assert(Number.isFinite(v.beta) && v.beta > 0, 'Transistor beta must be positive');
       if (['nmos', 'pmos', 'njfet', 'pjfet'].includes(c.kind)) assert(Number.isFinite(v.threshold) && Number.isFinite(v.beta) && v.beta > 0, 'Invalid FET parameters');
-      if (['andGate', 'nandGate', 'orGate', 'norGate', 'xorGate', 'inverter'].includes(c.kind)) assert(Number.isFinite(v.highVoltage) && v.highVoltage > 0 && (c.kind !== 'inverter' || Number.isFinite(v.slewRate) && v.slewRate > 0), 'Invalid logic level or slew rate');
+      if (['andGate', 'nandGate', 'orGate', 'norGate', 'xorGate', 'xnorGate', 'inverter'].includes(c.kind)) assert(Number.isFinite(v.highVoltage) && v.highVoltage > 0 && (c.kind !== 'inverter' || Number.isFinite(v.slewRate) && v.slewRate > 0), 'Invalid logic level or slew rate');
       if(outputSpecs[c.kind])validateOutput(c,document.simulation?.timeStep);
       if(c.kind==='pushSwitch')assert(typeof v.normallyClosed==='boolean','Invalid push-switch rest state');
       if(c.kind==='mbbSwitch')assert(Number.isInteger(v.position)&&v.position>=0&&v.position<=3,'Invalid MBB position');
@@ -32,7 +32,10 @@
       if (['led', 'zener'].includes(c.kind)) assert(Number.isFinite(v.forwardVoltage) && v.forwardVoltage > 0 && Number.isFinite(c.kind === 'led' ? v.maxCurrent : v.breakdownVoltage) && (c.kind === 'led' ? v.maxCurrent : v.breakdownVoltage) > 0, 'Invalid diode parameters');
       if (c.kind === 'inductor') assert(Number.isFinite(v.inductance) && v.inductance > 0 && Number.isFinite(v.initialCurrent) && ['backwardEuler', 'trapezoidal'].includes(v.integration), 'Invalid inductor parameters');
       if (c.kind === 'currentSource') assert(Number.isFinite(v.current) && Number.isFinite(v.maxVoltage) && v.maxVoltage >= 0, 'Invalid current source parameters');
-      if (c.kind === 'potentiometer') assert(Number.isFinite(v.resistance) && v.resistance > 0 && Number.isFinite(v.position) && v.position >= 0 && v.position <= 1, 'Potentiometer position must be between 0 and 1');
+      if (c.kind === 'potentiometer') {
+        assert(Number.isFinite(v.resistance) && v.resistance > 0 && Number.isFinite(v.position) && v.position >= 0 && v.position <= 1, 'Potentiometer position must be between 0 and 1');
+        assert(!Object.hasOwn(v, 'label') || typeof v.label === 'string', 'Potentiometer slider label must be text');
+      }
       if (c.kind === 'analogSwitch' || c.kind === 'analogSpdtSwitch') assert([v.onResistance, v.offResistance].every(r => Number.isFinite(r) && r > 0 && Number.isFinite(1 / r)) && Number.isFinite(v.threshold) && typeof v.inverted === 'boolean' && typeof v.pulldown === 'boolean', 'Invalid analog switch parameters');
       if (c.kind === 'output') assert(typeof v.showVoltage === 'boolean', 'Invalid output marker');
       if (c.kind === 'logicOutput') assert(Number.isFinite(v.threshold) && ['logic', 'numeric', 'ternary'].includes(v.mode) && typeof v.pulldown === 'boolean', 'Invalid logic output parameters');

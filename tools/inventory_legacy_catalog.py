@@ -101,13 +101,10 @@ def main():
     for t in sorted(type_classes, key=lambda t: (-usage[t], t)):
         lines.append(f"| `{t}` | {usage[t]} | {', '.join(type_classes[t])} | {'Base model only' if t in editor_types else 'Pending'} |")
     lines += ['', '## Scope and migration order', '',
-              '1. Latest user direction (2026-11-16): defer remaining passives; Variable Voltage and Outputs/Labels are now integrated.',
-              '2. Outputs/Labels menu coverage is complete for the supported fixed-size variants; broader legacy options remain.',
-              '3. Continue remaining Inputs and Sources when requested; Passive Components remain at 13/24 entries.',
-              '4. Return to remaining digital/mixed-signal, active and composite model families afterward.',
-              '5. Broaden supported variants, named model libraries and configurable options.',
-              '6. Deferred: legacy import and example chooser preserving all category paths; retain unavailable entries with explicit',
-              '   reasons until their dependencies are supported. Restore saved scopes/annotations where possible.', '',
+              '1. Continue toward full component coverage for the bundled Falstad fork. See PLAN.md for menu coverage.',
+              '2. Defer audio and data import/export workflows for redesign.',
+              '3. Broaden supported variants, named model libraries and configurable options as models are added.',
+              '4. Legacy circuit import and the example chooser remain separate from component coverage.', '',
               'Each family needs document schema, symbol/pin geometry, properties, compiler/result mapping',
               'and worker-safe initialization. Keep the existing numerical implementations. Do not remove',
               'the worker loader whitelist wholesale: constructors may still depend on the old UI.', '',

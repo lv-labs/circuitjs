@@ -34,17 +34,19 @@
     }
     return validate(fragment);
   }
-  function pasteSelection(d, fragment) {
+  function pasteSelection(d, fragment, {componentReferences=true}={}) {
     validate(fragment);
     const selection = new Set(), maps = { component: new Map(), junction: new Map(), wire: new Map(), probe: new Map() };
     const groups = [['component', 'components'], ['junction', 'junctions'], ['wire', 'wires'], ['probe', 'probes']];
     for (const [kind, list] of groups) for (const item of kind === 'probe' ? fragment.probes : fragment.electrical[list]) maps[kind].set(item.id, crypto.randomUUID());
     const ref = r => r.kind === 'pin' ? { ...clone(r), componentId: maps.component.get(r.componentId) } : { ...clone(r), junctionId: maps.junction.get(r.junctionId) };
-    const references = new Set(d.electrical.components.map(c => c.reference));
+    const references = componentReferences ? new Set(d.electrical.components.map(c => c.reference)) : null;
     for (const [kind, list] of groups) for (const original of kind === 'probe' ? fragment.probes : fragment.electrical[list]) {
       const item = clone(original); item.id = maps[kind].get(original.id); selection.add(token(kind, item.id));
       if (kind === 'component') {
-        const prefix = definitions[item.kind].prefix; let number = 1; while (references.has(prefix + number)) number++; item.reference = prefix + number; references.add(item.reference);
+        if (references) {
+          const prefix = definitions[item.kind].prefix; let number = 1; while (references.has(prefix + number)) number++; item.reference = prefix + number; references.add(item.reference);
+        } else delete item.reference;
       } else if (kind === 'wire') { item.from = ref(item.from); item.to = ref(item.to); }
       else if (kind === 'probe') { if (item.kind === 'current') item.componentId = maps.component.get(item.componentId); else { item.positive = ref(item.positive); if (item.reference !== 'ground') item.negative = ref(item.negative); } }
       if (kind === 'probe') d.probes.push(item); else d.electrical[list].push(item);
@@ -467,8 +469,9 @@
     const ids=new Set(d.electrical.wires.map(w=>w.id));for(const id of Object.keys(d.layout.wires))if(!ids.has(id))delete d.layout.wires[id];
     return d;
   }
-  function create(initial, onChange = () => { }, {wireSections=false}={}) {
+  function create(initial, onChange = () => { }, {wireSections=false, componentReferences=true}={}) {
     const history=History.create(alignGrid(clone(validate(initial))),onChange,{prepare:next=>{
+      if (!componentReferences) for (const component of next.electrical.components) delete component.reference;
       if(wireSections)normalizeWires(next);return validate(next);
     }}),transaction=history.transaction;
     const model={
@@ -479,17 +482,25 @@
         kind = def.kind || kind;
         const componentId = crypto.randomUUID();
         transaction('Place ' + def.name, d => {
-          let number = 1; while (d.electrical.components.some(c => c.reference === def.prefix + number)) number++;
-          d.electrical.components.push({ id: componentId, kind, modelVersion: 1, reference: def.prefix + number, parameters: clone(def.parameters) });
+          const component = { id: componentId, kind, modelVersion: 1, parameters: clone(def.parameters) };
+          if (componentReferences) {
+            let number = 1; while (d.electrical.components.some(c => c.reference === def.prefix + number)) number++;
+            component.reference = def.prefix + number;
+          }
+          d.electrical.components.push(component);
           d.layout.components[componentId] = placementPose(kind, { x, y }, rotation, mirror);
           connectContacts(d, new Set([componentId]));
         }); return componentId;
       },
-      addProbe(target) {
+      addProbe(target, label) {
         const id = crypto.randomUUID();
         transaction('Place voltage probe', d => {
-          const positive = connectionResolver(d)(target); let number = 1; while (d.probes.some(p => p.label === 'V' + number)) number++;
-          d.probes.push({ id, kind: 'voltage', positive, reference: 'ground', label: 'V' + number });
+          const positive = connectionResolver(d)(target);
+          if (label === undefined) {
+            let number = 1; while (d.probes.some(p => p.label === 'V' + number)) number++;
+            label = 'V' + number;
+          }
+          d.probes.push({ id, kind: 'voltage', positive, reference: 'ground', label });
           (d.layout.probes ||= {})[id] = { x: 16, y: -32 };
         }); return id;
       },
