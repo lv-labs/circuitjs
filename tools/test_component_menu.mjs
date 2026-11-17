@@ -1,9 +1,9 @@
+import {editing as CircuitEditorModel} from '../packages/circuit-core/index.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
-import '../experiments/engine/editor-model.js';
-import '../experiments/engine/legacy-component-menu.js';
-import '../experiments/engine/component-menu.js';
+import '../wires/src/editor/menu/legacy-component-menu.js';
+import '../wires/src/editor/menu/component-menu.js';
 const tree=CircuitLegacyComponentMenu,M=CircuitEditorModel;
 const expected=JSON.parse(execFileSync('python3',['-c',"import json,runpy; print(json.dumps(runpy.run_path('tools/generate_component_menu.py')['extract_menu']()))"],{encoding:'utf8'}));
 assert.deepEqual(tree,expected,'Generated menu exactly matches current bundled source');

@@ -1,5 +1,11 @@
 # Circuit document and engine adapter
 
+> Cleanup note (2026-11-17): the intermediate JavaScript editor has been retired.
+> Old `experiments/engine` paths and prototype browser commands below describe the
+> historical implementation. Runtime workers now live in `packages/circuit-runtime`,
+> verification assets in `tools/engine-harness`, and the active editor in `wires/`.
+> See [HANDOFF.md](HANDOFF.md) for current build and verification status.
+
 Design and implementation direction, originally 2026-11-13; current implementation
 status and priorities are in [HANDOFF.md](HANDOFF.md) and [PLAN.md](PLAN.md). Document loading, stable-ID
 results, revision coordination, continuous RC switching and the first editor are

@@ -3,9 +3,10 @@ import * as symbols from "../../../packages/circuit-symbols/index.ts"
 import type { SymbolProps } from "../../../packages/circuit-symbols/svg"
 import type { CircuitDocument, Component, Frame } from "./core"
 import { core } from "./core"
-import { componentSliders } from "./componentSliders"
+import { sliderField, setProperty } from "./componentSliders"
 import type { SliderAdjustment } from "./componentSliders"
 import { componentValue } from "./componentValue"
+import { SheetLabel } from "./SheetLabel"
 
 export function SymbolBody({
   component,
@@ -21,18 +22,27 @@ export function SymbolBody({
   if (!Object.hasOwn(symbols, component.kind))
     throw new Error(`Unsupported React symbol: ${component.kind}`)
   const View = symbols[component.kind as keyof typeof symbols]
+  const drawingScale =
+    core.catalog.definitions[component.kind].drawingScale ?? 1
   return (
-    <View
-      parameters={component.parameters}
-      pose={pose}
-      current={current}
-      measured={measured}
-      graphicSize={
-        core.catalog.graphic(component.kind)
-          ? core.geometry.graphicSize(component)
-          : undefined
-      }
-    />
+    <g
+      transform={`scale(${drawingScale})`}
+      style={{
+        strokeWidth: `calc(var(--symbol-stroke, 6.25px) / ${drawingScale})`,
+      }}
+    >
+      <View
+        parameters={component.parameters}
+        pose={pose}
+        current={current}
+        measured={measured}
+        graphicSize={
+          core.catalog.graphic(component.kind)
+            ? core.geometry.graphicSize(component)
+            : undefined
+        }
+      />
+    </g>
   )
 }
 
@@ -51,7 +61,7 @@ export const SymbolLayer = memo(function SymbolLayer({
     <g
       fill="none"
       stroke="currentColor"
-      strokeWidth={2}
+      strokeWidth={6.25}
       strokeLinecap="round"
       strokeLinejoin="round"
     >
@@ -60,49 +70,42 @@ export const SymbolLayer = memo(function SymbolLayer({
         const isSelected = selected.includes(component.id)
         const current = frame?.componentCurrents?.[component.id] ?? 0
         const measured = frame?.componentMeasurements?.[component.id] ?? {}
-        const bounds = core.geometry.bounds(document, component)
-        const side = pose.rotation % 180 !== 0 || component.kind === "ground"
-        const labelX = pose.x + (side ? 31 : 0)
-        const labelY = pose.y + (side ? -28 : 31)
         const displayComponent =
           sliderPreview?.id === component.id &&
           sliderPreview.kind === component.kind
-            ? {
-                ...component,
-                parameters: {
-                  ...component.parameters,
-                  [componentSliders[sliderPreview.kind].field]:
-                    sliderPreview.value,
-                },
-              }
+            ? structuredClone(component)
             : component
+        if (displayComponent !== component && sliderPreview)
+          setProperty(
+            displayComponent.parameters,
+            sliderField(sliderPreview),
+            sliderPreview.value
+          )
         const value = componentValue(displayComponent, {
           pinVoltages: frame?.pinVoltages[component.id],
           measurement: measured,
         })
+        const parts = String(value ?? "").split(" · ")
+        // Op-amp output limits are supplementary information rather than a value.
+        const detailsOnly = component.kind === "opamp"
+        const label = [
+          ...(pose.label?.showValue !== false && !detailsOnly ? parts.slice(0, 1) : []),
+          ...(pose.label?.showDetails !== false ? parts.slice(detailsOnly ? 0 : 1) : []),
+        ].join(" · ")
         return (
           <g
             key={component.id}
             className={
               isSelected ? "text-blue-600 dark:text-blue-400" : undefined
             }
-            strokeWidth={isSelected ? 3 : undefined}
+            style={
+              {
+                "--symbol-stroke": isSelected ? "9.375px" : "6.25px",
+              } as React.CSSProperties
+            }
           >
-            {isSelected && (
-              <rect
-                x={bounds.x}
-                y={bounds.y}
-                width={bounds.right - bounds.x}
-                height={bounds.bottom - bounds.y}
-                rx={7}
-                fill="currentColor"
-                fillOpacity={0.04}
-                stroke="currentColor"
-                strokeDasharray="4 3"
-                vectorEffect="non-scaling-stroke"
-              />
-            )}
             <g
+              data-symbol-body={component.id}
               transform={`translate(${pose.x} ${pose.y}) rotate(${pose.rotation}) scale(${pose.mirror ? -1 : 1} 1)`}
             >
               <SymbolBody
@@ -113,18 +116,8 @@ export const SymbolLayer = memo(function SymbolLayer({
               />
             </g>
             {/* Sheet labels are positioned outside the symbol's pose transform. */}
-            {!core.catalog.graphic(component.kind) && (
-              <text
-                x={labelX}
-                y={labelY + 16}
-                textAnchor={side ? "start" : "middle"}
-                fill="currentColor"
-                stroke="none"
-                fontSize={10}
-                opacity={0.7}
-              >
-                {value}
-              </text>
+            {!core.catalog.graphic(component.kind) && label && (
+              <SheetLabel pose={pose} kind={component.kind}>{label}</SheetLabel>
             )}
           </g>
         )

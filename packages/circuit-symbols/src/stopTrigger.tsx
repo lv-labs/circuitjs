@@ -3,6 +3,8 @@ import type { SymbolProps } from "../svg";
 
 export const kind = "stopTrigger";
 export const metadata = {
+  // Original 16-unit artwork, scaled to the 50-unit sheet grid.
+  drawingScale: 3.125,
   prefix: "TRIG",
   name: "Stop trigger",
   pins: {

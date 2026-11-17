@@ -1329,3 +1329,1027 @@ getMatrixConnection now represents both possible signal paths, independently of
 its active electrical getConnection. Stamping and component equations are unchanged.
 At this checkpoint the corrected build and expanded numerical tests were still
 being checked; the completed results are recorded at the top of this handoff.
+
+
+## Archived scope UI iterations — 2026-11-17
+
+These notes record the implementation sequence, including rejected/superseded UI
+and cursor behavior. They are historical, not current requirements. The current
+contract, persistence checkpoint and next work are in HANDOFF.md.
+
+## Cursor interaction reversed — 2026-11-17
+
+The user reversed the two modes: ordinary hover fixes the cursor at the pointer's
+plot position, continuously reading new samples; click-and-hold latches one exact
+sample so it moves across the plot with simulation time. Release resumes live
+sampling at the latest pointer position. ScopeWorkspace computes the shared sample
+for all panes, preserving exact timestamp synchronization. This supersedes the
+interaction described below. TypeScript/build passed; no browser verification.
+
+## Click-and-hold cursor sampling — 2026-11-17
+
+Hover retains an exact acquisition timestamp. Holding the primary pointer on the
+plot instead fixes the source cursor's horizontal fraction and selects the current
+sample passing that point as acquisition advances. ScopeWorkspace computes this
+shared timestamp once per frame for every pane/value readout. Releasing commits
+the final exact timestamp synchronously and returns to sample tracking; no simulation
+pause is involved. Pointer capture supports release/cancel outside the plot, and
+normal mouse leave is ignored while held. Clicking a waveform still selects its
+trace for the axis. Held state is transient, not saved in the circuit.
+Build/TypeScript passed; no browser verification/tests under the low-credit request.
+
+## Cursor value annotation — 2026-11-17
+
+The scale annotations now sit at the top-left of the plot. While the shared exact
+cursor sample is visible, they also show the selected axis trace's raw sample value
+in its colour and units. No value is substituted outside the pane's sample window.
+Build/TypeScript passed; no browser verification.
+
+## Cursors share the exact acquisition sample — 2026-11-17
+
+Scope cursor state now holds an acquisition timestamp, not a relative plot fraction.
+Hovering selects the nearest actual sample in that pane by binary search. Every
+other pane locates that identical timestamp and draws at its own time-axis position;
+it never substitutes its own nearest step. Panes whose visible sample window does
+not contain that timestamp hide the cursor. Different pane time scales and widths
+therefore remain synchronized to the same sample. Cursor changes do not rebuild
+waveform geometry. This supersedes the earlier fraction-linked cursor limitation.
+Build/TypeScript passed with the existing size warning; no browser checks/tests.
+
+## Dock panel height cap — 2026-11-17
+
+The entire docked scope panel is capped at 50% of viewport height by both CSS and
+resize/auto-stack calculations. Saved oversized layouts and viewport shrinking are
+covered by the CSS cap; nested panes scroll inside it. Dragging starts from actual
+rendered height rather than an oversized saved preference, avoiding jumps at the
+limit. The minimum yields to the cap in small windows. Build/TypeScript passed;
+no browser verification performed.
+
+## Mixed horizontal/vertical scope dock — 2026-11-17
+
+Dock layout is now a recursive split tree: a pane can sit beside a vertical stack,
+and horizontal/vertical splits can nest. Drag a scope grip to a target pane's
+left/right/top/bottom edge; the highlighted half previews the split. Dropping adds
+the scope there, collapsing its former empty branch. This supports one full-height
+pane on the left and two stacked on the right. Both splitter orientations resize
+by pointer or arrow keys. Context menu → Dock layout offers Side by side and Stack
+vertically as whole-dock arrangements. Docked grip arrow keys swap neighbouring
+leaf positions without flattening the mixed layout.
+
+The optional `layout.scopes.dock` tree saves split axes/ratios and pane IDs; older
+files without it reconstruct the previous weighted horizontal arrangement. New
+probes append horizontally; absent/deleted/undocked panes are pruned from display
+and empty split branches collapse. Layout changes use the existing local previews,
+release-time saving and Undo. Core validation bounds tree depth/node count and
+checks ratios/duplicate leaf IDs. Large arrangements scroll when minimum pane sizes
+exceed the panel. Vertical splits increase panel height where possible.
+Build/TypeScript passed with the existing size warning. No browser verification
+or tests were run, following the user's low-credit request.
+
+## Floating panel snapping and sheet grid — 2026-11-17
+
+Floating scopes now use the sliders' 12px edge inset and 48px toolbar clearance,
+including sizing constraints so panels fit within those margins. Moves and corner
+resizes magnetically snap within 10px of screen edges or other floating scope /
+slider panel edges, with 12px spacing between neighbouring panels and matching
+edge alignment. Target rectangles are cached at gesture start and refreshed when
+the surface resizes; normal pan/zoom does not measure them. Helpers live in
+`scopeSnapping.ts`. Sliders remain unchanged; scope movement snaps to them.
+
+Sheet scope placement, movement and width/height now snap in world coordinates to
+the 50-unit sheet grid. Keyboard handles move/resize by grid increments. Floating
+panels continue using pixels; existing layouts snap as they are moved/resized.
+The saved workspace captures the resulting geometry on gesture completion.
+Build/TypeScript passed with the existing size warning; no browser checks/tests
+were run under the user's low-credit constraint.
+
+## Scope grip drag/reorder/docking — 2026-11-17
+
+Docked scopes now have title grips matching undocked scopes. Drag horizontally
+within the bottom panel to reorder; drag outside and release to undock as a floating
+scope. Undocked floating or sheet scopes can dock by dropping their title grip back
+into the panel, at the indicated position. A temporary dock target appears when
+needed, including with the panel closed or all scopes undocked. Successful docking
+opens the panel. Reorder uses saved optional `panes[id].order`; older files fall back
+to probe order and new scopes append after explicitly ordered panes.
+
+A ghost/target label, insertion bars and source dimming show pending placement.
+Mode/order changes occur on release so pointer capture stays on a mounted grip.
+Escape, pointer cancellation or capture loss cancels the drag. Arrow keys on docked
+grips reorder. Normal undocked movement/resizing and sheet navigation remain.
+Pointer previews stay local; final layout/order goes through the existing saved,
+undoable workspace mechanism. Build/TypeScript passed with the existing size
+warning; no browser verification/tests, per the user's low-credit request.
+
+## Navigation over sheet scopes — 2026-11-17
+
+Sheet scope overlays now delegate navigation to the sheet: plain wheel/trackpad
+scroll pans, Ctrl/Meta+wheel zooms about the pointer, and middle-drag, Space+drag
+or the pan tool can start over a sheet scope. Wheel handling is delegated once on
+the shared sheet surface and filters out floating/docked scopes and other panels.
+Captured pointer navigation bypasses scope grips/selection gestures until release,
+cancellation or capture loss. Space and zoom keys remain available on a focused
+sheet scope while Delete and scope-editing shortcuts retain their scope ownership.
+Normal selection, title/corner dragging, settings and context menus remain local.
+Production build/TypeScript passed with the existing size warning; no browser
+checks/tests were run for this follow-up.
+
+## Sheet scopes scale with symbols — 2026-11-17
+
+The user now wants sheet scopes to zoom with the circuit like symbols. Sheet mode
+stores position AND dimensions in world coordinates; floating mode retains screen
+pixels. Placing onto the sheet captures a reference zoom so initial appearance is
+unchanged (no immediate tiny UI), then the entire scope scales by the zoom ratio.
+Moving/resizing converts pointer deltas through camera scale, and sheet scopes may
+extend beyond the viewport like other sheet objects. Floating windows remain
+viewport-clamped. Offscreen culling uses transformed screen bounds. CSS transforms
+scale the cached plot without changing local plot geometry, preserving the earlier
+pan/zoom performance improvements. Selection/delete and grip/corner controls remain.
+This supersedes the earlier fixed-pixel sheet-scope dimensions. Build/TypeScript
+passed with the existing size warning; no browser checks/tests were run.
+
+## Scope pan/zoom performance follow-up — 2026-11-17
+
+Investigated the reported navigation lag in source: sheet camera publication was
+lifting every pan/zoom into the editor shell, re-creating a ResizeObserver and doing
+layout reads each time. ScopeWorkspace also rebuilt group arrays and cropped/copied
+all pane samples on every placement/camera render, invalidating waveform caches.
+
+`scopeViewport.ts` now publishes camera through a stable external store, avoiding
+editor-shell updates. Docked/floating-only layouts ignore camera notifications;
+sheet scopes subscribe for placement. SVG offsets are measured only on actual
+resize, with one observer; camera publication occurs before paint. Group membership
+and per-pane sample windows are memoized, and memoized ScopeContent components keep
+position/selection changes from re-copying samples/rebuilding paths. Fully offscreen
+sheet scopes skip plot rendering while shared acquisition continues. SymbolLayer's
+selected-ID array is stable across camera changes so its existing memo can skip
+symbol reconciliation. AC scaling computes only its needed mean, rather than RMS
+and the full statistics set. Acquisition cadence, worker stepping and history remain
+unchanged.
+
+Production build/TypeScript passed with the existing size warning. These are
+source-level fixes for identified redundant work, not measured frame-rate claims;
+no browser profiling or tests were run under current verification constraints.
+
+## Pane time scale, trace vertical scale and selected axis — 2026-11-17
+
+A grid division always means one square of the pane. Time scale (s/div) belongs
+to the pane, and all traces in it use that window. Combining adopts the destination
+pane's time scale; separating preserves the combined pane's time scale in the new
+scopes. Vertical scale/offset belong solely to each trace. Automatic scaling now
+fits each trace independently, including small current signals; combining another
+trace no longer changes its automatic vertical scale. `traceDisplay` in
+`scopeDisplay.ts` is the shared mapping for plotting, context-menu scale changes
+and trace-properties defaults.
+
+Click a trace name or waveform to select it for the vertical axis; names are
+keyboard-accessible buttons. The selected name is underlined, its waveform is
+emphasised, and vertical axis/ticks use its colour, units, scale and offset. The
+first remaining trace is the fallback if selection disappears. Opening its gear or
+editing its vertical settings also selects it. In AC mode the axis reflects the
+mean-removed waveform (marked AC); properties statistics remain raw samples.
+
+Pane right-click menu → Time scale replaces Horizontal scale. Named trace
+submenus each expose Use for vertical axis, Vertical scale (Auto-fit this trace /
+manual values / zoom) and Vertical position, editing the same metadata as the
+properties dialog. Small top-right annotations show pane s/div and selected trace
+V/div or A/div. Selected-trace state remains session-only with the scope layout.
+This supersedes the earlier shared-by-unit automatic scales and shared/division-only
+vertical axis fallback. Production build/TypeScript passed with the existing size
+warning; no browser checks/tests were run for this follow-up.
+
+## Stacked labels and trace properties cleanup — 2026-11-17
+
+Combined scopes now stack trace names/gear buttons vertically at the bottom-left,
+with aligned button columns and scrolling for long lists. Properties is extracted
+to `TraceProperties.tsx`: Appearance (name, colour swatches, optional custom CSS
+colour), Scale & position (explicit automatic/manual scale, unit input only in
+manual mode, position and coupling), and collapsed Measurements. The AC explanation
+appears only for AC. Delete trace sits apart from Cancel/Save changes. Saving remains
+one undoable metadata edit; Cancel discards edits. Custom colour syntax and manual
+numeric fields are validated. The shared dialog retains focus restoration.
+Build/TypeScript passed with the existing chunk-size warning; browser checks/tests
+were not run for this follow-up.
+
+## Compact scope trace labels — 2026-11-17
+
+Removed the entire side legend for docked, floating and sheet scopes. The plot
+fills its pane; trace names appear in trace colours at the bottom-left, with a
+properties gear revealed on name hover/keyboard focus (always available on touch).
+Combined scopes list all their trace names there. Readings, scale/offset badges,
+RMS/peak-to-peak and visibility checkboxes are no longer shown beside the plot.
+Removed the unused visibility state; remaining scope/trace settings and statistics
+stay in their context menu/properties popup. Build passed with the existing size
+warning; browser checks/tests were not run. This supersedes earlier legend layouts.
+
+## Scope selection and deletion — 2026-11-17
+
+Click/focus selects a docked, floating or sheet scope and shows its selection ring.
+Backspace/Delete while that scope has focus, or Delete scope in its right-click
+menu, removes all of that scope's probe traces in one undoable core remove command.
+Electrical components and wires are retained. Text inputs/editable fields and
+menu/dialog typing do not invoke scope deletion; scope key handling stops the
+underlying sheet delete shortcut. Outside clicks clear scope selection. Probe/group
+assignments are retained so Undo can restore the deleted scope's grouping/layout.
+Production build passed with the existing size warning; no browser checks/tests
+were run for this follow-up.
+
+## Sheet scope behaviour correction — 2026-11-17
+
+The bottom-panel toggle now only hides docked scopes. Floating and sheet scopes,
+including their context menus, remain visible/usable when the bottom panel closes.
+“Lock to sheet” is renamed “Place on sheet”: only its anchor uses circuit/world
+coordinates. Dimensions, text and controls stay in screen pixels through mode
+changes and camera zoom. Sheet scopes follow pan/zoom by position, render below
+floating panels, and are clipped to the sheet. They remain selectable, movable by
+the title grip/arrow keys and resizable by the corner handle. Selection highlights
+the sheet scope and clears on outside clicks. This supersedes the earlier scaled,
+non-movable locked mode below. Production build passed with the existing size
+warning; browser verification is still pending.
+
+## Scope context menus and sheet anchors — 2026-11-17
+
+The user replaced the pane hover gear/dialog with a right-click menu. Each docked,
+floating or sheet-locked pane now opens `ScopeContextMenu.tsx` at the pointer;
+Shift+F10 / the context-menu key also opens it from a focused pane. Submenus expose
+Horizontal scale (s/div), Vertical scale (auto/zoom/presets) and Vertical position
+(up/down/centre/presets). Combined scopes nest vertical controls under each trace
+so mixed V/A settings remain explicit. Combine with selects another scope directly;
+Separate traces and docking actions no longer need an intermediate dialog. The
+individual trace-properties gear remains for name, colour, coupling and detailed
+settings/statistics.
+
+Each scope has its own horizontal time window. Acquisition retains the longest
+requested window, while pane samples/min/max/RMS are cropped independently; trace
+properties opened from a pane uses that pane's time span. Cursor position remains
+linked by relative plot fraction, so panes with different time scales can read
+different absolute times. Buffer capacity remains bounded; scale choices do not
+manufacture older samples. Vertical changes remain undoable probe metadata edits.
+
+Undock offers Floating panel (viewport coordinates, draggable/resizable like the
+sliders) or Lock to sheet (world coordinates, follows camera pan/zoom). An undocked
+pane can switch modes or dock again from its context menu. Locking preserves the
+current screen placement by converting position/size through the published sheet
+camera; locked panes cannot be dragged/resized until floated again. Locked content
+is clipped to the sheet viewport. `CircuitSheet` publishes camera/viewport offsets
+for these HTML overlays. Layout/time-scale/mode remain session-only; no circuit
+schema or simulation model changes were introduced.
+
+Production build and TypeScript passed with the existing chunk-size warning. No
+browser checks/tests were run; menu placement/focus, nested menu navigation,
+independent time scales and camera-following/docking flows need interactive checks.
+This supersedes the pane-settings popup and viewport-only undocking below.
+
+## One trace per scope, docked/floating layout — 2026-11-17
+
+The user changed the scope model to match Falstad's default: each new probe creates
+its own scope. `ScopeWorkspace.tsx` owns presentation grouping, docked split weights,
+panel height, floating positions/sizes, visibility and the scope-settings dialog.
+New trace IDs default to their own group. The scope hover/focus gear offers Combine
+with scope, Separate traces into scopes for combined scopes, and Undock onto sheet /
+Dock below sheet. Trace properties retains individual scale/coupling/measurements.
+
+Docked scopes sit side by side. Drag the thin top edge to resize the whole bottom
+panel and vertical dividers to resize adjacent scopes. Many narrow scopes retain a
+minimum width with horizontal scrolling. Undocked scopes render as portals over
+the sheet, move by their title grip and resize from the bottom-right corner. Focused
+handles also accept arrow keys. Floating bounds clamp to the current sheet and
+clicked windows come to the front. Scope focus suppresses sheet shortcuts so Delete
+or movement keys do not accidentally edit the circuit beneath an overlay.
+
+Layout is session-only, retained when scopes are hidden/reopened and reset on a
+circuit-ID change; it is not saved in circuit JSON/local storage. Group membership
+is retained across probe removal/undo within that session, and empty groups render
+nothing. Docking, grouping and resizing do not change sample channels or clear
+acquisition. The Oscilloscope toggle hides/shows both docked and floating scopes.
+All shared traces retain synchronized time/cursor data.
+
+Production build and TypeScript passed with the existing Vite chunk-size warning.
+No browser checks or tests were run under the handoff verification constraints;
+pointer/keyboard drag, split sizing, combine/separate and docking flows still need
+interactive verification. This supersedes the former single-pane/default combined
+trace layout and the earlier notes describing no combine/dock controls.
+
+## Trace-only scale settings — 2026-11-17
+
+Removed the Pane 1/local voltage-scale header and pane scale state. Scale changes
+now live solely in each trace's properties popup; unset trace scales use automatic
+scaling. The trace settings gear appears on legend-row hover or keyboard focus,
+and stays visible on devices without hover. The plot uses the freed header height.
+This supersedes the retained local-scale control in the earlier notes below.
+
+## Scope simplification requested by user — 2026-11-17
+
+Removed the per-pane Latest/Cursor readings footer, the general Component updated
+status strip, and the scope toolbar containing time/div, Add pane, layout dropdown,
+acquisition info and duplicate Pause/Run controls. Removed unused toolbar state
+and reclaimed footer height for the plot. Scope toggle, trace/run status, Clear,
+local voltage scale, plots and trace legends/properties remain. Main app simulation
+controls still operate the solver; the scope keeps its default 2 ms time window.
+Simulation errors use the remaining scope status text. This supersedes the earlier
+interface notes below; do not restore removed controls without a user request.
+
+## Scope interface and measurements follow-up — 2026-11-17
+
+The user wants a substantial scope interface cleanup. A first pass extracts the
+plot/legend into `wires/src/editor/ScopePane.tsx` and formatting/statistics into
+`scopeDisplay.ts`, making further UI work independent of the editor shell.
+All panes now have the same local voltage-scale header; the special global Pane 1
+voltage control is removed. Acquisition diagnostics are collapsed by default.
+The legend shows cursor/latest value, each trace's actual scale, manual/auto state,
+offset and AC state, plus visible-window RMS and peak-to-peak. Properties adds
+mean, RMS, peak-to-peak, min and max with explicit raw-sample semantics. The footer
+keeps time and same-unit two-trace difference rather than repeating every reading.
+
+The vertical axis uses V or A only when visible traces share one DC scale/offset;
+otherwise it shows divisions and the legend supplies each trace's physical scale.
+AC autoscaling uses mean-removed bounds. Horizontal grid lines are placed at ten
+equal time divisions instead of fixed pixel spacing, fixing resize-dependent
+time/div interpretation. These updates supersede the mixed-axis/measurement
+limitations in the earlier scope slice below. Frequency estimation, trigger,
+workspace persistence and imported-settings validation remain open. The broader
+visual redesign is still iterative; this pass does not establish final UI parity.
+
+`pnpm --dir wires build` passed with the existing chunk-size warning. No browser
+checks or tests were run for this follow-up, following the handoff constraints.
+
+## Scope current traces and trace properties — 2026-11-17
+
+Component context menu → Add to scope now includes Current through component for
+models with a non-null native current mapping. Voltage-across and pin-to-ground
+actions remain available. Current probes target stable component IDs. The adapter
+samples signed component current on every solver step, using the existing mapping
+sign rather than inferring direction from the displayed pin order. Mixed voltage
+and current batches share timestamps and the 32-channel limit. Invalid current
+targets are rejected before advancing the solver.
+
+Each scope legend row has a settings button opening Trace properties: name,
+CSS colour, optional manual scale in V/div or A/div, vertical position in divisions,
+AC/DC coupling and Delete trace. Settings live on the document probe and use
+undoable transactions; they travel with saved circuit JSON. Presentation changes
+do not change the sample descriptor signature. Current channels have independent
+automatic scaling and amp readings. AC currently subtracts the visible window's
+mean for display; it is not a stateful high-pass filter. Readouts/min/max still use
+raw samples. Pane visibility, layout, time/div and pane scale remain UI state.
+
+This is a first slice of original Falstad scope functionality, not full parity.
+The plot axis is still labelled in volts even for mixed/current-only panes, and
+manual trace scale/offset overrides are not fully represented in the axis/legend.
+Colour is currently a text field accepting CSS colours. Trace settings need strict
+validation on document import. Triggering, FFT, broader derived measurements and
+scope workspace persistence are not implemented in React.
+
+## Meter symbols and live sheet readings — 2026-11-17
+
+The user resized the ammeter to native sheet units: pins a/b at ±100, circular
+body radius 50, 64-unit A text, and upright +/− markers at x=±80, y=−30 with
+36-unit text. Preserve that authored design. Voltmeter and ohmmeter now match it,
+including polarity marks. Wattmeter retains four terminals at x=±100, y=±50,
+with a 100×160 rectangular body and matching text size; it has no new polarity
+markers. Their metadata has no legacy drawingScale; regenerate the catalog from
+TSX rather than hand-editing generated pins.
+
+Ammeter, voltmeter, ohmmeter, wattmeter and test point display live measurements
+above their symbols by default, using the existing upright sheet-label placement.
+Explicit user label position/value-visibility settings still apply. Readings include
+engineering units, RMS/average and voltage max/min/peak-to-peak suffixes where
+applicable, binary mode and open-circuit resistance. Before a measurement arrives,
+they show an em dash. Test point artwork/pins were not resized in this slice.
+Existing saved wire/junction coordinates are not migrated when symbol pin geometry
+changes; check older circuits for detached-looking endpoints.
+
+### Verification of these slices
+
+Production build and TypeScript passed; the existing Vite chunk-size warning
+remains. Symbol authoring checks passed for generated metadata, lead endpoints,
+rotations and reflections. Scope sampling/model/continuity checks passed, including
+mixed batches, signed source current and invalid-current-target rejection. The
+sampling fixture was updated to choose a wire from the normalized document rather
+than use an outdated hard-coded coordinate/count. Headless React rendering and
+focused meter formatting checks passed. No browser interaction/visual verification
+was performed. ESLint reported four existing editor issues (effect state updates,
+an explicit any, and ref use); unrelated existing symbol whitespace also remains.
+These results describe the checks performed in this chat, not full UI certification.
+
+## Recommended next slice — scope scaling and measurements
+
+1. First pass implemented above; refine units/scales for current-only and mixed V/A panes, including
+   per-trace manual scale and offset. Keep engineering-unit labels consistent with
+   what the plotted divisions actually mean.
+2. Mean/RMS/peak-to-peak are now implemented above; next add frequency for suitable
+   periodic signals, with explicit treatment of AC coupling and visible-window
+   statistics. Expose them through the existing properties dialog.
+3. Validate persisted trace settings and add document round-trip coverage, then
+   save scope pane assignments/visibility, layout and time/div. Decide what belongs
+   to circuit JSON versus a local workspace before implementing that persistence.
+4. Add trigger mode/edge/level for stable periodic waveform inspection. FFT and
+   specialised Falstad plots can follow as separate parity slices.
+
+Keep simulation-time slider automation as the next larger new tool in PLAN.md;
+apply ramps at worker step boundaries rather than driving full document edits
+from browser timers. Do not begin it as part of a documentation-only task.
+
+
+## Saved scope workspace — 2026-11-17
+
+Scope layout now lives in optional `layout.scopes` (version 1) in circuit JSON,
+alongside the existing per-probe trace settings. Save/Open and autosave retain
+combined trace assignments, selected axes, each pane's time scale, docking mode,
+split weights, bottom-panel height/open state, and undocked positions/sizes and
+sheet reference zoom. Older circuits without this field use defaults.
+
+`scopeLayout.ts` keeps drag previews local and commits on pointer release; layout
+changes use one undoable document transaction rather than saving every move.
+External Open/Undo/Redo restores workspace state. The longest saved pane time scale
+restores acquisition's display window. Core document validation checks workspace
+shape, finite geometry/scales and optional trace settings. Dormant group mappings
+are retained so probe deletion/Undo can restore the layout. Camera movement stays
+outside circuit state and does not trigger saving or history entries.
+
+The user explicitly requested minimal-credit continuation with no browser
+verification. Only TypeScript/build checks were used; interactive save/open and
+Undo flows remain unverified in a browser.
+
+
+## Snapshot before maintenance cleanup — 2026-11-17
+
+Historical snapshot; current instructions live in HANDOFF.md.
+
+# New simulator: current handoff
+
+Updated 2026-11-17. Read this and [PLAN.md](PLAN.md) first.
+[HANDOFF-HISTORY.md](HANDOFF-HISTORY.md) preserves earlier implementation notes,
+checks and limitations. Its old “latest” headings, continuation prompts and
+batch-specific verification restrictions are not current instructions.
+
+## Editor cleanup — 2026-11-17
+
+The intermediate JavaScript editor (`editor.js`, `editor.html`, `editor.css` and
+`scope-view.js`) has been removed at the user's request. React in `wires/` is the
+active new editor; its separate Vite `/editor.html` preview remains. This cutover
+does not certify full Falstad compatibility or complete browser parity.
+
+- `packages/circuit-runtime`: low-level, document and revision worker entry points;
+  the React worker calls the core modules directly without prototype adapters.
+- `wires/src/editor/menu`: generated Falstad menu hierarchy and availability map;
+  `tools/generate_component_menu.py` writes here.
+- `tools/engine-harness`: retained engine verification pages, traces, regression
+  helpers and compatibility adapters for existing tests. No React dependencies.
+- `makeEngineSite` and the cached fallback assemble runtime plus harness, clearing
+  stale output. Vite packages runtime/core/compiled engine only.
+- Prototype DOM-specific editor/drag/loose-end browser runners and the verifier's
+  `--editor`/`--screenshot` modes are retired. Core/model/numerical tests remain.
+
+The original Falstad Java/GWT interface remains available through `makeSite` as a
+development reference and existing deployment. Earlier sections describing the
+intermediate editor as a live reference are historical and superseded by this
+cleanup. Recover its source from Git history if needed; do not restore it as a
+runtime dependency. Existing React, symbol, core and Java work was preserved.
+
+See [UPSTREAM-ARCHITECTURE.md](UPSTREAM-ARCHITECTURE.md) for the dated source audit,
+repository options and proposed upstream update checks. A clean upstream checkout
+plus a small patch layer remains a proposal; no repository/submodule conversion
+was performed. Next establish the engine boundary and import/compatibility
+fixtures while preserving the current app.
+
+### Cleanup verification
+
+The React production build (84-symbol metadata check, TypeScript and both Vite
+entries), SSR divider render, packaged worker divider/RC checks, menu hierarchy,
+document adapter and revision/coordinator checks passed after relocation. The
+build retains its existing large-chunk warning. `test_editor_model.mjs` still
+fails at `200 !== 192`, and `test_core_package.mjs` at `84 !== 65`; both failures
+were reproduced from the pre-cleanup source snapshot. They are not new passing
+checks or cleanup regressions. No browser interaction checks were run.
+
+A fresh Java/GWT engine and worker compilation plus harness assembly passed using
+the cached fallback with
+`JAVA_TOOL_OPTIONS=-Dgwt.jjs.permutationWorkerFactory=com.google.gwt.dev.ThreadedPermutationWorkerFactory`.
+Default Gradle and external permutation workers could not bind local sockets in
+this sandbox. `build/engine-site` was freshly assembled without the retired UI.
+The Gradle `Sync` assembly change was inspected but could not be executed here.
+
+A pre-cleanup copy of modified/untracked files and a binary Git diff were saved
+outside the repo in the local temporary directory (`circuitjs-editor-cleanup-*`).
+134 pre-existing implementation files were checked byte-for-byte; the exceptions
+are the React menu import, simulation-cadence comment and test adapter paths.
+The Java sources and shared core implementation were not changed by cleanup.
+
+## User goal and implementation contract
+
+The goal is to **bring the full bundled original Falstad functionality into the React/TypeScript app in
+`wires/`, preserving the old app's behavior and interaction details while making
+the presentation easier for the user to style**. This means a real React/SVG
+implementation of the editor, menus, dialogs, property forms, scope and simulation
+controls. Do not embed the old app in an iframe, redesign interactions, or stop at
+the current prototype slice. Use the retained core fixtures and original Falstad app as behavior references;
+the intermediate editor has been retired.
+
+The agreed stack is React/TypeScript in `wires/`, shadcn/component libraries for
+the shell, SVG for the sheet, and the existing JavaScript core plus CircuitJS
+worker/solver. Styling should remain separable from behavior through React
+components, semantic classes and tokens; do not port the old stylesheet wholesale.
+The user chose one authored TSX file per symbol, co-locating symbol metadata and
+its React SVG view. Generate plain-data catalog sections for the headless
+core/worker; never add React/TSX to their runtime or duplicate handwritten pin
+geometry.
+
+## Full-app migration plan and current priority
+
+Keep the feature-by-feature parity inventory using the retained fixtures, original
+Falstad app and historical JavaScript editor behavior recorded in Git history. For each feature, identify the old behavior and
+source, implement it in React using the shared core, then record whether it has
+been checked. Build in these groups:
+
+1. **Shell and commands:** File/Edit/View/Add menus; New/Open/Save/autosave and
+   examples; undo/redo, clipboard, duplicate, delete, transform, view/grid and
+   tool commands; retain only Start/Stop/Reset as always-visible simulation
+   buttons.
+2. **Sheet parity:** camera/zoom/fit, selection feedback, shortcuts, component
+   placement and previews, switches/momentary controls, drag/move/rotate/flip,
+   wire routing/reconnect/segment editing, probes, junctions and deletion rules.
+3. **Library and properties:** every supported catalog entry and variant, chooser
+   taxonomy, authored React symbol views, component-specific properties/validation,
+   meter/output readings, variable controls and capture actions. Keep unsupported
+   models explicit; do not silently drop document content.
+4. **Scopes and simulation:** match the old scope controls, trace scaling, cursor,
+   channels, panes, sampling cadence and run-state behavior; preserve the existing
+   solver, worker protocol, recording and audio behavior.
+5. **Parity and transition:** compare representative circuits and workflows
+   against the reference app, fix discrepancies, then make React the sole active
+   frontend. Retire the old UI only after the user confirms the migration is
+   complete.
+
+Current status: React is active in `wires/src/App.tsx`; it is not an iframe. The
+React app already has broad editor interactions, menus, basic file actions,
+simulation integration, probes, a multi-pane scope and capture controls. These are
+partial ports, with whole-app browser verification still pending. All 84
+supported symbols now have authored TSX views. The user says scope pacing is
+now better, and later reported much more responsive pan/zoom after scope caching.
+
+Important scope regression found and fixed: the old editor configures the
+coordinator with `batchSteps: 10, intervalMs: 16`; React had inherited the core's
+default 128 steps per tick, so simulated time advanced 12.8x faster. React now uses
+the old settings and feeds scope acquisition from `onFrame`, like the old app.
+The sample-channel schema mismatch that previously blanked React is also fixed.
+
+Continue one coherent parity slice at a time, but keep the full-app goal in view;
+do not defer whole feature groups indefinitely. Preserve the user's shell, styling
+and uncommitted work. **Do not use browser tools unless the user requests them.**
+For UI failures, start with the console error the user supplies. Use TypeScript and
+focused build checks; do not run tests unless asked to verify or test. No
+subagents are needed.
+
+### Startup debugging follow-up
+
+The current main entry is `/src/main.tsx`, which mounts the React app and has a
+root error boundary. The latest blank-page error supplied by the user was
+`sample channel: unexpected or missing fields`: display labels and pin-reference
+wrappers were passed into the strict worker sample-channel API. The React boundary
+now maps these to exact voltage `{id, positive, negative}` terminal descriptors
+or current `{id, kind: "current", componentId}` descriptors. Presentation fields
+must stay outside the strict worker descriptors. Do
+not reintroduce temporary dynamic-import diagnostics in `wires/index.html`.
+
+## Current scope and meter checkpoint — 2026-11-17
+
+This section supersedes the earlier scope UI iterations archived in
+[HANDOFF-HISTORY.md](HANDOFF-HISTORY.md). Treat the user's simplified interface as
+the current contract; do not restore removed toolbars or side legends.
+
+- **Acquisition:** signed voltage/current channels sampled at every solver step,
+  up to 32 channels; 10 steps / 16 ms coordinator cadence remains unchanged.
+  Every new probe gets its own scope, with combine/separate available.
+- **Ownership:** pane owns time/div; each trace owns independent automatic/manual
+  V/div or A/div, vertical position, colour, name and coupling. Click its name or
+  waveform to select the vertical axis, which follows that trace's colour, units,
+  scale and offset. AC subtracts the visible mean for drawing; statistics stay raw.
+- **Presentation:** full-width plot, vertically stacked trace names at bottom-left,
+  larger discoverable trace-properties gears. Top-right annotations are ordered
+  cursor value → time scale → vertical scale. Trace properties has colour swatches,
+  automatic/manual scale, position/coupling and collapsed mean/RMS/peak-to-peak/
+  min/max measurements. No status strip, acquisition info, side legend, pane scale
+  row, standalone time selector, Add pane/layout dropdown or duplicate Pause button.
+- **Pane menu:** right-click for Time scale, named trace submenus (vertical scale,
+  position and axis selection), combine/separate, dock/undock, placement mode,
+  row/column dock presets and Delete scope.
+- **Docking:** nested horizontal/vertical splits support mixed layouts, e.g. one
+  pane left and two stacked right. Drag grips to pane edges to split, drag out to
+  undock, or drag back to dock. Both divider orientations resize. The whole bottom
+  panel is capped at 50% of viewport height; larger layouts scroll internally.
+- **Undocked modes:** floating panels stay in pixels, with sliders' 12px margins /
+  48px toolbar clearance, and snap to edges/other floating scopes/sliders with 12px
+  spacing. Sheet scopes snap position and size to the 50-unit world grid, scale
+  with symbols and retain initial appearance on placement. Both move/resize by
+  their grips/corners. Wheel/trackpad, middle-drag, Space+drag and pan-tool navigation
+  work over sheet scopes. Hiding the dock leaves undocked scopes visible.
+- **Selection/deletion:** select a scope, then Backspace/Delete or its menu removes
+  that scope's probes in one undoable operation; electrical components remain.
+- **Cursor contract (latest user choice):** hovering holds a fixed plot position and
+  reads new samples as simulation advances. Click-and-hold latches one exact sample,
+  which moves across the plot; release resumes hover sampling. All panes use the
+  identical sample timestamp regardless of time scale. A pane hides the cursor
+  when that sample falls outside its visible sample window. Cursor value reports
+  the selected trace's raw value at that sample. Pointer state is transient.
+- **Persistence:** optional version-1 `layout.scopes` saves combined assignments,
+  selected axes, pane time scales/modes/geometry, sheet reference zoom, dock split
+  tree/ratios/order and bottom height/open state. Per-probe metadata saves trace
+  settings. Save/Open/autosave and Undo/Redo use the document model. Drag previews
+  remain local and commit on release; camera updates do not enter circuit history.
+  Older circuits without workspace metadata retain defaults; old row-only layouts
+  convert to a horizontal dock. Core validation checks the saved representation.
+
+### Performance and verification
+
+Camera publication uses `scopeViewport.ts` rather than editor-shell state. Scope
+windows/grouping and plot content are memoized; pan/zoom only repositions sheet
+scopes, offscreen sheet plots skip drawing, and DOM panel-snap targets are measured
+at gesture boundaries/resize. The user reported navigation was “MILES better” after
+this change; this is user feedback, not a measured performance benchmark.
+
+Latest production build and TypeScript passed, with the existing Vite chunk-size
+warning. Early scope sampling/model/continuity and symbol/meter headless checks
+passed before later UI changes; they do not certify the latest drag/persistence/
+cursor behavior. No browser verification has been performed for this scope work.
+The user explicitly requests minimal credit use and no browser verification. Use
+focused build/type checks; do not launch browser checks or broader tests unless
+requested. Earlier ESLint issues remain outside this scope.
+
+### Meter design
+
+The authored ammeter uses a radius-50 body, pins at ±100 sheet units, 64-unit A text
+and upright 36-unit +/− marks at x=±80, y=−30. Voltmeter and ohmmeter match it;
+wattmeter keeps four pins at x=±100, y=±50 and a 100×160 body. All four plus test
+points show live readings above by default, respecting label overrides. Meter modes
+include RMS/average, voltage extrema/peak-to-peak/binary and open resistance. Test
+point artwork was not resized. Old saved wire coordinates are not automatically
+migrated after pin changes; regenerate catalog metadata from the authored TSX.
+
+### Source map
+
+`ScopeWorkspace.tsx` owns grouping, interactions and docking; `scopeDock.ts` owns
+split-tree operations; `ScopePane.tsx` draws traces/axes/labels; `ScopeContextMenu.tsx`
+and `TraceProperties.tsx` own settings. `scopeDisplay.ts` shares sample windows,
+statistics and vertical mappings; `scopeLayout.ts` stages/synchronizes saved layout;
+`scopeViewport.ts` isolates camera updates. `core.ts` types optional workspace data;
+`packages/circuit-core/document.js` validates it. Preserve this separation and the
+sampling/worker boundary when adding features.
+
+## Current next work — full Falstad parity first
+
+**Current priority: full functionality of the bundled original Falstad app before
+new custom tools.** Parity with the JavaScript prototype alone is insufficient;
+use the original Java/GWT menus, dialogs, element models, file formats and bundled
+examples as the full specification. Keep the user's React styling and accepted
+scope interactions; functional parity does not require restoring rejected UI.
+
+1. **Legacy circuit compatibility and examples:** import/export native circuit
+   text, including flags, models, connectivity and scope settings; expose bundled
+   examples. Start with supported records and explicit unsupported diagnostics,
+   never silently omit elements. Track loadability separately from type coverage.
+2. **Complete models and variants:** use LEGACY-CATALOG.md/JSON to close the actual
+   menu/example coverage gaps, prioritising commonly used missing models such as
+   the 555 timer and relay, then remaining building blocks, chips and variants.
+3. **Original scope/measurement functions:** finish trigger, frequency/period,
+   spectrum/FFT, XY and other native measurements/plots, retaining the simplified
+   React presentation and existing exact-time cursor/layout behavior.
+4. **Remaining native workflows:** inventory and complete missing commands,
+   component/model options, simulation controls, recording/audio and import/export
+   actions against the original app, not just the prototype.
+5. **Acceptance/cutover:** compare supported numerical behavior, saved examples and
+   representative workflows; keep the reference until the user accepts parity.
+   Continue the low-credit/no-browser-check constraint unless the user changes it.
+
+The first concrete slice should be legacy text import for already-supported
+components with clear unsupported-record reporting, followed by bundled-example
+loading. This makes remaining coverage gaps visible using real Falstad circuits.
+Do not claim all 374 bundled circuit files are loadable from the current 84-model
+inventory. See LEGACY-CATALOG.md for the static inventory and its limitations.
+
+Slider automation, looping modulation, parameter sweeps and Bode tools are deferred
+until native Falstad functionality is complete or the user explicitly reprioritises.
+
+## Slider list removal and ordering — 2026-11-17
+
+Property controls and built-in pot/voltage controls now render in one keyed
+`SliderList`, rather than a separate array of property controls beside the
+reorderable list. Property rows use namespaced stable IDs, reuse the same grip,
+drop indicators, edge scrolling, keyboard movement and saved ordering, and retain
+their edit/remove buttons. Removal updates the latest configuration through a
+functional state update and cancels any active preview. Removed rows are excluded
+from the list immediately; the empty-state message appears when no controls remain.
+The former separate property-row component/state was removed. Build passed with
+the existing chunk-size warning; the reported deletion symptom and mixed-list
+pointer behavior have not been browser-verified under the current constraints.
+
+## Slider preview pacing — 2026-11-17
+
+React slider previews now coalesce to the latest value, render the sheet preview
+at animation-frame cadence, and send at most 30 solver updates/second with one
+update in flight. They wait until the coordinator is idle before changing its
+desired revision: the previous implementation could invalidate an in-flight
+step, losing its sample batch. Release still commits the exact final value as one
+undoable edit; cancellation restores the committed document. The coordinator's
+10-step/16-ms pacing and revision guards remain unchanged.
+
+`useCircuitSession` appends every accepted sample batch immediately but batches
+scope-window construction and React state publication to animation frames. Scope
+trace/envelope calculations and the document's channel inventory are memoized so
+slider-only renders do not rebuild unchanged traces. The previews still compile
+and submit full document updates; general component edits can still incur solver
+analysis costs. No measured browser performance claim: build passed with the
+existing Vite size warning; browser checks/tests were not run under the current
+verification constraints.
+
+For future automation, introduce validated control events/ramps on simulation
+time in the worker, applied at solver step boundaries, rather than scheduling
+full document edits from browser timers. Interpolation policy and safe fast paths
+for each parameter need explicit design; that automation API is not implemented.
+
+## Item context menus and property sliders — 2026-11-17
+
+Right-clicking a sheet item opens a shadcn menu at the pointer. It selects the
+clicked item unless it is already in the current selection, preserving group
+operations. Edit (components/probes), connected drag, detached move, rotation,
+flips, copy/cut/duplicate and delete reuse the existing commands. Sheet shortcuts
+are suppressed while the menu is open. Existing clipboard limits still apply:
+probes are copied with their selected electrical anchors, not independently.
+
+Components offer Add property slider: choose any numeric parameter (including
+nested waveform fields), label, minimum, maximum and step. Controls appear in the
+existing Sliders panel, preview via the coordinator, and commit one validated,
+undoable transaction on release. Remove controls with their × buttons. Configs
+are retained locally per circuit ID for the main app; they are not part of saved
+circuit JSON. The existing voltage/wiper sliders and their ordering are retained.
+Nonnumeric properties remain in Edit. Each property control has a pencil button to edit its property, label, minimum,
+maximum and step in a prefilled dialog. Save replaces the configuration in place
+and retains its ID/order; Cancel discards changes. Configuration edits do not
+change the component value. All controls share the same list: drag their grips or use Up/Down on a grip
+to reorder property sliders alongside pots and variable voltages. Mixed ordering
+is remembered locally per circuit, retaining existing built-in slider order.
+
+Add to scope offers differential voltage across the first two catalog pins and
+individual pin voltage to ground. Wires/junctions offer voltage-to-ground probing;
+existing probes offer Show in scope. These actions open the scope. Current traces
+were added in the later scope slice documented above. Build/TypeScript checks passed with the existing
+Vite size warning. Browser interaction verification remains pending.
+
+## Selection and Add menu — 2026-11-17
+
+Selected symbols now use their color/stroke highlight without the dotted bounding
+rectangle. A opens the Add menu at the last sheet pointer position (sheet center
+before any pointer activity); clicking Add still anchors it to the menubar.
+Component searches show matching leaves in a flat list, including descendants
+when a category name matches. Empty search retains the category hierarchy.
+`pnpm --dir wires build` passed with the existing chunk-size warning. Browser
+interaction checks were not run, per the current verification constraints.
+
+## React migration implementation status — 2026-11-17
+
+The React sheet uses the full workspace width. Double-click or E opens a shadcn
+properties dialog with live readings, capture actions and meter plotting where
+applicable. Probe names can be edited from the same shortcuts on a probe label.
+Placing a variable voltage source or potentiometer opens the draggable shadcn
+Sliders card and keeps focus on the sheet. View → Sliders and Open sliders in
+component properties can also open it. Reorder controls with their grips or the
+Up and Down arrow keys. The main editor remembers each circuit's slider order
+locally. Edit Slider label in component properties to save its name with the
+circuit. Older potentiometers without a label display as Potentiometer. Sliders
+preview live and commit on release as undoable edits. The potentiometer wiper
+moves during the preview and its wire connection stays fixed. Visible buttons,
+menus and form controls use shadcn Base Mira.
+
+The [React parity inventory](REACT-PARITY.md) maps the JavaScript reference to the
+current React implementation. The port includes File/Open example and
+autosave feedback, command and gesture parity fixes, the reference component
+menu hierarchy, the modal property editor, and scope refresh during paused
+edits. The standalone preview uses its selected fixture independently of the
+main app's autosave. `pnpm --dir wires build` passes with a Vite chunk-size
+warning. Headless rendering checked the wiper across the slider range and
+confirmed that older unlabeled circuits still render. The engine projection
+stays the same after a potentiometer label edit. Browser interaction checks
+remain pending.
+
+The symbol port covers all 84 supported models, including graphics. Each
+`packages/circuit-symbols/src/<kind>.tsx` owns the React SVG, pin geometry,
+defaults and applicable presets or output fields. The generated
+catalog extends the original 65 models. The 19 additions cover native sources,
+logic, passives and
+semiconductors. Each ran and accepted a live circuit update in the compiled
+worker. Browser checks of appearance, placement, and live indicators are pending.
+Audio and data import and export workflows are deferred for redesign.
+
+`wires/src/editor/CircuitEditor.tsx` and `CircuitSheet.tsx` currently implement the
+React shell, File/Edit/View/Add menus, common shortcuts/editing gestures, wire
+routing, placement, probes, property dialogs, simulation controls, JSON persistence and a
+multi-pane scope. `useCircuitSession.ts` owns the shared core session and worker.
+These features are under active parity work. The last reported discrepancy was scope pace;
+the coordinator cadence now matches the old editor (10 steps/16 ms), and the user
+reported that the result feels better.
+
+Keep `/editor.html` available as the standalone preview and keep
+the original Falstad build available as a development reference. See the plan
+above for the remaining migration groups and acceptance direction.
+
+The cached Java/GWT build worked with the installed Corretto 8 JDK. This sandbox
+required in-process compilation:
+
+```sh
+JAVA_TOOL_OPTIONS='-Dgwt.jjs.permutationWorkerFactory=com.google.gwt.dev.ThreadedPermutationWorkerFactory' \
+  python3 tools/build_engine_cached.py \
+  --java-home /Library/Java/JavaVirtualMachines/amazon-corretto-8.jdk/Contents/Home
+pnpm --dir wires dev
+```
+
+Next: begin the native Falstad compatibility/parity work above; custom slider
+automation and analysis tools are deferred. Preserve the accepted scope contract.
+Recheck Git state because the user is editing concurrently.
+
+## Shared-core extraction — 2026-11-16
+
+- Shared catalog, geometry, document validation, history, commands, persistent
+  drag engine, compiler/session adapter, revision protocol, simulation coordination
+  and sampled-signal state now live under `packages/circuit-core`.
+- `index.mjs` is the native ESM entry; `index.js` supports Node/CommonJS and the
+  generated classic browser bundle. Metadata/defaults/output schemas are shared;
+  native engine post order remains distinct from symbol pin order.
+- New editor-session `execute` and `editing.applyCommand` APIs accept frontend-neutral command objects.
+  Existing focused model APIs remain available. The old editor/adapter/protocol/
+  coordinator/scope entry files are thin compatibility adapters, so the reference
+  UI retains its controls, document format and behavior.
+- Simulation requires an injected worker transport. The optional browser transport
+  forwards session identity through `browserTransport.factory`. Worker bootstrap
+  and engine artifact placement remain host concerns.
+- Build and cached-build paths package the core. The current UI loads one generated
+  core script; fresh frontends can import ESM directly without the renderer/DOM.
+- Pre-extraction comparison matched all 65 definitions/defaults/presets/output
+  schemas and exact edit/history/compiler snapshots on four saved circuits.
+- `node tools/check_core.mjs` passes all 28 computational suites. A new direct-core
+  test covers ESM/classic imports, a real DOM-free Node worker, commands/history,
+  injected transport and real-engine divider results.
+- Full real-browser engine/worker verification passes, including the six saved
+  numerical baselines, protocol/fallback lifecycle, continuous runs and scopes.
+- Browser checks cover the unchanged reference interactions plus an independent
+  ESM consumer editing/simulating a divider without prototype globals. Its native
+  value edit retains simulation time/run identity.
+- Older browser verification assumptions were made explicit: the candidate-worker
+  failure suite negotiates out of native updates to test the existing fallback;
+  initial-value edits are tested after an explicit Reset. Runtime policies were
+  not changed to satisfy those tests.
+
+## Workspace and source of truth
+
+Work is in the separate `circuitjs-new-sim` worktree on branch `new-sim`.
+The neighboring `circuitjs` checkout is `master`; changing Java editor files there
+does not change the experimental editor served from `build/engine-site` here.
+The shared core, React editor, symbol registry and worker sources live on the
+`new-sim` branch and use `origin/new-sim` for transfer between machines.
+`wires/` is tracked directly in the main repository.
+
+Recheck Git state before working. The user is actively editing `wires/src/App.tsx` and menu components. Preserve
+those changes alongside the new React slice; the earlier `editor.js` local-change
+note is stale. Nothing was deployed.
+
+Important runtime files:
+
+- `packages/circuit-core/`: reusable computational package; see its README for
+  namespaces, ownership, command formats and a frontend integration example.
+- `packages/circuit-runtime/`: dedicated-worker entry points.
+- `wires/src/editor/menu/`: generated hierarchy and placement availability.
+- `tools/engine-harness/`: development verification pages and compatibility
+  adapters used by retained regression tests; no application frontend.
+- `EngineEntryPoint.java`, `EngineCircuitUpdate.java`, `EngineOutputSupport.java`
+  and existing simulation/model classes: retained Java/GWT engine boundary.
+
+The document, physics behavior, IDs, compiler/worker contracts and regression
+fixtures are the durable investment. Keep their behavior while replacing the UI;
+there is no requirement to retain every prototype module/API unchanged.
+
+## Implemented checkpoint
+
+- **Engine:** Java/GWT host runs without the legacy UI, including a real dedicated
+  worker. Analysis/stamping/model equations remain CircuitJS's. Node harnesses
+  execute the generated worker bundle without a DOM shim.
+- **Documents:** schema v1, stable component/pin/wire/junction identities, explicit
+  connectivity, separate layout and stable-ID results. Canonical electrical
+  identity ignores layout and equivalent wire subdivision.
+- **Live simulation:** Run is the default. Guarded `updateCircuit` retains existing
+  element instances/time/dynamic state for supported same-document value,
+  topology and timestep edits. Explicit Reset, another document or fault recovery
+  still starts a fresh session. Changes that replace a device's own buffer retain
+  their native local-reset behavior. Invalid intermediate edits suspend solving
+  without losing Run intent; physical solver faults still need recovery.
+- **Catalog** includes 84 document/editor models, including text, box and line
+  graphics. The original menu labels and order include disabled entries for
+  pending models. See [PLAN.md](PLAN.md) for menu counts and
+  [LEGACY-CATALOG.md](LEGACY-CATALOG.md) for model and import coverage.
+- **Inspection:** continuous sampled scopes with multiple panes, voltage probes,
+  output readings and bounded recorder/audio capture. Scope acquisition survives
+  ordinary edits; Reset/document changes retain their intentional reset behavior.
+- **Editor harness:** save/open/autosave, transactions/undo, copy/paste, directional
+  selection, placement/value editing, source controls and the wiring rules below.
+
+## Latest interaction behavior
+
+[DRAGGING.md](DRAGGING.md) records the source references, API and focused checks.
+
+- The editor normalizes wires into independently selectable straight sections.
+  Collinear overlaps within an existing net merge; obsolete turnaround tails are
+  trimmed while intentional loose ends and probe anchors are preserved.
+- Pointer/G drag uses one persistent `createDragSession` graph, retaining original
+  segment directions and temporary bends between updates. X/Y movement and
+  reversals are processed separately; compatible corners/adjacent wires slide
+  before new segments are added. Fixed branches and pins have distinct rules.
+- **Rotation and X/Y flips detach the component, change its pose, then reconnect
+  only where the final pins land.** Original visible wire geometry stays put.
+  Reorienting during G discards temporary drag wiring and becomes a detached Move
+  from the original pickup position. M remains a detached move.
+- Clicking a floating wire end starts a new route; dragging it reconnects/moves
+  the existing end. Enter finishes loose wiring; Escape cancels the preview.
+- Dropping a wire section onto a component pin splits/attaches on commit. An
+  interior pin contact gets a three-way junction dot; an ordinary endpoint contact
+  connects without a spurious branch dot. Pointer drag and G share this behavior.
+- Deleting a component leaves its wires at the old pin locations. Shared branches
+  and voltage probes are retained at shared stubs; its current probe is removed.
+  Explicitly selected wires still delete normally.
+- These operations commit once and undo/redo atomically. Ordinary crossings do
+  not connect just because wires overlap; editor drop/draw commands create the
+  explicit graph connections. Native KiCad UI equivalence is not certified.
+
+## Verification checkpoint
+
+Recent implementation work passed the following focused model checks, including
+96 pin-drag cases, 120 rotation/flip cases, 55 incremental/reversal states and 400
+seeded drag offsets. Do not interpret older “all N suites” counts as today's test
+inventory or as a full-catalog browser claim.
+
+```sh
+node tools/test_drag_session.mjs
+node tools/test_pin_drag.mjs
+node tools/test_flip_connections.mjs
+node tools/test_wire_pin_contacts.mjs
+node tools/test_wire_sections.mjs
+node tools/test_editor_model.mjs
+node tools/test_symbol_orientation.mjs
+node tools/test_document_adapter.mjs
+```
+
+Historical Chrome checks exercised the retired prototype's pointer/keyboard
+workflows. Its three DOM-specific runners have now been removed; those results do
+not establish React browser parity. The computational entry command remains
+`node tools/check_core.mjs`. Browser verification of the retained engine harness
+remains available through `tools/verify_engine.py` when requested.
+
+A full `makeEngineSite` Java/GWT build passed during the drag replacement. Later
+JS-only changes were packaged with its existing compiled engine/worker artifacts;
+no additional Java changes were needed. The extraction also passed a fresh full
+Java/GWT/site build and repackaging. Those checks describe that code checkpoint,
+not newer local editor changes or the planned React migration.
+
+## Build and run
+
+Use this worktree, not the neighboring legacy checkout. Java 8, the Gradle 8.7
+wrapper, cached/downloadable dependencies, Python and modern Node are required.
+The current local session uses the following temporary JDK/cache; they are not
+repository dependencies and may need replacing on another machine:
+
+```sh
+cd ~/Documents/lv-labs/circuitjs-new-sim
+export JAVA_HOME="/private/tmp/circuitjs-jdk8/zulu8.98.0.111-ca-jdk8.0.512-macosx_aarch64/Contents/Home"
+export GRADLE_USER_HOME="/private/tmp/circuitjs-gradle"
+./gradlew makeEngineSite --console plain
+python3 -m http.server 8765 --bind 127.0.0.1 --directory build/engine-site
+```
+
+This server hosts the engine verification harness, not the React editor.
+Run `pnpm --dir wires dev` and use its printed URL for the application. No server is guaranteed to be
+running; temporary verification servers have been stopped. Sandbox Gradle failures
+opening local coordination sockets can require running the build outside that
+sandbox. `tools/build_engine_cached.py` is an offline fallback when the required
+GWT jars and a local JDK already exist; it does not fetch dependencies.
+
+After checking out `new-sim` on another machine, build the worker, then run
+`pnpm --dir wires install --frozen-lockfile` and `pnpm --dir wires dev`.
+See the [React editor README](../../wires/src/editor/README.md) for the preview
+entry point and build commands. Use Save/Open JSON to transfer designs between
+machines. The worker build and browser autosave are local.
+
+## Reading order and remaining limits
+
+1. [PLAN.md](PLAN.md) and [UPSTREAM-ARCHITECTURE.md](UPSTREAM-ARCHITECTURE.md): current priorities, upstream audit and proposed maintenance architecture.
+2. [DRAGGING.md](DRAGGING.md): implemented geometry/interaction rules.
+3. [DOCUMENT-ADAPTER.md](DOCUMENT-ADAPTER.md), [COORDINATOR.md](COORDINATOR.md),
+   [WORKER-PROTOCOL.md](WORKER-PROTOCOL.md), [RUN-AND-LIVE-EDITS.md](RUN-AND-LIVE-EDITS.md):
+   implemented contracts, with later updates superseding their initial slices.
+4. [EDITOR-DESIGN.md](EDITOR-DESIGN.md), [EDITOR-PROTOTYPE.md](EDITOR-PROTOTYPE.md):
+   document ownership/design and the reference UI. Older dated checkpoints remain
+   history where explicitly marked.
+5. [LEGACY-CATALOG.md](LEGACY-CATALOG.md): supported versus pending library entries.
+
+No general legacy text importer/example chooser exists. Bus/hierarchical objects
+and many original variants remain outside the current document model. Large-scene
+performance, broad browser/platform coverage, full workspace portability and desktop packaging remain open. Scope layout is
+now saved with the circuit. The shared-core extraction is implemented;
+the latest priority is the cleanup/upstream-maintenance discussion near the top,
+followed by continued compatibility work.
+The existing behavior tests and simulator remain the reference throughout.

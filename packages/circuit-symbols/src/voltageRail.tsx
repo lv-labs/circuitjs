@@ -3,6 +3,8 @@ import type { SymbolProps } from "../svg";
 
 export const kind = "voltageRail";
 export const metadata = {
+  // Original 16-unit artwork, scaled to the 50-unit sheet grid.
+  drawingScale: 3.125,
   prefix: "V",
   name: "DC source (1 terminal)",
   pins: {

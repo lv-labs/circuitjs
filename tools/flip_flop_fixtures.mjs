@@ -1,4 +1,4 @@
-import '../experiments/engine/editor-model.js';
+import {editing as CircuitEditorModel} from '../packages/circuit-core/index.mjs';
 export const flipFlopKinds=['dFlipFlop','jkFlipFlop','tFlipFlop'];
 export function flipFlopCircuit(kind,parameters={},levels={}){
   const M=CircuitEditorModel,d=M.empty();d.id='flip-flop-'+kind;
@@ -14,5 +14,5 @@ export function flipFlopCircuit(kind,parameters={},levels={}){
   for(const pin of inputs){rail('in'+pin,levels[pin]??0);wire('in'+pin,'p','part',pin);}
   rail('clock',levels.clock??0);wire('clock','p','part','clock');
   for(const pin of ['Q','Qn']){add('out'+pin,'output',{showVoltage:true});wire('part',pin,'out'+pin,'in');}
-  return d;
+  return CircuitEditorModel.alignGrid(d);
 }

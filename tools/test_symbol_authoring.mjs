@@ -1,16 +1,9 @@
 import assert from "node:assert/strict";
-import { createRequire } from "node:module";
 import { readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
-import vm from "node:vm";
 import { catalog, geometry } from "../packages/circuit-core/index.mjs";
-
-const require = createRequire(
-  new URL("../wires/package.json", import.meta.url),
-);
-const ts = require("typescript");
-const React = require("react");
-const { renderToStaticMarkup } = require("react-dom/server");
+import {createTypeScriptLoader, React, renderToStaticMarkup} from './typescript_module.mjs';
+const load=createTypeScriptLoader();
 const check = spawnSync(
   process.execPath,
   ["wires/scripts/generate-symbols.mjs", "--check"],
@@ -19,39 +12,16 @@ const check = spawnSync(
 assert.equal(check.status, 0, check.stderr);
 
 const root = new URL("../packages/circuit-symbols/", import.meta.url);
-const modules = new Map();
-function load(file) {
-  if (modules.has(file.href)) return modules.get(file.href);
-  const source = readFileSync(file, "utf8");
-  const output = ts.transpileModule(source, {
-    fileName: file.pathname,
-    compilerOptions: {
-      module: ts.ModuleKind.CommonJS,
-      jsx: ts.JsxEmit.ReactJSX,
-    },
-  }).outputText;
-  const exports = {};
-  modules.set(file.href, exports);
-  vm.runInNewContext(
-    output,
-    {
-      exports,
-      require: (name) =>
-        name.startsWith(".")
-          ? load(new URL(name + ".tsx", file))
-          : require(name),
-    },
-    { filename: file.pathname },
-  );
-  return exports;
-}
-
 const symbols = load(new URL("index.ts", root));
 assert.deepEqual(Object.keys(symbols), Object.keys(catalog.definitions));
 for (const [kind, definition] of Object.entries(catalog.definitions)) {
   const authored = load(new URL(`src/${kind}.tsx`, root));
   assert.equal(symbols[kind], authored.Symbol);
-  assert.deepEqual(JSON.parse(JSON.stringify(authored.metadata)), definition);
+  const drawingScale = authored.metadata.drawingScale ?? 1;
+  const expected = JSON.parse(JSON.stringify(authored.metadata));
+  expected.pins = Object.fromEntries(Object.entries(expected.pins).map(([name, pin]) => [name, pin.map(value => value * drawingScale)]));
+  if (authored.output) expected.drawingScale = drawingScale;
+  assert.deepEqual(expected, definition);
   const render = (props) =>
     renderToStaticMarkup(React.createElement(symbols[kind], props));
   assert.ok(render(), `${kind}: empty symbol`);
@@ -76,8 +46,8 @@ for (const [kind, definition] of Object.entries(catalog.definitions)) {
       };
       for (const [pinId, [x, y]] of Object.entries(authored.metadata.pins)) {
         const [rx, ry] = geometry.rotateOffset(
-          x * (mirror ? -1 : 1),
-          y,
+          x * drawingScale * (mirror ? -1 : 1),
+          y * drawingScale,
           rotation,
         );
         assert.deepEqual(

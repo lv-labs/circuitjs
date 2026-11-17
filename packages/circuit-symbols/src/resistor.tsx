@@ -6,8 +6,8 @@ export const metadata = {
   prefix: "R",
   name: "Resistor",
   pins: {
-    a: [-24, 0],
-    b: [24, 0],
+    a: [0, -100],
+    b: [0, 100],
   },
   parameters: {
     resistance: 1000,
@@ -17,9 +17,9 @@ export const metadata = {
 export function Symbol() {
   return (
     <>
-      <Lead from={metadata.pins.a} to={[-24, 0]} />
-      <Lead from={metadata.pins.b} to={[24, 0]} />
-      <path d="M-24-8H24V8H-24Z" />
+      <Lead from={metadata.pins.a} to={[0, -70]} />
+      <Lead from={metadata.pins.b} to={[0, 70]} />
+      <rect x={-30} y={-70} width={60} height={140} />
     </>
   );
 }

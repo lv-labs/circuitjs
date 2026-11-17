@@ -1,0 +1,41 @@
+name: React app and simulation engine
+
+on:
+  push:
+    branches: [new-sim]
+  pull_request:
+    branches: [master, dev, new-sim]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: react-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '8'
+          distribution: temurin
+      - uses: gradle/actions/setup-gradle@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+          cache-dependency-path: wires/pnpm-lock.yaml
+      - name: Install React dependencies
+        run: pnpm deps:install
+      - name: Compile engine and assemble verification assets
+        run: pnpm engine:build
+      - name: Check core, React rendering and packaged worker
+        run: pnpm check

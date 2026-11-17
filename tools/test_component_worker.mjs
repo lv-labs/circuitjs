@@ -1,10 +1,8 @@
+import {editing as CircuitEditorModel, adapter as CircuitDocumentAdapter, protocol as CircuitRevisionProtocol} from '../packages/circuit-core/index.mjs';
 // Real Node worker thread driving the production adapter and revision protocol.
 // This checks the computational worker path, not browser APIs or UI behavior.
 import assert from 'node:assert/strict';
 import {Worker,isMainThread,parentPort} from 'node:worker_threads';
-import '../experiments/engine/editor-model.js';
-import '../experiments/engine/document-adapter.js';
-import '../experiments/engine/revision-protocol.js';
 import {createEngine} from './engine_node_runtime.mjs';
 import {expansionKinds,expansionCircuit} from './component_expansion_fixtures.mjs';
 import {passiveSwitchKinds,passiveSwitchCircuit} from './passive_switch_fixtures.mjs';

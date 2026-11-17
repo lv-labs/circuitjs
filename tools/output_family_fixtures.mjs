@@ -1,5 +1,6 @@
-import '../experiments/engine/editor-model.js';
-export const outputFamilyKinds=Object.keys(CircuitEditorModel.outputSpecs);
+import {editing as CircuitEditorModel} from '../packages/circuit-core/index.mjs';
+// This fixture covers the output/control family; other models have their own circuits.
+export const outputFamilyKinds=['variableVoltage','lamp','text','box','line','labeledNode','voltmeter','ohmmeter','ammeter','wattmeter','testPoint','decimalDisplay','instructionDisplay','ledArray','dataExport','audioOutput','stopTrigger','dcMotor','threePhaseMotor'];
 export function outputFamilyCircuit(kind,parameters={},voltage=5){
  const M=CircuitEditorModel,d=M.empty();d.id='outputs-'+kind;
  const add=(id,kind,parameters)=>{d.electrical.components.push({id,kind,modelVersion:1,reference:id,parameters});d.layout.components[id]={x:d.electrical.components.length*512,y:0,rotation:0,mirror:false};};
@@ -24,5 +25,5 @@ export function outputFamilyCircuit(kind,parameters={},voltage=5){
  }else{
   add('vin','voltageRail',{waveform:{kind:'dc',voltage}});wire('vin','p','part','in');
  }
- return d;
+ return CircuitEditorModel.alignGrid(d);
 }

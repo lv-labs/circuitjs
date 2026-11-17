@@ -1,5 +1,5 @@
+import {editing as CircuitEditorModel, adapter as CircuitDocumentAdapter} from '../packages/circuit-core/index.mjs';
 import assert from 'node:assert/strict';
-import '../experiments/engine/document-adapter.js';
 import {createEngine} from './engine_node_runtime.mjs';
 import {logicDisplayKinds,logicDisplayCircuit} from './logic_display_fixtures.mjs';
 const M=CircuitEditorModel,A=CircuitDocumentAdapter,engine=createEngine(),session=A.createSession(engine);
@@ -15,7 +15,7 @@ for(const kind of logicDisplayKinds){
   for(const rotation of [0,90,180,270])for(const mirror of [false,true]){
     const rotated=structuredClone(d);Object.assign(rotated.layout.components.part,{rotation,mirror});
     const pinId=Object.keys(M.definitions[kind].pins)[0],point=M.pin(rotated,{kind:'pin',componentId:'part',pinId});
-    assert.equal(point.x%16,0);assert.equal(Math.abs(point.y%16),0);
+    assert.equal(point.x%M.grid,0);assert.equal(Math.abs(point.y%M.grid),0);
     assert.equal(A.compile(rotated).canonical,compiled.canonical);
   }
   const model=M.create(d),before=model.document;

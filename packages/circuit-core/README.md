@@ -29,7 +29,7 @@ package neither constructs a Worker nor reads `window`, DOM or storage. Modern
 
 | Namespace / source | Responsibility |
 | --- | --- |
-| `catalog` / `catalog.js` | All 65 component definitions, stable pin names/positions, defaults, placement presets, output field schemas and legacy mapping metadata |
+| `catalog` / `catalog.js` | Component definitions, stable pin names/positions, defaults, placement presets, output field schemas and legacy mapping metadata |
 | `geometry` / `geometry.js` | Grid/world-coordinate transforms, routes, bounds, hit testing, selection geometry and probe reference helpers |
 | `document` / `document.js` | Saved graph/layout validation and empty schema-v1 document creation |
 | `history` / `history.js` | Generic transactional snapshots, bounded undo/redo and change notifications |
@@ -41,12 +41,12 @@ package neither constructs a Worker nor reads `window`, DOM or storage. Modern
 | `signals` / `signals.js` | Sample history, channel identity, envelopes and scale calculations; no scope DOM |
 | `browserTransport` / `browser-transport.js` | Optional request/reply Worker transport with timeouts and session identity |
 
-Symbol SVG, menus/palette order, forms, camera event handling, autosave and HTML/CSS
-stay in `experiments/engine`. Legacy files such as `editor-model.js`,
-`document-adapter.js`, `scope-model.js`, `revision-protocol.js`,
-`simulation-coordinator.js` and `revision-client.js` are compatibility adapters.
-Their old globals remain available to the reference UI; new frontends do not need
-those adapters.
+Symbol SVG lives in `packages/circuit-symbols`; the active editor, forms, camera,
+autosave and menu metadata live in `wires/src/editor`. Worker entry points live in
+`packages/circuit-runtime`. The old JavaScript editor has been removed.
+Node regression tests import this package directly. Development-only browser
+harness adapters live in `tools/engine-harness`; application code does not depend
+on them.
 
 `catalog.definitions[kind].pins` describes display/world pin geometry.
 `catalog.simulationModels[kind].postOrder` separately preserves native engine post

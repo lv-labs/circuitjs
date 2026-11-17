@@ -1,0 +1,18 @@
+{
+  "name": "lv-labs-circuitjs",
+  "private": true,
+  "packageManager": "pnpm@10.30.3",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "pnpm --dir wires dev",
+    "engine:build": "./gradlew makeEngineSite --console plain",
+    "build": "pnpm engine:build && pnpm --dir wires build",
+    "check:core": "node tools/check_core.mjs",
+    "check:react": "pnpm --dir wires check",
+    "check": "pnpm check:core && pnpm check:react",
+    "verify": "pnpm engine:build && pnpm check",
+    "deps:install": "pnpm --dir wires install --frozen-lockfile"
+  }
+}

@@ -2,6 +2,8 @@ import { Lead } from "../svg";
 
 export const kind = "zener";
 export const metadata = {
+  // Original 16-unit artwork, scaled to the 50-unit sheet grid.
+  drawingScale: 3.125,
   prefix: "D",
   name: "Zener diode",
   pins: {
@@ -9,8 +11,7 @@ export const metadata = {
     cathode: [48, 0],
   },
   parameters: {
-    forwardVoltage: 0.805904783,
-    breakdownVoltage: 5.6,
+    model: "default-zener",
   },
 } as const;
 

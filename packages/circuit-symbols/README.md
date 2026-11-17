@@ -32,3 +32,20 @@ The regression check covers the registry, generated definitions, SVG lead
 endpoints, world pin positions across all rotations and reflections, and source
 presets. Install `wires` dependencies before running it or the full computational
 suite.
+
+## Sheet units
+
+The placement and visible grid are 50 units. Design new symbol artwork in
+10-unit increments, with pins on the 50-unit grid where practical. The resistor
+uses these sheet units directly.
+
+Older symbol files have `metadata.drawingScale: 3.125` (50 / 16). Their SVG and
+local pin metadata remain in original artwork coordinates. The sheet applies
+this scale to the drawing; catalog generation applies it to electrical pin
+coordinates. Stroke widths, sheet labels, wire markers and probes use sheet
+units. When redrawing an older symbol in 50/10 units, remove `drawingScale` and
+update its local pins and artwork together, then regenerate the catalog.
+
+Text, box and line annotations use native sheet-unit dimensions. Their default
+sizes have been increased to match the new grid. Saved circuit positions and
+explicit annotation sizes are not automatically resized by this authoring change.

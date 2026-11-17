@@ -1,4 +1,4 @@
-import { UprightText } from "../svg";
+import { Upright, UprightText } from "../svg";
 import type { SymbolProps } from "../svg";
 
 export const kind = "text";
@@ -8,7 +8,8 @@ export const metadata = {
   pins: {},
   parameters: {
     text: "Text",
-    size: 18,
+    size: 56.25,
+    drawBar: false,
   },
 } as const;
 
@@ -20,12 +21,13 @@ export const output = {
       type: "string",
       maxLength: 4096,
     },
+    drawBar: { label: "Draw bar on top", type: "boolean", optional: true },
     size: {
       label: "Font size",
       type: "number",
       min: 8,
-      max: 96,
-      integer: true,
+      max: 300,
+      
     },
   },
   sign: null,
@@ -46,6 +48,8 @@ export function Symbol({
   const x = -width / 2;
   const y = -height / 2 + size;
   return (
+    <>
+    {parameters.drawBar === true && <Upright pose={pose}><path d={`M${x} ${-height/2}H${x+width}`} /></Upright>}
     <UprightText
       pose={pose}
       x={x}
@@ -59,5 +63,6 @@ export function Symbol({
         </tspan>
       ))}
     </UprightText>
+    </>
   );
 }

@@ -1,7 +1,7 @@
+import {adapter as CircuitDocumentAdapter} from '../packages/circuit-core/index.mjs';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import '../experiments/engine/document-adapter.js';
-const {compile, createSession} = globalThis.CircuitDocumentAdapter;
+const {compile, createSession} = CircuitDocumentAdapter;
 const document = JSON.parse(await readFile(new URL('../docs/new-simulator/examples/voltage-divider.json', import.meta.url)));
 const original = compile(document);
 assert.equal(original.nets.length, 3);

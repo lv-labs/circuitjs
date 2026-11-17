@@ -1,4 +1,4 @@
-import { Meter } from "../svg";
+import { Meter, UprightText } from "../svg";
 import type { SymbolProps } from "../svg";
 
 export const kind = "voltmeter";
@@ -6,8 +6,8 @@ export const metadata = {
   prefix: "VM",
   name: "Voltmeter / scope probe",
   pins: {
-    a: [-48, 0],
-    b: [48, 0],
+    a: [-100, 0],
+    b: [100, 0],
   },
   parameters: {
     mode: 0,
@@ -35,5 +35,11 @@ export const output = {
 };
 
 export function Symbol({ pose }: SymbolProps) {
-  return <Meter pins={metadata.pins} letter="V" pose={pose} />;
+  return (
+    <>
+      <Meter pins={metadata.pins} letter="V" pose={pose} />
+      <UprightText pose={pose} x={-80} y={-30} textAnchor="middle" dominantBaseline="central" fontSize={36}>+</UprightText>
+      <UprightText pose={pose} x={80} y={-30} textAnchor="middle" dominantBaseline="central" fontSize={36}>−</UprightText>
+    </>
+  );
 }

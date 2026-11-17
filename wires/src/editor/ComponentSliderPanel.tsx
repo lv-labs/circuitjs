@@ -3,8 +3,12 @@ import { GripIcon, XIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import type { Component, Point } from "./core"
+import type { SliderItem } from "./SliderList"
+import { numericProperties } from "./PropertySliders"
+import type { PropertySlider } from "./PropertySliders"
+import { format } from "./componentValue"
 import { SliderList } from "./SliderList"
-import { componentSliders } from "./componentSliders"
+import { componentSliders, potPositionRange } from "./componentSliders"
 import type { SliderAdjustment, SliderKind } from "./componentSliders"
 
 const orderStorageKey = "circuit-editor.slider-orders.v1"
@@ -56,7 +60,13 @@ function clampPosition(card: HTMLDivElement, point: Point): Point {
 }
 
 export function ComponentSliderPanel({
+  propertySliders,
+  allComponents,
+  onPropertyPreview,
+  onEditPropertySlider,
+  onRemovePropertySlider,
   open,
+  dismissible,
   focusOnOpen,
   documentId,
   persistOrder,
@@ -67,7 +77,17 @@ export function ComponentSliderPanel({
   onCancelAdjustment,
   onClose,
 }: {
+  propertySliders: PropertySlider[]
+  allComponents: Component[]
+  onPropertyPreview: (
+    component: Component,
+    field: string,
+    value: number
+  ) => void
+  onEditPropertySlider: (config: PropertySlider) => void
+  onRemovePropertySlider: (id: string) => void
   open: boolean
+  dismissible: boolean
   focusOnOpen: boolean
   documentId: string
   persistOrder: boolean
@@ -95,18 +115,64 @@ export function ComponentSliderPanel({
     }
     return names
   }, [components])
+  const items = useMemo<SliderItem[]>(() => {
+    const propertyItems = propertySliders.flatMap((config): SliderItem[] => {
+      const component = allComponents.find(
+        ({ id }) => id === config.componentId
+      )
+      const value =
+        component &&
+        numericProperties(component.parameters).find(
+          ([field]) => field === config.field
+        )?.[1]
+      if (!component || value === undefined) return []
+      return [
+        {
+          ...config,
+          id: `property:${config.id}`,
+          component,
+          value,
+          config,
+          displayValue: (number) => String(Number(number.toPrecision(5))),
+        },
+      ]
+    })
+    return [
+      ...propertyItems,
+      ...components.map((component): SliderItem => {
+        const isVoltage = component.kind === "variableVoltage"
+        const { field } = componentSliders[component.kind]
+        const min = isVoltage ? Number(component.parameters.minVoltage) : potPositionRange.min
+        const max = isVoltage ? Number(component.parameters.maxVoltage) : potPositionRange.max
+        return {
+          id: component.id,
+          component,
+          field,
+          label: sliderNames.get(component.id) ?? "Slider",
+          min,
+          max,
+          step: Math.max(Number.MIN_VALUE, (max - min) / 1000),
+          value: Number(component.parameters[field]),
+          displayValue: (number) =>
+            isVoltage
+              ? format(number, "V")
+              : `${Number((number * 100).toPrecision(4))}%`,
+        }
+      }),
+    ]
+  }, [propertySliders, allComponents, components, sliderNames])
   const order = orders.get(documentId)
-  const orderedComponents = useMemo(() => {
-    if (!order) return components
+  const orderedItems = useMemo(() => {
+    if (!order) return items
     const positions = new Map(order.map((id, index) => [id, index]))
-    return [...components].sort(
+    return [...items].sort(
       (a, b) =>
         (positions.get(a.id) ?? order.length) -
         (positions.get(b.id) ?? order.length)
     )
-  }, [components, order])
+  }, [items, order])
   function reorder(id: string, index: number) {
-    const visibleIds = orderedComponents.map((component) => component.id)
+    const visibleIds = orderedItems.map((item) => item.id)
     const previousIndex = visibleIds.indexOf(id)
     if (previousIndex < 0 || previousIndex === index) return
     visibleIds.splice(previousIndex, 1)
@@ -184,7 +250,8 @@ export function ComponentSliderPanel({
         if (event.key === "Escape") {
           event.preventDefault()
           event.stopPropagation()
-          onClose()
+          onCancelAdjustment()
+          if (dismissible) onClose()
         }
       }}
     >
@@ -238,30 +305,43 @@ export function ComponentSliderPanel({
             <span id={title}>Sliders</span>
           </Button>
         </CardTitle>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          aria-label="Close sliders panel"
-          onClick={onClose}
-        >
-          <XIcon aria-hidden="true" />
-        </Button>
+        {dismissible && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Close sliders panel"
+            onClick={onClose}
+          >
+            <XIcon aria-hidden="true" />
+          </Button>
+        )}
       </CardHeader>
       <CardContent className="min-h-0 overflow-y-auto pb-3">
-        {orderedComponents.length ? (
+        {orderedItems.length ? (
           <SliderList
             key={documentId}
-            components={orderedComponents}
-            names={sliderNames}
+            items={orderedItems}
             adjustment={adjustment}
-            onPreview={onPreview}
+            onPreview={(item, value) => {
+              if (item.config)
+                onPropertyPreview(item.component, item.field, value)
+              else
+                onPreview(
+                  item.component.kind as SliderKind,
+                  item.component.id,
+                  value
+                )
+            }}
             onCommit={onCommit}
             onReorder={reorder}
+            onEdit={onEditPropertySlider}
+            onRemove={onRemovePropertySlider}
           />
         ) : (
           <p className="py-1 text-muted-foreground">
-            Add a variable voltage source or potentiometer to use this panel.
+            Right-click a component and choose Add property slider to add a
+            control.
           </p>
         )}
       </CardContent>

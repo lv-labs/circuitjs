@@ -7,10 +7,11 @@
     "variableVoltage": {
       "name": "Variable voltage",
       "prefix": "V",
+      "drawingScale": 3.125,
       "pins": {
         "p": [
           0,
-          32
+          100
         ]
       },
       "type": "172",
@@ -48,13 +49,14 @@
     "lamp": {
       "name": "Lamp",
       "prefix": "LP",
+      "drawingScale": 3.125,
       "pins": {
         "a": [
-          -48,
+          -150,
           0
         ],
         "b": [
-          48,
+          150,
           0
         ]
       },
@@ -104,6 +106,7 @@
     "text": {
       "name": "Text",
       "prefix": "TXT",
+      "drawingScale": 1,
       "pins": {},
       "type": "x",
       "fields": {
@@ -113,24 +116,31 @@
           "maxLength": 4096,
           "default": "Text"
         },
+        "drawBar": {
+          "label": "Draw bar on top",
+          "type": "boolean",
+          "optional": true,
+          "default": false
+        },
         "size": {
           "label": "Font size",
           "type": "number",
           "min": 8,
-          "max": 96,
-          "integer": true,
-          "default": 18
+          "max": 300,
+          "default": 56.25
         }
       },
       "parameters": {
         "text": "Text",
-        "size": 18
+        "size": 56.25,
+        "drawBar": false
       },
       "sign": null
     },
     "box": {
       "name": "Box",
       "prefix": "BOX",
+      "drawingScale": 1,
       "pins": {},
       "type": "b",
       "fields": {
@@ -139,25 +149,26 @@
           "type": "number",
           "min": 16,
           "max": 2048,
-          "default": 128
+          "default": 400
         },
         "height": {
           "label": "Height · canvas units",
           "type": "number",
           "min": 16,
           "max": 2048,
-          "default": 96
+          "default": 300
         }
       },
       "parameters": {
-        "width": 128,
-        "height": 96
+        "width": 400,
+        "height": 300
       },
       "sign": null
     },
     "line": {
       "name": "Line",
       "prefix": "LINE",
+      "drawingScale": 1,
       "pins": {},
       "type": "423",
       "fields": {
@@ -166,7 +177,7 @@
           "type": "number",
           "min": 16,
           "max": 2048,
-          "default": 128
+          "default": 400
         },
         "height": {
           "label": "Height · canvas units",
@@ -177,7 +188,7 @@
         }
       },
       "parameters": {
-        "width": 128,
+        "width": 400,
         "height": 0
       },
       "sign": null
@@ -185,9 +196,10 @@
     "labeledNode": {
       "name": "Labeled node",
       "prefix": "NET",
+      "drawingScale": 3.125,
       "pins": {
         "in": [
-          -48,
+          -150,
           0
         ]
       },
@@ -208,13 +220,14 @@
     "voltmeter": {
       "name": "Voltmeter / scope probe",
       "prefix": "VM",
+      "drawingScale": 1,
       "pins": {
         "a": [
-          -48,
+          -100,
           0
         ],
         "b": [
-          48,
+          100,
           0
         ]
       },
@@ -244,13 +257,14 @@
     "ohmmeter": {
       "name": "Ohmmeter",
       "prefix": "OM",
+      "drawingScale": 1,
       "pins": {
         "a": [
-          -48,
+          -100,
           0
         ],
         "b": [
-          48,
+          100,
           0
         ]
       },
@@ -279,13 +293,14 @@
     "ammeter": {
       "name": "Ammeter",
       "prefix": "AM",
+      "drawingScale": 1,
       "pins": {
         "a": [
-          -48,
+          -100,
           0
         ],
         "b": [
-          48,
+          100,
           0
         ]
       },
@@ -308,22 +323,23 @@
     "wattmeter": {
       "name": "Wattmeter",
       "prefix": "WM",
+      "drawingScale": 1,
       "pins": {
         "returnIn": [
-          -48,
-          16
+          -100,
+          50
         ],
         "returnOut": [
-          48,
-          16
+          100,
+          50
         ],
         "currentIn": [
-          -48,
-          -16
+          -100,
+          -50
         ],
         "currentOut": [
-          48,
-          -16
+          100,
+          -50
         ]
       },
       "type": "420",
@@ -345,9 +361,10 @@
     "testPoint": {
       "name": "Test point",
       "prefix": "TP",
+      "drawingScale": 3.125,
       "pins": {
         "in": [
-          -48,
+          -150,
           0
         ]
       },
@@ -377,22 +394,23 @@
     "decimalDisplay": {
       "name": "Decimal display (4 bit)",
       "prefix": "DISP",
+      "drawingScale": 3.125,
       "pins": {
         "I0": [
-          -48,
-          48
+          -150,
+          150
         ],
         "I1": [
-          -48,
-          16
+          -150,
+          50
         ],
         "I2": [
-          -48,
-          -16
+          -150,
+          -50
         ],
         "I3": [
-          -48,
-          -48
+          -150,
+          -150
         ]
       },
       "type": "419",
@@ -414,22 +432,23 @@
     "instructionDisplay": {
       "name": "Instruction display (4 bit)",
       "prefix": "INS",
+      "drawingScale": 3.125,
       "pins": {
         "I0": [
-          -48,
-          48
+          -150,
+          150
         ],
         "I1": [
-          -48,
-          16
+          -150,
+          50
         ],
         "I2": [
-          -48,
-          -16
+          -150,
+          -50
         ],
         "I3": [
-          -48,
-          -48
+          -150,
+          -150
         ]
       },
       "type": "instruction",
@@ -455,70 +474,71 @@
     "ledArray": {
       "name": "LED array (8 × 8)",
       "prefix": "LA",
+      "drawingScale": 3.125,
       "pins": {
         "C0": [
-          -112,
-          160
+          -350,
+          500
         ],
         "C1": [
-          -80,
-          160
+          -250,
+          500
         ],
         "C2": [
-          -48,
-          160
+          -150,
+          500
         ],
         "C3": [
-          -16,
-          160
+          -50,
+          500
         ],
         "C4": [
-          16,
-          160
+          50,
+          500
         ],
         "C5": [
-          48,
-          160
+          150,
+          500
         ],
         "C6": [
-          80,
-          160
+          250,
+          500
         ],
         "C7": [
-          112,
-          160
+          350,
+          500
         ],
         "R0": [
-          -160,
-          -112
+          -500,
+          -350
         ],
         "R1": [
-          -160,
-          -80
+          -500,
+          -250
         ],
         "R2": [
-          -160,
-          -48
+          -500,
+          -150
         ],
         "R3": [
-          -160,
-          -16
+          -500,
+          -50
         ],
         "R4": [
-          -160,
-          16
+          -500,
+          50
         ],
         "R5": [
-          -160,
-          48
+          -500,
+          150
         ],
         "R6": [
-          -160,
-          80
+          -500,
+          250
         ],
         "R7": [
-          -160,
-          112
+          -500,
+          350
         ]
       },
       "type": "405",
@@ -529,9 +549,10 @@
     "dataExport": {
       "name": "Data export",
       "prefix": "DATA",
+      "drawingScale": 3.125,
       "pins": {
         "in": [
-          -48,
+          -150,
           0
         ]
       },
@@ -554,9 +575,10 @@
     "audioOutput": {
       "name": "Audio output",
       "prefix": "AUDIO",
+      "drawingScale": 3.125,
       "pins": {
         "in": [
-          -48,
+          -150,
           0
         ]
       },
@@ -592,9 +614,10 @@
     "stopTrigger": {
       "name": "Stop trigger",
       "prefix": "TRIG",
+      "drawingScale": 3.125,
       "pins": {
         "in": [
-          -48,
+          -150,
           0
         ]
       },
@@ -630,13 +653,14 @@
     "dcMotor": {
       "name": "DC motor",
       "prefix": "M",
+      "drawingScale": 3.125,
       "pins": {
         "a": [
-          -48,
+          -150,
           0
         ],
         "b": [
-          48,
+          150,
           0
         ]
       },
@@ -705,30 +729,31 @@
     "threePhaseMotor": {
       "name": "3-phase motor",
       "prefix": "M",
+      "drawingScale": 3.125,
       "pins": {
         "U1": [
-          -48,
-          -32
+          -150,
+          -100
         ],
         "U2": [
-          48,
-          32
+          150,
+          100
         ],
         "V1": [
-          -48,
+          -150,
           0
         ],
         "V2": [
-          48,
+          150,
           0
         ],
         "W1": [
-          -48,
-          32
+          -150,
+          100
         ],
         "W2": [
-          48,
-          -32
+          150,
+          -100
         ]
       },
       "type": "427",
@@ -790,10 +815,11 @@
     "sweepSource": {
       "name": "A/C sweep",
       "prefix": "V",
+      "drawingScale": 3.125,
       "pins": {
         "p": [
           0,
-          32
+          100
         ]
       },
       "type": "170",
@@ -846,10 +872,11 @@
     "antennaSource": {
       "name": "Antenna",
       "prefix": "V",
+      "drawingScale": 3.125,
       "pins": {
         "p": [
           0,
-          32
+          100
         ]
       },
       "type": "A",
@@ -860,10 +887,11 @@
     "amSource": {
       "name": "AM source",
       "prefix": "V",
+      "drawingScale": 3.125,
       "pins": {
         "p": [
           0,
-          32
+          100
         ]
       },
       "type": "200",
@@ -897,10 +925,11 @@
     "fmSource": {
       "name": "FM source",
       "prefix": "V",
+      "drawingScale": 3.125,
       "pins": {
         "p": [
           0,
-          32
+          100
         ]
       },
       "type": "201",
@@ -941,10 +970,11 @@
     "noiseSource": {
       "name": "Noise source",
       "prefix": "V",
+      "drawingScale": 3.125,
       "pins": {
         "p": [
           0,
-          32
+          100
         ]
       },
       "type": "R",
@@ -970,13 +1000,14 @@
     "schmittTrigger": {
       "name": "Schmitt trigger",
       "prefix": "U",
+      "drawingScale": 3.125,
       "pins": {
         "input": [
-          -48,
+          -150,
           0
         ],
         "out": [
-          48,
+          150,
           0
         ]
       },
@@ -1021,13 +1052,14 @@
     "invertingSchmittTrigger": {
       "name": "Inverting Schmitt trigger",
       "prefix": "U",
+      "drawingScale": 3.125,
       "pins": {
         "input": [
-          -48,
+          -150,
           0
         ],
         "out": [
-          48,
+          150,
           0
         ]
       },
@@ -1072,13 +1104,14 @@
     "sparkGap": {
       "name": "Spark gap",
       "prefix": "R",
+      "drawingScale": 3.125,
       "pins": {
         "a": [
-          -48,
+          -150,
           0
         ],
         "b": [
-          48,
+          150,
           0
         ]
       },
@@ -1120,13 +1153,14 @@
     "memristor": {
       "name": "Memristor",
       "prefix": "R",
+      "drawingScale": 3.125,
       "pins": {
         "a": [
-          -48,
+          -150,
           0
         ],
         "b": [
-          48,
+          150,
           0
         ]
       },
@@ -1175,13 +1209,14 @@
     "tunnelDiode": {
       "name": "Tunnel diode",
       "prefix": "D",
+      "drawingScale": 3.125,
       "pins": {
         "anode": [
-          -48,
+          -150,
           0
         ],
         "cathode": [
-          48,
+          150,
           0
         ]
       },
@@ -1193,13 +1228,14 @@
     "fuse": {
       "name": "Fuse",
       "prefix": "R",
+      "drawingScale": 3.125,
       "pins": {
         "a": [
-          -48,
+          -150,
           0
         ],
         "b": [
-          48,
+          150,
           0
         ]
       },
@@ -1227,13 +1263,14 @@
     "photoresistor": {
       "name": "Photoresistor",
       "prefix": "R",
+      "drawingScale": 3.125,
       "pins": {
         "a": [
-          -48,
+          -150,
           0
         ],
         "b": [
-          48,
+          150,
           0
         ]
       },
@@ -1255,13 +1292,14 @@
     "thermistor": {
       "name": "NTC thermistor",
       "prefix": "R",
+      "drawingScale": 3.125,
       "pins": {
         "a": [
-          -48,
+          -150,
           0
         ],
         "b": [
-          48,
+          150,
           0
         ]
       },
@@ -1311,18 +1349,19 @@
     "scr": {
       "name": "SCR",
       "prefix": "D",
+      "drawingScale": 3.125,
       "pins": {
         "anode": [
-          -48,
+          -150,
           0
         ],
         "cathode": [
-          48,
+          150,
           0
         ],
         "gate": [
-          16,
-          32
+          50,
+          100
         ]
       },
       "type": "177",
@@ -1356,13 +1395,14 @@
     "diac": {
       "name": "DIAC",
       "prefix": "D",
+      "drawingScale": 3.125,
       "pins": {
         "a": [
-          -48,
+          -150,
           0
         ],
         "b": [
-          48,
+          150,
           0
         ]
       },
@@ -1404,18 +1444,19 @@
     "triac": {
       "name": "TRIAC",
       "prefix": "D",
+      "drawingScale": 3.125,
       "pins": {
         "mt2": [
-          -48,
+          -150,
           0
         ],
         "mt1": [
-          48,
+          150,
           0
         ],
         "gate": [
-          16,
-          32
+          50,
+          100
         ]
       },
       "type": "206",
@@ -1449,13 +1490,14 @@
     "varactor": {
       "name": "Varactor",
       "prefix": "D",
+      "drawingScale": 3.125,
       "pins": {
         "anode": [
-          -48,
+          -150,
           0
         ],
         "cathode": [
-          48,
+          150,
           0
         ]
       },
@@ -1476,18 +1518,19 @@
     "triode": {
       "name": "Triode",
       "prefix": "Q",
+      "drawingScale": 3.125,
       "pins": {
         "plate": [
-          32,
-          -48
+          100,
+          -150
         ],
         "grid": [
-          -48,
+          -150,
           0
         ],
         "cathode": [
-          32,
-          48
+          100,
+          150
         ]
       },
       "type": "173",
@@ -1514,106 +1557,129 @@
   };
   const basicDefinitions = {
     "npn": {
+      "drawingScale": 3.125,
       "prefix": "Q",
       "name": "NPN transistor",
       "pins": {
         "base": [
-          -48,
+          -150,
           0
         ],
         "collector": [
-          48,
-          -16
+          150,
+          -50
         ],
         "emitter": [
-          48,
-          16
+          150,
+          50
         ]
       },
       "parameters": {
-        "beta": 100
+        "beta": 100,
+        "model": "default",
+        "swapTerminals": false,
+        "drawCircle": false
       }
     },
     "pnp": {
+      "drawingScale": 3.125,
       "prefix": "Q",
       "name": "PNP transistor",
       "pins": {
         "base": [
-          -48,
+          -150,
           0
         ],
         "collector": [
-          48,
-          16
+          150,
+          50
         ],
         "emitter": [
-          48,
-          -16
+          150,
+          -50
         ]
       },
       "parameters": {
-        "beta": 100
+        "beta": 100,
+        "model": "default",
+        "swapTerminals": false,
+        "drawCircle": false
       }
     },
     "nmos": {
+      "drawingScale": 3.125,
       "prefix": "Q",
       "name": "NMOS",
       "pins": {
         "gate": [
-          -48,
+          -150,
           0
         ],
         "source": [
-          48,
-          16
+          150,
+          50
         ],
         "drain": [
-          48,
-          -16
+          150,
+          -50
         ]
       },
       "parameters": {
         "threshold": 1.5,
-        "beta": 0.02
+        "beta": 0.02,
+        "bodyDiode": true,
+        "bodyTerminal": false,
+        "showBulk": true,
+        "digitalSymbol": false,
+        "showBodyDiode": false,
+        "swapTerminals": false
       }
     },
     "pmos": {
+      "drawingScale": 3.125,
       "prefix": "Q",
       "name": "PMOS",
       "pins": {
         "gate": [
-          -48,
+          -150,
           0
         ],
         "source": [
-          48,
-          16
+          150,
+          50
         ],
         "drain": [
-          48,
-          -16
+          150,
+          -50
         ]
       },
       "parameters": {
         "threshold": 1.5,
-        "beta": 0.02
+        "beta": 0.02,
+        "bodyDiode": true,
+        "bodyTerminal": false,
+        "showBulk": true,
+        "digitalSymbol": false,
+        "showBodyDiode": false,
+        "swapTerminals": false
       }
     },
     "njfet": {
+      "drawingScale": 3.125,
       "prefix": "Q",
       "name": "NJFET",
       "pins": {
         "gate": [
-          -48,
+          -150,
           0
         ],
         "source": [
-          48,
-          16
+          150,
+          50
         ],
         "drain": [
-          48,
-          -16
+          150,
+          -50
         ]
       },
       "parameters": {
@@ -1622,20 +1688,21 @@
       }
     },
     "pjfet": {
+      "drawingScale": 3.125,
       "prefix": "Q",
       "name": "PJFET",
       "pins": {
         "gate": [
-          -48,
+          -150,
           0
         ],
         "source": [
-          48,
-          16
+          150,
+          50
         ],
         "drain": [
-          48,
-          -16
+          150,
+          -50
         ]
       },
       "parameters": {
@@ -1644,120 +1711,146 @@
       }
     },
     "andGate": {
+      "drawingScale": 3.125,
       "prefix": "U",
       "name": "AND gate",
       "pins": {
         "a": [
-          -48,
-          -16
+          -150,
+          -50
         ],
         "b": [
-          -48,
-          16
+          -150,
+          50
         ],
         "out": [
-          48,
+          150,
           0
         ]
       },
       "parameters": {
-        "highVoltage": 5
+        "highVoltage": 5,
+        "inputCount": 2,
+        "propagationDelay": 0,
+        "schmittInputs": false,
+        "invertInputs": false
       }
     },
     "nandGate": {
+      "drawingScale": 3.125,
       "prefix": "U",
       "name": "NAND gate",
       "pins": {
         "a": [
-          -48,
-          -16
+          -150,
+          -50
         ],
         "b": [
-          -48,
-          16
+          -150,
+          50
         ],
         "out": [
-          48,
+          150,
           0
         ]
       },
       "parameters": {
-        "highVoltage": 5
+        "highVoltage": 5,
+        "inputCount": 2,
+        "propagationDelay": 0,
+        "schmittInputs": false,
+        "invertInputs": false
       }
     },
     "orGate": {
+      "drawingScale": 3.125,
       "prefix": "U",
       "name": "OR gate",
       "pins": {
         "a": [
-          -48,
-          -16
+          -150,
+          -50
         ],
         "b": [
-          -48,
-          16
+          -150,
+          50
         ],
         "out": [
-          48,
+          150,
           0
         ]
       },
       "parameters": {
-        "highVoltage": 5
+        "highVoltage": 5,
+        "inputCount": 2,
+        "propagationDelay": 0,
+        "schmittInputs": false,
+        "invertInputs": false
       }
     },
     "norGate": {
+      "drawingScale": 3.125,
       "prefix": "U",
       "name": "NOR gate",
       "pins": {
         "a": [
-          -48,
-          -16
+          -150,
+          -50
         ],
         "b": [
-          -48,
-          16
+          -150,
+          50
         ],
         "out": [
-          48,
+          150,
           0
         ]
       },
       "parameters": {
-        "highVoltage": 5
+        "highVoltage": 5,
+        "inputCount": 2,
+        "propagationDelay": 0,
+        "schmittInputs": false,
+        "invertInputs": false
       }
     },
     "xorGate": {
+      "drawingScale": 3.125,
       "prefix": "U",
       "name": "XOR gate",
       "pins": {
         "a": [
-          -48,
-          -16
+          -150,
+          -50
         ],
         "b": [
-          -48,
-          16
+          -150,
+          50
         ],
         "out": [
-          48,
+          150,
           0
         ]
       },
       "parameters": {
-        "highVoltage": 5
+        "highVoltage": 5,
+        "inputCount": 2,
+        "propagationDelay": 0,
+        "schmittInputs": false,
+        "invertInputs": false
       }
     },
     "inverter": {
+      "drawingScale": 3.125,
       "prefix": "U",
       "name": "Inverter",
       "pins": {
         "input": [
-          -48,
+          -150,
           0
         ],
         "out": [
-          48,
+          150,
           0
         ]
       },
@@ -1767,24 +1860,25 @@
       }
     },
     "transformer": {
+      "drawingScale": 3.125,
       "prefix": "T",
       "name": "Transformer",
       "pins": {
         "p1": [
-          -32,
-          -48
+          -100,
+          -150
         ],
         "s1": [
-          32,
-          -48
+          100,
+          -150
         ],
         "p2": [
-          -32,
-          48
+          -100,
+          150
         ],
         "s2": [
-          32,
-          48
+          100,
+          150
         ]
       },
       "parameters": {
@@ -1795,56 +1889,70 @@
       }
     },
     "spdtSwitch": {
+      "drawingScale": 3.125,
       "prefix": "S",
-      "name": "SPDT switch (center off)",
+      "name": "SPDT switch",
       "pins": {
         "common": [
-          -48,
+          -150,
           0
         ],
         "a": [
-          48,
-          -16
+          150,
+          -50
         ],
         "b": [
-          48,
-          16
+          150,
+          50
         ]
       },
       "parameters": {
+        "onResistance": 0,
+        "momentary": false,
+        "linkLabel": "",
+        "iecSymbol": false,
+        "group": 0,
+        "throwCount": 2,
+        "centerOff": false,
         "position": 0
       }
     },
     "dpdtSwitch": {
+      "drawingScale": 3.125,
       "prefix": "S",
       "name": "DPDT switch",
       "pins": {
         "common1": [
-          -48,
-          -32
+          -150,
+          -100
         ],
         "a1": [
-          48,
-          -16
+          150,
+          -50
         ],
         "b1": [
-          48,
-          -48
+          150,
+          -150
         ],
         "common2": [
-          -48,
-          16
+          -150,
+          50
         ],
         "a2": [
-          48,
-          32
+          150,
+          100
         ],
         "b2": [
-          48,
+          150,
           0
         ]
       },
       "parameters": {
+        "onResistance": 0,
+        "momentary": false,
+        "linkLabel": "",
+        "iecSymbol": false,
+        "poleCount": 2,
         "position": 0
       }
     },
@@ -1853,35 +1961,38 @@
       "name": "LED",
       "pins": {
         "anode": [
-          -48,
+          -100,
           0
         ],
         "cathode": [
-          48,
+          100,
           0
         ]
       },
       "parameters": {
-        "forwardVoltage": 2.1,
+        "model": "default-led",
+        "red": 1,
+        "green": 0,
+        "blue": 0,
         "maxCurrent": 0.01
       }
     },
     "zener": {
+      "drawingScale": 3.125,
       "prefix": "D",
       "name": "Zener diode",
       "pins": {
         "anode": [
-          -48,
+          -150,
           0
         ],
         "cathode": [
-          48,
+          150,
           0
         ]
       },
       "parameters": {
-        "forwardVoltage": 0.805904783,
-        "breakdownVoltage": 5.6
+        "model": "default-zener"
       }
     },
     "resistor": {
@@ -1889,12 +2000,12 @@
       "name": "Resistor",
       "pins": {
         "a": [
-          -24,
-          0
+          0,
+          -100
         ],
         "b": [
-          24,
-          0
+          0,
+          100
         ]
       },
       "parameters": {
@@ -1902,15 +2013,16 @@
       }
     },
     "inductor": {
+      "drawingScale": 3.125,
       "prefix": "L",
       "name": "Inductor",
       "pins": {
         "a": [
-          -48,
+          -150,
           0
         ],
         "b": [
-          48,
+          150,
           0
         ]
       },
@@ -1921,30 +2033,34 @@
       }
     },
     "diode": {
+      "drawingScale": 3.125,
       "prefix": "D",
       "name": "Diode",
       "pins": {
         "anode": [
-          -48,
+          -150,
           0
         ],
         "cathode": [
-          48,
+          150,
           0
         ]
       },
-      "parameters": {}
+      "parameters": {
+        "model": "default"
+      }
     },
     "currentSource": {
+      "drawingScale": 3.125,
       "prefix": "I",
       "name": "DC current source",
       "pins": {
         "a": [
-          -48,
+          -150,
           0
         ],
         "b": [
-          48,
+          150,
           0
         ]
       },
@@ -1954,20 +2070,21 @@
       }
     },
     "potentiometer": {
+      "drawingScale": 3.125,
       "prefix": "RV",
       "name": "Potentiometer",
       "pins": {
         "a": [
-          -48,
+          -150,
           0
         ],
         "b": [
-          48,
+          150,
           0
         ],
         "wiper": [
           0,
-          32
+          100
         ]
       },
       "parameters": {
@@ -1977,15 +2094,16 @@
       }
     },
     "polarizedCapacitor": {
+      "drawingScale": 3.125,
       "prefix": "C",
       "name": "Polarized capacitor",
       "pins": {
         "positive": [
-          -48,
+          -150,
           0
         ],
         "negative": [
-          48,
+          150,
           0
         ]
       },
@@ -1997,20 +2115,21 @@
       }
     },
     "analogSwitch": {
+      "drawingScale": 3.125,
       "prefix": "S",
       "name": "Analog switch (SPST)",
       "pins": {
         "a": [
-          -48,
+          -150,
           0
         ],
         "b": [
-          48,
+          150,
           0
         ],
         "control": [
           0,
-          -32
+          -100
         ]
       },
       "parameters": {
@@ -2022,24 +2141,25 @@
       }
     },
     "analogSpdtSwitch": {
+      "drawingScale": 3.125,
       "prefix": "S",
       "name": "Analog switch (SPDT)",
       "pins": {
         "common": [
-          -48,
+          -150,
           0
         ],
         "a": [
-          48,
-          -16
+          150,
+          -50
         ],
         "b": [
-          48,
-          16
+          150,
+          50
         ],
         "control": [
           0,
-          32
+          100
         ]
       },
       "parameters": {
@@ -2051,11 +2171,12 @@
       }
     },
     "output": {
+      "drawingScale": 3.125,
       "prefix": "O",
       "name": "Output marker",
       "pins": {
         "in": [
-          -48,
+          -150,
           0
         ]
       },
@@ -2064,11 +2185,12 @@
       }
     },
     "logicOutput": {
+      "drawingScale": 3.125,
       "prefix": "M",
       "name": "Logic output",
       "pins": {
         "in": [
-          -48,
+          -150,
           0
         ]
       },
@@ -2079,11 +2201,12 @@
       }
     },
     "logicInput": {
+      "drawingScale": 3.125,
       "prefix": "L",
       "name": "Logic input",
       "pins": {
         "out": [
-          48,
+          150,
           0
         ]
       },
@@ -2095,66 +2218,78 @@
       }
     },
     "pushSwitch": {
+      "drawingScale": 3.125,
       "prefix": "S",
       "name": "Push switch",
       "pins": {
         "a": [
-          -48,
+          -150,
           0
         ],
         "b": [
-          48,
+          150,
           0
         ]
       },
       "parameters": {
+        "onResistance": 0,
+        "momentary": true,
+        "linkLabel": "",
+        "iecSymbol": false,
         "normallyClosed": false
       }
     },
     "mbbSwitch": {
+      "drawingScale": 3.125,
       "prefix": "S",
       "name": "Make-before-break switch",
       "pins": {
         "common": [
-          -48,
+          -150,
           0
         ],
         "a": [
-          48,
-          -16
+          150,
+          -50
         ],
         "b": [
-          48,
-          16
+          150,
+          50
         ]
       },
       "parameters": {
+        "onResistance": 0,
+        "momentary": false,
+        "linkLabel": "",
+        "iecSymbol": false,
+        "group": 0,
         "position": 0
       }
     },
     "tappedTransformer": {
+      "drawingScale": 3.125,
       "prefix": "T",
       "name": "Tapped transformer",
       "pins": {
         "p1": [
-          -32,
-          -48
+          -100,
+          -150
         ],
         "p2": [
-          -32,
-          48
+          -100,
+          150
         ],
         "s1": [
-          32,
-          -48
+          100,
+          -150
         ],
         "tap": [
-          32,
+          100,
           0
         ],
         "s2": [
-          32,
-          48
+          100,
+          150
         ]
       },
       "parameters": {
@@ -2165,32 +2300,33 @@
       }
     },
     "customTransformer": {
+      "drawingScale": 3.125,
       "prefix": "T",
       "name": "Custom transformer (three windings)",
       "pins": {
         "p1a": [
-          -32,
-          -64
+          -100,
+          -200
         ],
         "p1b": [
-          -32,
-          -32
+          -100,
+          -100
         ],
         "p2a": [
-          -32,
+          -100,
           0
         ],
         "p2b": [
-          -32,
-          64
+          -100,
+          200
         ],
         "sa": [
-          32,
-          -64
+          100,
+          -200
         ],
         "sb": [
-          32,
-          64
+          100,
+          200
         ]
       },
       "parameters": {
@@ -2203,24 +2339,25 @@
       }
     },
     "transmissionLine": {
+      "drawingScale": 3.125,
       "prefix": "TL",
       "name": "Transmission line",
       "pins": {
         "leftReturn": [
-          -48,
-          16
+          -150,
+          50
         ],
         "rightReturn": [
-          48,
-          16
+          150,
+          50
         ],
         "left": [
-          -48,
-          -16
+          -150,
+          -50
         ],
         "right": [
-          48,
-          -16
+          150,
+          -50
         ]
       },
       "parameters": {
@@ -2229,32 +2366,33 @@
       }
     },
     "counter": {
+      "drawingScale": 3.125,
       "prefix": "U",
       "name": "Counter (4 bit)",
       "pins": {
         "clock": [
-          -48,
-          -48
+          -150,
+          -150
         ],
         "reset": [
-          -48,
-          48
+          -150,
+          150
         ],
         "Q3": [
-          48,
-          -48
+          150,
+          -150
         ],
         "Q2": [
-          48,
-          -16
+          150,
+          -50
         ],
         "Q1": [
-          48,
-          16
+          150,
+          50
         ],
         "Q0": [
-          48,
-          48
+          150,
+          150
         ]
       },
       "parameters": {
@@ -2266,44 +2404,45 @@
       }
     },
     "latch": {
+      "drawingScale": 3.125,
       "prefix": "U",
       "name": "Latch / register (4 bit)",
       "pins": {
         "I0": [
-          -48,
-          32
+          -150,
+          100
         ],
         "I1": [
-          -48,
+          -150,
           0
         ],
         "I2": [
-          -48,
-          -32
+          -150,
+          -100
         ],
         "I3": [
-          -48,
-          -64
+          -150,
+          -200
         ],
         "O0": [
-          48,
-          32
+          150,
+          100
         ],
         "O1": [
-          48,
+          150,
           0
         ],
         "O2": [
-          48,
-          -32
+          150,
+          -100
         ],
         "O3": [
-          48,
-          -64
+          150,
+          -200
         ],
         "load": [
-          -48,
-          64
+          -150,
+          200
         ]
       },
       "parameters": {
@@ -2313,24 +2452,25 @@
       }
     },
     "halfAdder": {
+      "drawingScale": 3.125,
       "prefix": "U",
       "name": "Half adder",
       "pins": {
         "sum": [
-          48,
-          -16
+          150,
+          -50
         ],
         "carry": [
-          48,
-          16
+          150,
+          50
         ],
         "A": [
-          -48,
-          -16
+          -150,
+          -50
         ],
         "B": [
-          -48,
-          16
+          -150,
+          50
         ]
       },
       "parameters": {
@@ -2338,64 +2478,65 @@
       }
     },
     "fullAdder": {
+      "drawingScale": 3.125,
       "prefix": "U",
       "name": "Adder (4 bit)",
       "pins": {
         "A0": [
-          -48,
-          -32
+          -150,
+          -100
         ],
         "A1": [
-          -48,
-          -64
+          -150,
+          -200
         ],
         "A2": [
-          -48,
-          -96
+          -150,
+          -300
         ],
         "A3": [
-          -48,
-          -128
+          -150,
+          -400
         ],
         "B0": [
-          -48,
-          96
+          -150,
+          300
         ],
         "B1": [
-          -48,
-          64
+          -150,
+          200
         ],
         "B2": [
-          -48,
-          32
+          -150,
+          100
         ],
         "B3": [
-          -48,
+          -150,
           0
         ],
         "S0": [
-          48,
-          32
+          150,
+          100
         ],
         "S1": [
-          48,
+          150,
           0
         ],
         "S2": [
-          48,
-          -32
+          150,
+          -100
         ],
         "S3": [
-          48,
-          -64
+          150,
+          -200
         ],
         "carryIn": [
-          -48,
-          128
+          -150,
+          400
         ],
         "carryOut": [
-          48,
-          -128
+          150,
+          -400
         ]
       },
       "parameters": {
@@ -2403,24 +2544,25 @@
       }
     },
     "dFlipFlop": {
+      "drawingScale": 3.125,
       "prefix": "U",
       "name": "D flip-flop",
       "pins": {
         "D": [
-          -48,
-          -16
+          -150,
+          -50
         ],
         "clock": [
-          -48,
-          16
+          -150,
+          50
         ],
         "Q": [
-          48,
-          -16
+          150,
+          -50
         ],
         "Qn": [
-          48,
-          16
+          150,
+          50
         ]
       },
       "parameters": {
@@ -2429,28 +2571,29 @@
       }
     },
     "jkFlipFlop": {
+      "drawingScale": 3.125,
       "prefix": "U",
       "name": "JK flip-flop",
       "pins": {
         "J": [
-          -48,
-          -32
+          -150,
+          -100
         ],
         "clock": [
-          -48,
+          -150,
           0
         ],
         "K": [
-          -48,
-          32
+          -150,
+          100
         ],
         "Q": [
-          48,
-          -32
+          150,
+          -100
         ],
         "Qn": [
-          48,
-          32
+          150,
+          100
         ]
       },
       "parameters": {
@@ -2460,24 +2603,25 @@
       }
     },
     "tFlipFlop": {
+      "drawingScale": 3.125,
       "prefix": "U",
       "name": "T flip-flop",
       "pins": {
         "T": [
-          -48,
-          -16
+          -150,
+          -50
         ],
         "clock": [
-          -48,
-          16
+          -150,
+          50
         ],
         "Q": [
-          48,
-          -16
+          150,
+          -50
         ],
         "Qn": [
-          48,
-          16
+          150,
+          50
         ]
       },
       "parameters": {
@@ -2486,15 +2630,16 @@
       }
     },
     "capacitor": {
+      "drawingScale": 3.125,
       "prefix": "C",
       "name": "Capacitor",
       "pins": {
         "a": [
-          -24,
+          -75,
           0
         ],
         "b": [
-          24,
+          75,
           0
         ]
       },
@@ -2505,16 +2650,17 @@
       }
     },
     "voltageSource": {
+      "drawingScale": 3.125,
       "prefix": "V",
       "name": "DC source (2 terminals)",
       "pins": {
         "p": [
           0,
-          -48
+          -150
         ],
         "n": [
           0,
-          48
+          150
         ]
       },
       "parameters": {
@@ -2525,12 +2671,13 @@
       }
     },
     "voltageRail": {
+      "drawingScale": 3.125,
       "prefix": "V",
       "name": "DC source (1 terminal)",
       "pins": {
         "p": [
           0,
-          32
+          100
         ]
       },
       "parameters": {
@@ -2541,36 +2688,42 @@
       }
     },
     "switch": {
+      "drawingScale": 3.125,
       "prefix": "S",
       "name": "Switch",
       "pins": {
         "a": [
-          -48,
+          -150,
           0
         ],
         "b": [
-          48,
+          150,
           0
         ]
       },
       "parameters": {
-        "closed": true
+        "onResistance": 0,
+        "momentary": false,
+        "linkLabel": "",
+        "iecSymbol": false,
+        "closed": false
       }
     },
     "opamp": {
+      "drawingScale": 3.125,
       "prefix": "U",
       "name": "Op-amp",
       "pins": {
         "minus": [
-          -48,
-          -16
+          -150,
+          -50
         ],
         "plus": [
-          -48,
-          16
+          -150,
+          50
         ],
         "out": [
-          48,
+          150,
           0
         ]
       },
@@ -2586,30 +2739,35 @@
       "pins": {
         "g": [
           0,
-          -32
+          0
         ]
       },
       "parameters": {}
     },
     "xnorGate": {
+      "drawingScale": 3.125,
       "prefix": "U",
       "name": "XNOR gate",
       "pins": {
         "a": [
-          -48,
-          -16
+          -150,
+          -50
         ],
         "b": [
-          -48,
-          16
+          -150,
+          50
         ],
         "out": [
-          48,
+          150,
           0
         ]
       },
       "parameters": {
-        "highVoltage": 5
+        "highVoltage": 5,
+        "inputCount": 2,
+        "propagationDelay": 0,
+        "schmittInputs": false,
+        "invertInputs": false
       }
     }
   };
@@ -2671,12 +2829,229 @@
   };
   // END GENERATED SYMBOL CATALOG
   const definitions={
-    ...Object.fromEntries(Object.entries(outputSpecs).map(([kind,spec])=>[kind,{prefix:spec.prefix,name:spec.name,pins:spec.pins,parameters:spec.parameters}])),
+    ...Object.fromEntries(Object.entries(outputSpecs).map(([kind,spec])=>[kind,{prefix:spec.prefix,name:spec.name,drawingScale:spec.drawingScale,pins:spec.pins,parameters:spec.parameters}])),
     ...basicDefinitions
   };
+  // Public models copied from the bundled Falstad DiodeModel, excluding internal entries.
+  const diodeModelSpecs = Object.freeze({
+    'default': {saturationCurrent:1.7143528192808883e-7,seriesResistance:0,emissionCoefficient:2,breakdownVoltage:0},
+    'spice-default': {saturationCurrent:1e-14,seriesResistance:0,emissionCoefficient:1,breakdownVoltage:0},
+    'default-zener': {saturationCurrent:1.7143528192808883e-7,seriesResistance:0,emissionCoefficient:2,breakdownVoltage:5.6},
+    'default-led': {saturationCurrent:93.2e-12,seriesResistance:.042,emissionCoefficient:3.73,breakdownVoltage:0},
+    'default-optocoupler-led': {saturationCurrent:1.714e-7,seriesResistance:0,emissionCoefficient:4.077,breakdownVoltage:0},
+    '1N5711': {saturationCurrent:315e-9,seriesResistance:2.8,emissionCoefficient:2.03,breakdownVoltage:70},
+    '1N5712': {saturationCurrent:680e-12,seriesResistance:12,emissionCoefficient:1.003,breakdownVoltage:20},
+    'BAT85': {saturationCurrent:2.076e-7,seriesResistance:2.326,emissionCoefficient:1.023,breakdownVoltage:33},
+    '1N4004': {saturationCurrent:18.8e-9,seriesResistance:28.6e-3,emissionCoefficient:2,breakdownVoltage:400},
+    '1N4148': {saturationCurrent:4.352e-9,seriesResistance:.6458,emissionCoefficient:1.906,breakdownVoltage:75}
+  });
+  const diodeModels = Object.freeze(Object.keys(diodeModelSpecs));
+  const diodeKind=kind=>['diode','led','zener'].includes(kind);
+  function resolveDiodeModel(model) {
+    if(typeof model==='string') {
+      if(!Object.hasOwn(diodeModelSpecs,model))throw new Error('Unknown diode model');
+      return {...diodeModelSpecs[model]};
+    }
+    if(!model||typeof model!=='object'||Array.isArray(model))throw new Error('Invalid custom diode model');
+    const keys=['name','mode','saturationCurrent','breakdownVoltage',...(model.mode==='simple'?['forwardVoltage','forwardCurrent']:['seriesResistance','emissionCoefficient'])];
+    if(Object.keys(model).length!==keys.length||!keys.every(k=>Object.hasOwn(model,k))||
+        !['simple','advanced'].includes(model.mode)||typeof model.name!=='string'||!model.name.trim()||model.name.length>80||/[\x00-\x1f]/.test(model.name)||diodeModels.includes(model.name))
+      throw new Error('Custom diode models need a unique name and simple or advanced parameters');
+    const positive=v=>Number.isFinite(v)&&v>0&&Number.isFinite(1/v);
+    if(!positive(model.saturationCurrent)||!Number.isFinite(model.breakdownVoltage)||model.breakdownVoltage<0)
+      throw new Error('Diode saturation current must be positive and breakdown voltage nonnegative');
+    const emissionCoefficient=model.mode==='simple'?
+      model.forwardVoltage/(Math.log1p(model.forwardCurrent/model.saturationCurrent)*.025865):model.emissionCoefficient;
+    const seriesResistance=model.mode==='simple'?0:model.seriesResistance;
+    if(model.mode==='simple'&&(!positive(model.forwardVoltage)||!positive(model.forwardCurrent)))
+      throw new Error('Simple diode forward voltage and current must be positive');
+    if(!positive(emissionCoefficient)||!Number.isFinite(seriesResistance)||seriesResistance<0||
+        seriesResistance>0&&!Number.isFinite(1/seriesResistance)||
+        !Number.isFinite(1/(emissionCoefficient*.025865))||
+        !Number.isFinite(Math.log1p(1/model.saturationCurrent)*emissionCoefficient*.025865))
+      throw new Error('Invalid diode series resistance or emission coefficient');
+    return {saturationCurrent:model.saturationCurrent,seriesResistance,emissionCoefficient,breakdownVoltage:model.breakdownVoltage};
+  }
+  function validateDiodeParameters(kind,p) {
+    if(!p||typeof p!=='object'||Array.isArray(p))throw new Error('Invalid diode parameters');
+    const named=Object.hasOwn(p,'model');
+    const keys=kind==='diode'?(named?['model']:[]):named?
+      (kind==='led'?['model','maxCurrent','red','green','blue']:['model']):
+      ['forwardVoltage',kind==='led'?'maxCurrent':'breakdownVoltage'];
+    if(Object.keys(p).length!==keys.length||!keys.every(k=>Object.hasOwn(p,k)))throw new Error('Unexpected or missing diode parameters');
+    if(named){const model=resolveDiodeModel(p.model);if(kind==='zener'&&model.breakdownVoltage<=0)throw new Error('Zener models require a positive breakdown voltage');}
+    if(!named&&kind!=='diode'&&(!Number.isFinite(p.forwardVoltage)||p.forwardVoltage<=0||!Number.isFinite(p[kind==='led'?'maxCurrent':'breakdownVoltage'])||p[kind==='led'?'maxCurrent':'breakdownVoltage']<=0))throw new Error('Invalid legacy diode parameters');
+    if(named&&kind==='led'&&(!Number.isFinite(p.maxCurrent)||p.maxCurrent<=0||!['red','green','blue'].every(k=>Number.isFinite(p[k])&&p[k]>=0&&p[k]<=1)))throw new Error('LED colors must be from 0 to 1 and brightness current positive');
+    return structuredClone(p);
+  }
+  function diodeEditorParameters(kind,p) {
+    if(Object.hasOwn(p,'model'))return structuredClone(p);
+    if(kind==='diode')return {model:'default'};
+    // Preserve the I/V curve of existing forward-voltage-based saved components.
+    return {model:{name:'Imported '+kind+' '+p.forwardVoltage+(kind==='zener'?' / '+p.breakdownVoltage:''),mode:'simple',saturationCurrent:1/Math.expm1(p.forwardVoltage/(2*.025865)),breakdownVoltage:kind==='zener'?p.breakdownVoltage:0,forwardVoltage:p.forwardVoltage,forwardCurrent:1},
+      ...(kind==='led'?{maxCurrent:p.maxCurrent,red:1,green:0,blue:0}:{})};
+  }
+  function validateSharedDiodeModels(components) {
+    const models=new Map();
+    for(const c of components){
+      if(!diodeKind(c.kind))continue;
+      validateDiodeParameters(c.kind,c.parameters);
+      const model=c.parameters.model;
+      if(!model||typeof model!=='object')continue;
+      const definition=JSON.stringify([model.mode,...Object.entries(model).filter(([k])=>k!=='name').sort(([a],[b])=>a.localeCompare(b))]);
+      if(models.has(model.name)&&models.get(model.name)!==definition)throw new Error('Conflicting definitions for diode model '+model.name);
+      models.set(model.name,definition);
+    }
+  }
+  const transistorModelFields = {
+    saturationCurrent:{label:'Transport saturation current (IS) · A',default:1e-13,positive:true},
+    reverseBeta:{label:'Reverse beta (BR)',default:1,positive:true},
+    forwardEarlyVoltage:{label:'Forward Early voltage (VAF) · V (0 = disabled)',default:0},
+    reverseEarlyVoltage:{label:'Reverse Early voltage (VAR) · V (0 = disabled)',default:0},
+    forwardRollOff:{label:'Forward beta roll-off current (IKF) · A (0 = disabled)',default:0},
+    reverseRollOff:{label:'Reverse beta roll-off current (IKR) · A (0 = disabled)',default:0},
+    forwardEmissionCoefficient:{label:'Forward emission coefficient (NF)',default:1,positive:true},
+    reverseEmissionCoefficient:{label:'Reverse emission coefficient (NR)',default:1,positive:true},
+    beLeakageCurrent:{label:'B-E leakage saturation current (ISE) · A',default:0},
+    beLeakageEmissionCoefficient:{label:'B-E leakage emission coefficient (NE)',default:1.5,positive:true},
+    bcLeakageCurrent:{label:'B-C leakage saturation current (ISC) · A',default:0},
+    bcLeakageEmissionCoefficient:{label:'B-C leakage emission coefficient (NC)',default:2,positive:true},
+    beCapacitance:{label:'B-E zero-bias junction capacitance (CJE) · F',default:0},
+    beJunctionPotential:{label:'B-E junction potential (VJE) · V',default:.75,positive:true},
+    beGradingCoefficient:{label:'B-E grading coefficient (MJE)',default:.33,positive:true},
+    bcCapacitance:{label:'B-C zero-bias junction capacitance (CJC) · F',default:0},
+    bcJunctionPotential:{label:'B-C junction potential (VJC) · V',default:.75,positive:true},
+    bcGradingCoefficient:{label:'B-C grading coefficient (MJC)',default:.33,positive:true},
+    forwardTransitTime:{label:'Forward transit time (TF) · s',default:0},
+    reverseTransitTime:{label:'Reverse transit time (TR) · s',default:0}
+  };
+  const transistorModels=['default','spice-default'];
+  const transistorKind=kind=>['npn','pnp'].includes(kind);
+  function resolveTransistorModel(model) {
+    if(typeof model==='string') {
+      if(!transistorModels.includes(model))throw new Error('Unknown transistor model');
+      return {...Object.fromEntries(Object.entries(transistorModelFields).map(([k,f])=>[k,f.default])),saturationCurrent:model==='default'?1e-13:1e-16};
+    }
+    const fields=Object.keys(transistorModelFields);
+    if(!model||typeof model!=='object'||Array.isArray(model)||Object.keys(model).length!==fields.length+1||
+        !fields.every(k=>Object.hasOwn(model,k))||typeof model.name!=='string'||!model.name.trim()||model.name.length>80||/[\x00-\x1f]/.test(model.name)||transistorModels.includes(model.name))
+      throw new Error('Invalid custom transistor model name or fields');
+    for(const [key,field] of Object.entries(transistorModelFields)){
+      const v=model[key];
+      if(!Number.isFinite(v)||v<0||(field.positive&&v===0)||(v>0&&!Number.isFinite(1/v)))throw new Error('Invalid '+field.label);
+    }
+    return Object.fromEntries(fields.map(k=>[k,model[k]]));
+  }
+  function validateTransistorParameters(p) {
+    const named=Object.hasOwn(p,'model'),keys=['beta',...(named?['model']:[]),...['swapTerminals','drawCircle'].filter(k=>Object.hasOwn(p,k))];
+    if(Object.keys(p).length!==keys.length||!keys.every(k=>Object.hasOwn(p,k))||!Number.isFinite(p.beta)||p.beta<=0||!Number.isFinite(1/p.beta))throw new Error('Invalid transistor parameters');
+    if(['swapTerminals','drawCircle'].some(k=>Object.hasOwn(p,k)&&typeof p[k]!=='boolean'))throw new Error('Invalid transistor swap option');
+    if(named)resolveTransistorModel(p.model);
+    return structuredClone(p);
+  }
+  function validateSharedTransistorModels(components) {
+    const models=new Map();
+    for(const c of components){
+      if(!transistorKind(c.kind))continue;
+      validateTransistorParameters(c.parameters);
+      const m=c.parameters.model;
+      if(!m||typeof m!=='object')continue;
+      const definition=JSON.stringify(resolveTransistorModel(m));
+      if(models.has(m.name)&&models.get(m.name)!==definition)throw new Error('Conflicting definitions for transistor model '+m.name);
+      models.set(m.name,definition);
+    }
+  }
+  const gateKind=kind=>['andGate','nandGate','orGate','norGate','xorGate','xnorGate'].includes(kind);
+  function gateOffsets(count) {
+    let i=-Math.floor(count/2);
+    return Array.from({length:count},()=>{if(i===0&&count%2===0)i++;return 16*i++;});
+  }
+  function validateGateParameters(p) {
+    const optional=['inputCount','propagationDelay','schmittInputs','invertInputs'];
+    if(!p||Object.keys(p).some(k=>!['highVoltage',...optional].includes(k))||!Number.isFinite(p.highVoltage)||p.highVoltage<=0||
+      !Number.isInteger(p.inputCount??2)||(p.inputCount??2)<1||(p.inputCount??2)>8||
+      !Number.isFinite(p.propagationDelay??0)||(p.propagationDelay??0)<0||
+      ['schmittInputs','invertInputs'].some(k=>Object.hasOwn(p,k)&&typeof p[k]!=='boolean'))throw new Error('Invalid gate input count, delay or logic parameters');
+    return structuredClone(p);
+  }
+  function componentPins(component) {
+    const kind=component.kind,p=component.parameters||{};
+    if(gateKind(kind)) {
+      if(!Number.isInteger(p.inputCount??2)||(p.inputCount??2)<1||(p.inputCount??2)>8)throw new Error('Gate input count must be 1 to 8');
+      if((p.inputCount??2)===2)return definitions[kind].pins;
+      return {...Object.fromEntries(gateOffsets(p.inputCount??2).map((y,i)=>[String.fromCharCode(97+i),[-150,y*3.125]])),out:[150,0]};
+    }
+    if(kind==='spdtSwitch'&&(p.throwCount??2)!==2){
+      const count=p.throwCount;
+      if(!Number.isInteger(count)||count<2||count>10)throw new Error('Invalid throw count');
+      return {common:[-150,0],...Object.fromEntries(Array.from({length:count},(_,i)=>[i<2?['a','b'][i]:'throw'+(i+1),[150,50*(i-Math.floor((count-1)/2))]]))};
+    }
+    if(kind==='dpdtSwitch'&&(p.poleCount??2)!==2){
+      if(!Number.isInteger(p.poleCount)||p.poleCount<1||p.poleCount>8)throw new Error('Invalid pole count');
+      return Object.fromEntries(Array.from({length:p.poleCount},(_,i)=>[['common'+(i+1),[-150,-100+i*150]],['a'+(i+1),[150,-50+i*150]],['b'+(i+1),[150,-150+i*150]]]).flat());
+    }
+    if(transistorKind(kind)&&p.swapTerminals){const pins=definitions[kind].pins;return {...pins,collector:pins.emitter,emitter:pins.collector};}
+    if(mosfetKind(kind)) {
+      const pins={...definitions[kind].pins};
+      if(p.swapTerminals){const source=pins.source;pins.source=pins.drain;pins.drain=source;}
+      if(activeBody(p))pins.body=[150,0];
+      return pins;
+    }
+    return definitions[kind].pins;
+  }
+  function componentModel(component) {
+    const model=simulationModels[component.kind];
+    if(gateKind(component.kind)||mosfetKind(component.kind)||['spdtSwitch','dpdtSwitch'].includes(component.kind)){const pins=Object.keys(componentPins(component));return {...model,pins,postOrder:pins};}
+    return model;
+  }
+  const mosfetKind=kind=>['nmos','pmos'].includes(kind);
+  const mosfetOptions={bodyDiode:true,bodyTerminal:false,showBulk:true,digitalSymbol:false,showBodyDiode:false,swapTerminals:false};
+  const activeBody=p=>p.bodyDiode===true&&p.bodyTerminal===true&&p.showBulk!==false&&!p.digitalSymbol;
+  function validateMosfetParameters(p) {
+    if(!p||Object.keys(p).some(k=>!['threshold','beta',...Object.keys(mosfetOptions)].includes(k))||
+      !Number.isFinite(p.threshold)||!Number.isFinite(p.beta)||p.beta<=0||!Number.isFinite(1/p.beta)||
+      Object.keys(mosfetOptions).some(k=>Object.hasOwn(p,k)&&typeof p[k]!=='boolean'))throw new Error('Invalid MOSFET parameters');
+    return structuredClone(p);
+  }
+  const switchKind=kind=>['switch','pushSwitch','spdtSwitch','dpdtSwitch','mbbSwitch'].includes(kind);
+  function switchDefaults(kind){return {onResistance:0,momentary:kind==='pushSwitch',linkLabel:'',iecSymbol:false,
+    ...(kind==='spdtSwitch'?{group:0,throwCount:2,centerOff:false}:kind==='mbbSwitch'?{group:0}:kind==='dpdtSwitch'?{poleCount:2}:{})};}
+  const switchPositionCount=c=>c.kind==='spdtSwitch'?((c.parameters.centerOff??false)&&(c.parameters.throwCount??2)===2?3:c.parameters.throwCount??2):c.kind==='mbbSwitch'?4:2;
+  const momentary=c=>switchKind(c?.kind)&&(c.parameters.momentary??c.kind==='pushSwitch');
+  function validateSwitchParameters(kind,p){
+    const defaults=switchDefaults(kind),state=kind==='switch'?'closed':kind==='pushSwitch'?'normallyClosed':'position';
+    if(!p||Object.keys(p).some(k=>![state,...Object.keys(defaults)].includes(k)))throw new Error('Unexpected switch parameters');
+    const v={...defaults,...p},positive=v=>Number.isFinite(v)&&v>=0&&(v===0||Number.isFinite(1/v));
+    if(!positive(v.onResistance)||typeof v.momentary!=='boolean'||typeof v.iecSymbol!=='boolean'||
+      typeof v.linkLabel!=='string'||v.linkLabel.length>80||/[\x00-\x1f]/.test(v.linkLabel)||
+      (['switch','pushSwitch'].includes(kind)?typeof v[state]!=='boolean':!Number.isInteger(v.position)||v.position<0||v.position>=switchPositionCount({kind,parameters:v})))throw new Error('Invalid switch state, resistance, label or shortcut');
+    if(kind==='spdtSwitch'&&(!Number.isInteger(v.throwCount)||v.throwCount<2||v.throwCount>10||typeof v.centerOff!=='boolean'||v.throwCount>2&&v.momentary))throw new Error('Switch requires 2 to 10 throws; momentary operation requires 2 throws');
+    if(kind==='dpdtSwitch'&&(!Number.isInteger(v.poleCount)||v.poleCount<1||v.poleCount>8))throw new Error('Switch requires 1 to 8 poles');
+    if(['spdtSwitch','mbbSwitch'].includes(kind)&&(!Number.isInteger(v.group)||v.group<0||v.group>1000))throw new Error('Switch group must be from 0 to 1000');
+    return structuredClone(p);
+  }
+  function switchPairs(c){
+    const p=c.pins,v=c.parameters;
+    if(c.kind==='spdtSwitch')return (v.centerOff??false)&&(v.throwCount??2)===2&&v.position===2?[]:[[p.common,p[v.position<2?['a','b'][v.position]:'throw'+(v.position+1)]]];
+    if(c.kind==='dpdtSwitch')return Array.from({length:v.poleCount??2},(_,i)=>[p['common'+(i+1)],p[(v.position===0?'a':'b')+(i+1)]]);
+    if(c.kind==='mbbSwitch')return v.position%2?[[p.common,p.a],[p.common,p.b]]:[[p.common,v.position===0?p.a:p.b]];
+    return [];
+  }
+  function switchPostPoints(c,x){
+    const v=c.parameters;
+    if(c.kind==='spdtSwitch'){
+      const count=v.throwCount??2;
+      return [[x,32],...Array.from({length:count},(_,i)=>[x+64,count===2?(i===0?16:48):32+16*(i-Math.floor((count-1)/2))])];
+    }
+    if(c.kind==='dpdtSwitch')return Array.from({length:v.poleCount??2},(_,i)=>[[x,32+i*48],[x+64,48+i*48],[x+64,16+i*48]]).flat();
+    if(c.kind==='mbbSwitch')return [[x,32],[x+64,16],[x+64,48]];
+    return null;
+  }
   const graphic=kind=>['text','box','line'].includes(kind);
   function validateOutput(component,timeStep){
-    const spec=outputSpecs[component.kind],p=component.parameters,fields=Object.keys(spec.fields);
+    const spec=outputSpecs[component.kind],fields=Object.keys(spec.fields),raw=component.parameters;
+    if(!raw||typeof raw!=='object'||Array.isArray(raw))throw new Error('Invalid component parameters');
+    const p={...Object.fromEntries(Object.entries(spec.fields).filter(([,f])=>f.optional).map(([k,f])=>[k,f.default])),...raw};
     if(!p||typeof p!=='object'||Array.isArray(p)||Object.keys(p).length!==fields.length||!fields.every(k=>Object.hasOwn(p,k)))throw new Error('Unexpected or missing '+component.kind+' parameters');
     for(const [key,f] of Object.entries(spec.fields)){
       const v=p[key];
@@ -2964,7 +3339,8 @@
     if(pins.length!==postOrder.length||pins.some(pin=>!postOrder.includes(pin)))throw new Error('Catalog pin mismatch: '+kind);
     return [kind,{type:metadata.type,sign:metadata.sign,pins,postOrder}];
   }));
-  const api=Object.freeze({grid:16,definitions,placementDefinitions,outputSpecs,graphic,validateOutput,validWaveform,waveformNames,simulationModels});
+  // Placement grid: five 10-unit symbol design steps per interval.
+  const api=Object.freeze({grid:50,switchKind,switchDefaults,switchPositionCount,momentary,validateSwitchParameters,switchPairs,switchPostPoints,mosfetKind,mosfetOptions,activeBody,validateMosfetParameters,gateKind,gateOffsets,validateGateParameters,componentPins,componentModel,transistorModels,transistorModelFields,transistorKind,resolveTransistorModel,validateTransistorParameters,validateSharedTransistorModels,diodeModels,diodeModelSpecs,diodeKind,resolveDiodeModel,validateDiodeParameters,diodeEditorParameters,validateSharedDiodeModels,definitions,placementDefinitions,outputSpecs,graphic,validateOutput,validWaveform,waveformNames,simulationModels});
 
   registry.catalog=api;
   if(typeof module==='object'&&module.exports)module.exports=api;

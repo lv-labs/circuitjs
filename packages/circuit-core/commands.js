@@ -218,9 +218,37 @@
     d.layout.wires[wire.id].bends = route(d, wire).slice(1, -1);
     // Keep existing wire IDs and target junctions: probes and branches may name them.
   }
+  function replaceParameters(document,componentId,parameters) {
+    const c=document.electrical.components.find(c=>c.id===componentId);
+    if(!c)throw new Error('Unknown component');
+    const previousPins=Catalog.componentPins(c),nextPins=Catalog.componentPins({...c,parameters});
+    if((Catalog.transistorKind(c.kind)||Catalog.mosfetKind(c.kind))&&!!c.parameters.swapTerminals!==!!parameters.swapTerminals){
+      const pair=Catalog.transistorKind(c.kind)?['collector','emitter']:['source','drain'];
+      const swap=ref=>{if(ref?.kind==='pin'&&ref.componentId===componentId&&pair.includes(ref.pinId))ref.pinId=pair[1-pair.indexOf(ref.pinId)];};
+      for(const w of document.electrical.wires){swap(w.from);swap(w.to);}
+      for(const p of document.probes){swap(p.positive);swap(p.negative);}
+    }
+    const refers=ref=>ref?.kind==='pin'&&ref.componentId===componentId;
+    for(const pinId of Object.keys(previousPins).filter(k=>!Object.hasOwn(nextPins,k))){
+      const refs=[];
+      for(const w of document.electrical.wires)for(const key of ['from','to'])if(refers(w[key])&&w[key].pinId===pinId)refs.push([w,key]);
+      for(const p of document.probes)for(const key of ['positive','negative'])if(refers(p[key])&&p[key].pinId===pinId)refs.push([p,key]);
+      if(!refs.length)continue;
+      const id=crypto.randomUUID();document.electrical.junctions.push({id});
+      document.layout.junctions[id]=clone(pin(document,{kind:'pin',componentId,pinId}));
+      for(const [item,key] of refs)item[key]={kind:'junction',junctionId:id};
+    }
+    const m=parameters.model;
+    if(m&&typeof m==='object'){
+      const family=Catalog.diodeKind(c.kind)?Catalog.diodeKind:Catalog.transistorKind(c.kind)?Catalog.transistorKind:null;
+      if(family)for(const other of document.electrical.components)
+        if(family(other.kind)&&other.parameters.model?.name===m.name)other.parameters.model=clone(m);
+    }
+    c.parameters=clone(parameters);
+  }
   function insertInline(document, componentId) {
     const component = document.electrical.components.find(c => c.id === componentId);
-    const pins = Object.keys(definitions[component.kind].pins);
+    const pins = Object.keys(Catalog.componentPins(component));
     if (pins.length !== 2) return false;
     const refs = pins.map(pinId => ({ kind: 'pin', componentId, pinId })), points = refs.map(ref => pin(document, ref));
     const horizontal = points[0].y === points[1].y, axis = horizontal ? 'x' : 'y', cross = horizontal ? 'y' : 'x';
@@ -280,7 +308,7 @@
   // component insertion here: moving a wire across two pins must not remove it.
   function connectWireContacts(document, paths) {
     const on=(p,path)=>distance(closest(p,path[0],path[1]),p)<.001,resolve=connectionResolver(document);
-    for(const c of document.electrical.components)for(const pinId of Object.keys(definitions[c.kind].pins)){
+    for(const c of document.electrical.components)for(const pinId of Object.keys(Catalog.componentPins(c))){
       const from={kind:'pin',componentId:c.id,pinId},p=pin(document,from);
       if(!paths.some(path=>on(p,path)))continue;
       for(const wire of [...document.electrical.wires]){
@@ -309,9 +337,9 @@
       document.layout.wires[wireId] = { bends: [] };
     }
     const resolve = connectionResolver(document);
-    for (const c of document.electrical.components) if (componentIds.has(c.id)) for (const pinId of Object.keys(definitions[c.kind].pins)) {
+    for (const c of document.electrical.components) if (componentIds.has(c.id)) for (const pinId of Object.keys(Catalog.componentPins(c))) {
       const from = { kind: 'pin', componentId: c.id, pinId }, point = pin(document, from);
-      for (const other of document.electrical.components) if (other.id !== c.id) for (const otherPin of Object.keys(definitions[other.kind].pins)) {
+      for (const other of document.electrical.components) if (other.id !== c.id) for (const otherPin of Object.keys(Catalog.componentPins(other))) {
         const to = { kind: 'pin', componentId: other.id, pinId: otherPin };
         if (distance(point, pin(document, to)) < .001) attach(from, to);
       }
@@ -330,7 +358,7 @@
     const key = referenceKey;
     function add(ref, count = 0) { const k = key(ref); if (!parent.has(k)) { parent.set(k, k); refs.set(k, ref); counts.set(k, 0); } counts.set(k, counts.get(k) + count); return k; }
     function find(k) { while (parent.get(k) !== k) k = parent.get(k); return k; }
-    for (const c of document.electrical.components) for (const p of Object.keys(definitions[c.kind].pins)) add({ kind: 'pin', componentId: c.id, pinId: p }, 1);
+    for (const c of document.electrical.components) for (const p of Object.keys(Catalog.componentPins(c))) add({ kind: 'pin', componentId: c.id, pinId: p }, 1);
     for (const j of document.electrical.junctions) add({ kind: 'junction', junctionId: j.id });
     for (const w of document.electrical.wires) {
       const a = add(w.from), b = add(w.to), points = route(document, w);
@@ -501,7 +529,7 @@
             label = 'V' + number;
           }
           d.probes.push({ id, kind: 'voltage', positive, reference: 'ground', label });
-          (d.layout.probes ||= {})[id] = { x: 16, y: -32 };
+          (d.layout.probes ||= {})[id] = { x: 50, y: -100 };
         }); return id;
       },
       connect(from, to, bends = []) {
@@ -542,7 +570,19 @@
     model.execute=command=>executeCommand(model,command);
     return model;
   }
-  function momentaryDocument(document,id){const result=clone(document),part=result.electrical.components.find(c=>c.id===id&&c.kind==='pushSwitch');if(!part)throw new Error('Expected push switch');part.parameters.normallyClosed=!part.parameters.normallyClosed;return result;}
+  function toggleSwitches(document,id){
+    const part=document.electrical.components.find(c=>c.id===id&&Catalog.switchKind(c.kind));
+    if(!part)throw new Error('Expected switch');
+    const advance=c=>{const p=c.parameters;if(c.kind==='switch')p.closed=!p.closed;else if(c.kind==='pushSwitch')p.normallyClosed=!p.normallyClosed;else p.position=(p.position+1)%Catalog.switchPositionCount(c);};
+    advance(part);
+    const label=part.parameters.linkLabel;
+    if(label)for(const c of document.electrical.components)if(c!==part&&Catalog.switchKind(c.kind)&&c.parameters.linkLabel===label)advance(c);
+    if(['spdtSwitch','mbbSwitch'].includes(part.kind)&&part.parameters.group){
+      for(const c of document.electrical.components)if(c!==part&&c.kind===part.kind&&c.parameters.group===part.parameters.group&&part.parameters.position<Catalog.switchPositionCount(c))c.parameters.position=part.parameters.position;
+    }
+  }
+  function momentaryDocument(document,id){const result=clone(document);toggleSwitches(result,id);return result;}
+
   // Frontend-neutral commands use entity references, never DOM events or pixels.
   // execute() records one undo step; applyCommand() is the immutable one-shot API.
   function executeCommand(model,command){
@@ -561,7 +601,7 @@
       case 'setParameters':return model.transaction('Edit parameters',d=>{
         const c=d.electrical.components.find(c=>c.id===command.componentId);if(!c)throw new Error('Unknown component');
         if(!command.parameters||typeof command.parameters!=='object'||Array.isArray(command.parameters))throw new Error('Expected parameter fields');
-        Object.assign(c.parameters,clone(command.parameters));
+        replaceParameters(d,c.id,{...c.parameters,...clone(command.parameters)});
       });
       case 'replace':return model.replace(command.document);
       default:throw new Error('Unknown editing command: '+command.type);
@@ -570,8 +610,14 @@
   function applyCommand(document,command,options={wireSections:true}){
     const model=create(document,()=>{},options);executeCommand(model,command);return model.document;
   }
+  function retargetProbe(document, id, target) {
+    const probe = document.probes.find(p => p.id === id && p.kind === 'voltage');
+    if (!probe) throw new Error('Unknown voltage probe');
+    probe.positive = connectionResolver(document)(target);
+    return document;
+  }
   const {createDragSession}=Drag.createTools({normalizeWires,connectContacts,transformSelection,connectWireContacts});
-  const api=Object.freeze({ applyCommand, createDragSession, normalizeWires, outputSpecs, graphic, graphicSize, momentaryDocument, boxSelection, copySelection, pasteSelection, looseEndpoint, reconnectTarget, reconnect, definitions, placementDefinitions, waveformNames, validWaveform, grid, snap, token, pin, route, closest, bounds, hit, move, detach, transformSelection, moveSegment, validate, empty, create, zoom, placementPose, flipPose, probePoint, probeVoltage, scopeChannels, alignGrid, insertInline, connectContacts, junctionDots, reshape, referenceKey });
+  const api=Object.freeze({ toggleSwitches, replaceParameters, retargetProbe, applyCommand, createDragSession, normalizeWires, outputSpecs, graphic, graphicSize, momentaryDocument, boxSelection, copySelection, pasteSelection, looseEndpoint, reconnectTarget, reconnect, definitions, placementDefinitions, waveformNames, validWaveform, grid, snap, token, pin, route, closest, bounds, hit, move, detach, transformSelection, moveSegment, validate, empty, create, zoom, placementPose, flipPose, probePoint, probeVoltage, scopeChannels, alignGrid, insertInline, connectContacts, junctionDots, reshape, referenceKey });
 
   registry.commands=api;
   if(typeof module==='object'&&module.exports)module.exports=api;

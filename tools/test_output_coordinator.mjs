@@ -1,7 +1,5 @@
+import {adapter as CircuitDocumentAdapter, protocol as CircuitRevisionProtocol, simulation as CircuitSimulation} from '../packages/circuit-core/index.mjs';
 import assert from 'node:assert/strict';
-import '../experiments/engine/document-adapter.js';
-import '../experiments/engine/revision-protocol.js';
-import '../experiments/engine/simulation-coordinator.js';
 import {createEngine} from './engine_node_runtime.mjs';
 import {outputFamilyCircuit} from './output_family_fixtures.mjs';
 const A=CircuitDocumentAdapter;let holdCapture=false,releaseCapture;

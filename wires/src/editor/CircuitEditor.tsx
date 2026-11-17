@@ -1,17 +1,31 @@
-import { useEffect, useId, useMemo, useRef, useState } from "react"
-import { PencilIcon } from "lucide-react"
+import { defaultScopeLayout } from "./scopeLayout"
+import { createScopeViewport } from "./scopeViewport"
+import { TraceProperties } from "./TraceProperties"
+import { ScopeWorkspace } from "./ScopeWorkspace"
+import { scopeWindow } from "./scopeDisplay"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Input } from "@/components/ui/input"
-import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select"
 import { core } from "./core"
-import type { CircuitDocument, Component, Entity, Target } from "./core"
+import type {
+  CircuitDocument,
+  Component,
+  Entity,
+  Target,
+  LabelSettings,
+} from "./core"
 import { useCircuitSession } from "./useCircuitSession"
 import { CircuitSheet } from "./CircuitSheet"
 import { ComponentProperties } from "./ComponentProperties"
-import { EditorDialog } from "./EditorDialog"
 import { ComponentSliderPanel } from "./ComponentSliderPanel"
-import { componentSliders, hasSlider } from "./componentSliders"
+import { PropertySliderDialog, numericProperties } from "./PropertySliders"
+import type { PropertySlider } from "./PropertySliders"
+import {
+  componentSliders,
+  clampSliderValue,
+  hasSlider,
+  sliderField,
+  setProperty,
+} from "./componentSliders"
 import type { SliderAdjustment, SliderKind } from "./componentSliders"
 import { captureCsv, captureWav, normalizedAudio } from "./capture"
 const examples = new Map(
@@ -26,26 +40,6 @@ const examples = new Map(
   ).map((document) => [document.title, document])
 )
 const exampleNames = [...examples.keys()].sort((a, b) => a.localeCompare(b))
-
-const scopeTimeDivisions = [
-  1e-5, 2e-5, 5e-5, 1e-4, 2e-4, 5e-4, 0.001, 0.002, 0.005, 0.01, 0.02,
-]
-const scopeVoltageDivisions = [
-  0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10,
-]
-
-function formatScope(value: number | null | undefined, unit = "") {
-  if (value == null || !Number.isFinite(value)) return "—"
-  if (Math.abs(value) < 1e-15) value = 0
-  const [scale, prefix] = [
-    [1, ""],
-    [1e-3, "m"],
-    [1e-6, "µ"],
-    [1e-9, "n"],
-    [1e-12, "p"],
-  ].find(([size]) => Math.abs(value) >= Number(size)) || [1, ""]
-  return `${Number((value / Number(scale)).toPrecision(4))} ${prefix}${unit}`.trim()
-}
 
 type PendingAdjustment = SliderAdjustment & { document: CircuitDocument }
 
@@ -65,309 +59,6 @@ function nextTraceName(
   return `${base} ${number}`
 }
 
-function ScopePane({
-  id,
-  channels,
-  times,
-  start,
-  end,
-  volts,
-  hidden,
-  cursor,
-  onVolts,
-  onToggleChannel,
-  onRenameChannel,
-  onCursor,
-  onLeave,
-  onRemove,
-}: {
-  id: number
-  channels: {
-    id: string
-    label: string
-    color: string
-    values: number[]
-    min: number | null
-    max: number | null
-    last?: number
-  }[]
-  times: number[]
-  start: number
-  end: number
-  volts: string
-  hidden: string[]
-  cursor: number | null
-  onVolts: (value: string) => void
-  onToggleChannel: (id: string) => void
-  onRenameChannel: (id: string) => void
-  onCursor: (fraction: number) => void
-  onLeave: () => void
-  onRemove?: () => void
-}) {
-  const channelLabelId = useId()
-  const width = 720,
-    height = 200,
-    left = 55,
-    right = width - 17,
-    top = 14,
-    bottom = height - 28
-  const plotWidth = right - left,
-    plotHeight = bottom - top
-  const visible = channels.filter((channel) => !hidden.includes(channel.id))
-  const voltsPerDivision =
-    volts === "auto" ? core.signals.autoScale(visible) : Number(volts)
-  const x = (time: number) =>
-    left + ((time - start) / Math.max(end - start, 1e-12)) * plotWidth
-  const y = (value: number) =>
-    Math.max(
-      top - 2,
-      Math.min(
-        bottom + 2,
-        top + plotHeight / 2 - (value / (voltsPerDivision * 8)) * plotHeight
-      )
-    )
-  let readingIndex = times.length - 1
-  if (cursor !== null && times.length) {
-    const targetTime = start + cursor * (end - start)
-    readingIndex = 0
-    for (let i = 1; i < times.length; i++)
-      if (
-        Math.abs(times[i] - targetTime) <
-        Math.abs(times[readingIndex] - targetTime)
-      )
-        readingIndex = i
-  }
-  const paths = visible.map((channel) => {
-    const points = core.signals.envelope(
-      times,
-      channel.values,
-      start,
-      end,
-      Math.floor(plotWidth)
-    )
-    return {
-      channel,
-      points,
-      d: points
-        .map(
-          ([time, value], i) =>
-            `${i ? "L" : "M"}${x(time).toFixed(2)} ${y(value).toFixed(2)}`
-        )
-        .join(" "),
-    }
-  })
-  let readings =
-    readingIndex < 0
-      ? "Place a Probe, then Run. Hover the plot for synchronized voltage readings."
-      : `${cursor === null ? "Latest" : "Cursor"} t=${formatScope(times[readingIndex], "s")}  ·  ${visible.map((channel) => `${channel.label} ${formatScope(channel.values[readingIndex], "V")}`).join("  ·  ")}`
-  if (readingIndex >= 0 && visible.length === 2)
-    readings += `  ·  Δ (${visible[1].label} − ${visible[0].label}) ${formatScope(visible[1].values[readingIndex] - visible[0].values[readingIndex], "V")}`
-  const emptyMessage = !channels.length
-    ? "Place voltage probes on the input and output"
-    : !visible.length
-      ? "Enable a probe channel to plot it"
-      : "Run or Step to capture waveforms"
-
-  return (
-    <section
-      className="h-[252px] min-h-[226px] min-w-0 resize-y overflow-auto border"
-      data-pane={id}
-    >
-      {id > 1 && (
-        <div className="flex h-8 items-center gap-3 px-2 text-xs">
-          <span>Pane {id}</span>
-          <label className="ml-auto">
-            Voltage{" "}
-            <NativeSelect
-              size="sm"
-              aria-label={`Pane ${id} volts per division`}
-              value={volts}
-              onChange={(event) => onVolts(event.target.value)}
-            >
-              <NativeSelectOption value="auto">Auto</NativeSelectOption>
-              {scopeVoltageDivisions.map((value) => (
-                <NativeSelectOption key={value} value={value}>
-                  {formatScope(value, "V")}/div
-                </NativeSelectOption>
-              ))}
-            </NativeSelect>
-          </label>
-          <Button variant="outline" size="sm" onClick={onRemove}>
-            Remove
-          </Button>
-        </div>
-      )}
-      <div
-        className={
-          id === 1
-            ? "grid h-[calc(100%-26px)] min-h-[160px] grid-cols-[minmax(0,1fr)_145px]"
-            : "grid h-[calc(100%-58px)] min-h-[160px] grid-cols-[minmax(0,1fr)_145px]"
-        }
-      >
-        <svg
-          viewBox={`0 0 ${width} ${height}`}
-          className="h-full w-full touch-none"
-          role="img"
-          aria-label={`Pane ${id} voltage waveforms`}
-          onPointerMove={(event) => {
-            const rect = event.currentTarget.getBoundingClientRect()
-            onCursor(
-              Math.max(
-                0,
-                Math.min(
-                  1,
-                  (event.clientX - rect.left - (rect.width * left) / width) /
-                    ((rect.width * plotWidth) / width)
-                )
-              )
-            )
-          }}
-          onPointerLeave={onLeave}
-        >
-          <rect width={width} height={height} fill="#101720" />
-          {Array.from({ length: 11 }, (_, i) => {
-            const gx = left + (plotWidth * i) / 10
-            return (
-              <g key={`x-${i}`}>
-                <path d={`M${gx} ${top}V${bottom}`} stroke="#26313e" />
-                {i % 2 === 0 && (
-                  <text
-                    x={gx}
-                    y={height - 9}
-                    fill="#8797ab"
-                    textAnchor="middle"
-                    fontSize={10}
-                  >
-                    {formatScope(start + ((end - start) * i) / 10, "s")}
-                  </text>
-                )}
-              </g>
-            )
-          })}
-          {Array.from({ length: 9 }, (_, i) => {
-            const gy = top + (plotHeight * i) / 8
-            return (
-              <g key={`y-${i}`}>
-                <path
-                  d={`M${left} ${gy}H${right}`}
-                  stroke={i === 4 ? "#526071" : "#26313e"}
-                />
-                {i % 2 === 0 && (
-                  <text
-                    x={left - 8}
-                    y={gy + 4}
-                    fill="#8797ab"
-                    textAnchor="end"
-                    fontSize={10}
-                  >
-                    {formatScope((4 - i) * voltsPerDivision, "V")}
-                  </text>
-                )}
-              </g>
-            )
-          })}
-          <defs>
-            <clipPath id={`scope-clip-${id}`}>
-              <rect x={left} y={top} width={plotWidth} height={plotHeight} />
-            </clipPath>
-          </defs>
-          <g clipPath={`url(#scope-clip-${id})`}>
-            {paths.map(({ channel, points, d }) => (
-              <g key={channel.id}>
-                {d && (
-                  <path
-                    data-scope-trace={channel.id}
-                    d={d}
-                    fill="none"
-                    stroke={channel.color}
-                    strokeWidth={1.8}
-                    strokeLinejoin="round"
-                  />
-                )}
-                {points.length > 0 && (
-                  <circle
-                    cx={x(points.at(-1)![0])}
-                    cy={y(points.at(-1)![1])}
-                    r={2}
-                    fill={channel.color}
-                  />
-                )}
-              </g>
-            ))}
-            {readingIndex >= 0 && cursor !== null && (
-              <path
-                d={`M${x(times[readingIndex])} ${top}V${bottom}`}
-                stroke="#d4deeb"
-                strokeDasharray="3 3"
-              />
-            )}
-          </g>
-          {(!channels.length || !visible.length || !times.length) && (
-            <text
-              x={left + plotWidth / 2}
-              y={top + plotHeight / 2}
-              textAnchor="middle"
-              fill="#a0afc2"
-              fontSize={12}
-            >
-              {emptyMessage}
-            </text>
-          )}
-        </svg>
-        <div
-          className="overflow-auto border-l px-2 py-1 text-xs"
-          aria-label="Voltage probe channels"
-        >
-          {channels.map((channel) => (
-            <div
-              key={channel.id}
-              className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-1 border-b py-1.5"
-              data-scope-channel={channel.id}
-            >
-              <div className="flex min-w-0 items-center gap-1.5">
-                <Checkbox
-                  id={`${channelLabelId}-${channel.id}`}
-                  checked={!hidden.includes(channel.id)}
-                  onCheckedChange={() => onToggleChannel(channel.id)}
-                />
-                <label
-                  htmlFor={`${channelLabelId}-${channel.id}`}
-                  className="flex min-w-0 items-center gap-1.5"
-                >
-                  <span
-                    className="h-[3px] w-3 shrink-0"
-                    style={{ background: channel.color }}
-                  />
-                  <span className="truncate">{channel.label}</span>
-                </label>
-              </div>
-              <span className="tabular-nums">
-                {formatScope(channel.last, "V")}
-              </span>
-              <Button
-                variant="ghost"
-                size="icon-xs"
-                aria-label={`Rename trace ${channel.label}`}
-                onClick={() => onRenameChannel(channel.id)}
-              >
-                <PencilIcon aria-hidden="true" />
-              </Button>
-              <small className="col-span-3 text-muted-foreground">
-                min {formatScope(channel.min, "V")} · max{" "}
-                {formatScope(channel.max, "V")}
-              </small>
-            </div>
-          ))}
-        </div>
-      </div>
-      <div className="h-[26px] overflow-auto border-t px-3 py-1 text-[10px] whitespace-nowrap text-muted-foreground">
-        {readings}
-      </div>
-    </section>
-  )
-}
-
-/** React editor shell and controls over the shared circuit editing/simulation core. */
 export function CircuitEditor({
   initialDocument,
   autosave = true,
@@ -379,33 +70,129 @@ export function CircuitEditor({
   const [selection, setSelection] = useState<Entity[]>([])
   const [tool, setTool] = useState("select")
   const [gridMode, setGridMode] = useState<"dots" | "lines" | "off">("lines")
-  const [scopeOpen, setScopeOpen] = useState(false)
-  const [scopeLayout, setScopeLayout] = useState<"stacked" | "side">("stacked")
-  const [scopeTimeDivision, setScopeTimeDivision] = useState("0.0002")
-  const [scopePanes, setScopePanes] = useState([
-    { id: 1, volts: "auto", hidden: [] as string[] },
-  ])
+  const [scopeViewport] = useState(createScopeViewport)
+  const scopeOpen = editor.document.layout.scopes?.open ?? false
+  function setScopeOpen(change: boolean | ((open: boolean) => boolean)) {
+    editor.session.transaction("Scope panel", (draft) => {
+      const scopes = (draft.layout.scopes ||= defaultScopeLayout())
+      scopes.open = typeof change === "function" ? change(scopes.open) : change
+    })
+  }
+  const saveScopeLayout = useCallback(
+    (
+      layout: Omit<
+        NonNullable<CircuitDocument["layout"]["scopes"]>,
+        "version" | "open"
+      >
+    ) => {
+      editor.session.transaction("Scope layout", (draft) => {
+        draft.layout.scopes = {
+          ...layout,
+          version: 1,
+          open: draft.layout.scopes?.open ?? false,
+        }
+      })
+    },
+    [editor.session]
+  )
+  const [scopePropertiesSpan, setScopePropertiesSpan] = useState(0.002)
   const [scopeCursor, setScopeCursor] = useState<number | null>(null)
   const cursorFrame = useRef<number | null>(null)
   const cursorValue = useRef<number | null>(null)
-  const nextScopePane = useRef(2)
   const [fitRequest, setFitRequest] = useState(0)
   const [editing, setEditing] = useState<Entity | null>(null)
+  const [editingPropertySlider, setEditingPropertySlider] = useState<
+    PropertySlider | undefined
+  >(undefined)
+  const [sliderComponentId, setSliderComponentId] = useState<string | null>(
+    null
+  )
+  const [propertySlidersByDocument, setPropertySlidersByDocument] = useState<
+    Record<string, PropertySlider[]>
+  >(() => {
+    try {
+      const saved = JSON.parse(
+        localStorage.getItem("circuit-editor.property-sliders.v1") ?? "{}"
+      )
+      if (!saved || typeof saved !== "object" || Array.isArray(saved)) return {}
+      return Object.fromEntries(
+        Object.entries(saved).map(([id, entries]) => [
+          id,
+          Array.isArray(entries)
+            ? entries.filter(
+                (entry) =>
+                  entry &&
+                  typeof entry.id === "string" &&
+                  typeof entry.componentId === "string" &&
+                  typeof entry.field === "string" &&
+                  typeof entry.label === "string" &&
+                  [entry.min, entry.max, entry.step].every(
+                    (value) =>
+                      typeof value === "number" && Number.isFinite(value)
+                  ) &&
+                  entry.min < entry.max &&
+                  entry.step > 0
+              )
+            : [],
+        ])
+      )
+    } catch {
+      return {}
+    }
+  })
+  const propertySliders = propertySlidersByDocument[editor.document.id] ?? []
+  function updatePropertySliders(
+    update: PropertySlider[] | ((current: PropertySlider[]) => PropertySlider[])
+  ) {
+    setPropertySlidersByDocument((current) => {
+      const sliders =
+        typeof update === "function"
+          ? update(current[editor.document.id] ?? [])
+          : update
+      const next = { ...current, [editor.document.id]: sliders }
+      if (autosave) {
+        try {
+          localStorage.setItem(
+            "circuit-editor.property-sliders.v1",
+            JSON.stringify(next)
+          )
+        } catch {
+          /* Keep controls available in this session. */
+        }
+      }
+      return next
+    })
+  }
+  const sliderComponent = editor.document.electrical.components.find(
+    ({ id }) => id === sliderComponentId
+  )
   const [sliderPanel, setSliderPanel] = useState<"manual" | "placement" | null>(
     null
   )
-  const sliderPanelOpen = sliderPanel !== null
   const sliderComponents = useMemo(
     () => editor.document.electrical.components.filter(hasSlider),
     [editor.document]
   )
+  const sliderPanelRequired =
+    sliderComponents.length > 0 ||
+    propertySliders.some((slider) =>
+      editor.document.electrical.components.some(
+        (component) =>
+          component.id === slider.componentId &&
+          numericProperties(component.parameters).some(
+            ([field]) => field === slider.field
+          )
+      )
+    )
+  const sliderPanelOpen = sliderPanelRequired || sliderPanel !== null
   const [sliderAdjustment, setSliderAdjustment] =
     useState<PendingAdjustment | null>(null)
   const pendingSlider = useRef<PendingAdjustment | null>(null)
   const sliderPreviewFrame = useRef<number | null>(null)
   const sliderPreviewInFlight = useRef(false)
+  const lastSliderPreviewAt = useRef(-Infinity)
   const workspace = useRef<HTMLDivElement>(null)
-  const [notice, setNotice] = useState("Ready")
+  const [, setNotice] = useState("Ready")
   const fileInput = useRef<HTMLInputElement>(null)
   const documentRequest = useRef(0)
   const frame = core.simulation.presentationFrame(editor.simulation)
@@ -413,7 +200,7 @@ export function CircuitEditor({
     !!editor.simulation.accepted &&
     !editor.simulation.runRequested &&
     editor.simulation.status === "paused"
-  const scopeInfo = core.geometry.scopeChannels(editor.document)
+
   useEffect(() => {
     const { electrical, probes } = editor.document
     const ids = {
@@ -457,7 +244,8 @@ export function CircuitEditor({
   const activeSliderAdjustment =
     sliderAdjustment?.document === editor.document ? sliderAdjustment : null
 
-  function beginEdit(entity: Entity) {
+  function beginEdit(entity: Entity, span = 0.002) {
+    setScopePropertiesSpan(span)
     cancelSliderAdjustment()
     setEditing(entity)
     setSelection([entity])
@@ -465,13 +253,17 @@ export function CircuitEditor({
   function closeProperties() {
     setEditing(null)
   }
-  function applyEdit(parameters: Component["parameters"]) {
+  function applyEdit(
+    parameters: Component["parameters"],
+    label: LabelSettings
+  ) {
     editor.session.transaction("Edit component", (draft) => {
       const component = draft.electrical.components.find(
         (item) => item.id === editingComponent?.id
       )
       if (!component) throw new Error("Component no longer exists")
-      component.parameters = parameters
+      core.editing.replaceParameters(draft, component.id, parameters)
+      draft.layout.components[component.id].label = label
     })
     closeProperties()
     setNotice("Component updated")
@@ -483,20 +275,10 @@ export function CircuitEditor({
       )
       if (!component) return
       const p = component.parameters as Record<string, any>
-      if (component.kind === "switch") p.closed = !p.closed
+      if (core.catalog.switchKind(component.kind))
+        core.editing.toggleSwitches(draft, id)
       else if (component.kind === "logicInput")
         p.state = (p.state + 1) % (p.mode === "ternary" ? 3 : 2)
-      else if (
-        ["spdtSwitch", "dpdtSwitch", "mbbSwitch"].includes(component.kind)
-      ) {
-        const count =
-          component.kind === "spdtSwitch"
-            ? 3
-            : component.kind === "mbbSwitch"
-              ? 4
-              : 2
-        p.position = (p.position + 1) % count
-      }
     })
   }
   function pressComponent(id: string) {
@@ -505,7 +287,15 @@ export function CircuitEditor({
       ?.setDocument(pressed)
       .catch((cause) => setNotice(String(cause)))
   }
-  function releaseComponent() {
+  function releaseComponent(id: string) {
+    const component = editor.document.electrical.components.find(
+      (c) => c.id === id
+    )
+    if (component && core.catalog.switchPositionCount(component) > 2)
+      editor.session.transaction("Release momentary switch", (draft) => {
+        core.editing.toggleSwitches(draft, id)
+        core.editing.toggleSwitches(draft, id)
+      })
     void editor.run.current
       ?.setDocument(editor.document)
       .catch((cause) => setNotice(String(cause)))
@@ -527,6 +317,7 @@ export function CircuitEditor({
     }
   }
   function setSliderPanelVisibility(open: boolean) {
+    if (!open && sliderPanelRequired) return
     if (!open) {
       cancelSliderAdjustment()
       if (document.activeElement?.closest("[data-component-slider-panel]"))
@@ -540,25 +331,63 @@ export function CircuitEditor({
     const pending = pendingSlider.current
     if (pending && (pending.id !== id || pending.document !== editor.document))
       return
+    value = clampSliderValue(kind, componentSliders[kind].field, value)
     const next = { document: editor.document, kind, id, value }
     pendingSlider.current = next
-    setSliderAdjustment(next)
+    scheduleSliderPreview()
+  }
+  function previewPropertySlider(
+    component: Component,
+    field: string,
+    value: number
+  ) {
+    const pending = pendingSlider.current
+    if (
+      pending &&
+      (pending.id !== component.id ||
+        sliderField(pending) !== field ||
+        pending.document !== editor.document)
+    )
+      return
+    value = clampSliderValue(component.kind, field, value)
+    const next = {
+      document: editor.document,
+      kind: component.kind,
+      id: component.id,
+      field,
+      value,
+    }
+    pendingSlider.current = next
     scheduleSliderPreview()
   }
   function scheduleSliderPreview() {
-    if (sliderPreviewFrame.current !== null || sliderPreviewInFlight.current)
-      return
-    sliderPreviewFrame.current = requestAnimationFrame(() => {
+    if (sliderPreviewFrame.current !== null) return
+    sliderPreviewFrame.current = requestAnimationFrame((now) => {
       sliderPreviewFrame.current = null
       const pending = pendingSlider.current
       const coordinator = editor.run.current
       if (!pending || !coordinator) return
+      // Keep the sheet responsive at display cadence; only the latest control
+      // value needs to reach the solver. Never build a queue of mouse events.
+      setSliderAdjustment(pending)
+      if (sliderPreviewInFlight.current) return
+      const state = coordinator.getState()
+      if (
+        !["running", "paused", "error"].includes(state.status) ||
+        now - lastSliderPreviewAt.current < 1000 / 30
+      ) {
+        scheduleSliderPreview()
+        return
+      }
+      // An idle coordinator has no outstanding step. Updating during a step
+      // invalidates its old revision and discards otherwise valid scope samples.
       const preview = editor.session.document
       const source = preview.electrical.components.find(
         ({ id }) => id === pending.id
       )
       if (source?.kind !== pending.kind) return
-      source.parameters[componentSliders[pending.kind].field] = pending.value
+      setProperty(source.parameters, sliderField(pending), pending.value)
+      lastSliderPreviewAt.current = now
       sliderPreviewInFlight.current = true
       void coordinator
         .setDocument(preview)
@@ -575,13 +404,19 @@ export function CircuitEditor({
     if (!pending || pending.id !== id) return
     clearSliderAdjustment()
     if (pending.document !== editor.document) return
-    const { field, historyLabel } = componentSliders[pending.kind]
+    const field = sliderField(pending)
+    value = clampSliderValue(pending.kind, field, value)
+    const historyLabel =
+      hasSlider(pending) && !pending.field
+        ? componentSliders[pending.kind].historyLabel
+        : `Adjust ${field}`
     try {
       const changed = editor.session.transaction(historyLabel, (draft) => {
         const source = draft.electrical.components.find(
           (item) => item.id === id
         )
-        if (source?.kind === pending.kind) source.parameters[field] = value
+        if (source?.kind === pending.kind)
+          setProperty(source.parameters, field, value)
       })
       if (changed) return
     } catch (cause) {
@@ -597,6 +432,50 @@ export function CircuitEditor({
       nextTraceName(editor.session.document.probes, "Wire")
     )
     setSelection([{ kind: "probe", id }])
+    setScopeOpen(true)
+  }
+  function plotComponent(componentId: string, pin?: string) {
+    const component = editor.document.electrical.components.find(
+      ({ id }) => id === componentId
+    )
+    if (!component) return
+    if (pin === "__current") {
+      editor.session.transaction("Add current to scope", (draft) => {
+        draft.probes.push({
+          id: crypto.randomUUID(),
+          kind: "current",
+          componentId,
+          label: nextTraceName(
+            draft.probes,
+            `${core.catalog.definitions[component.kind].name} current`
+          ),
+        })
+      })
+      setScopeOpen(true)
+      return
+    }
+    const pins = Object.keys(core.catalog.componentPins(component))
+    const positive = pin ?? pins[0]
+    if (!positive) return
+    const negative = pin ? undefined : pins[1]
+    const id = crypto.randomUUID()
+    editor.session.transaction("Add voltage to scope", (draft) => {
+      draft.probes.push({
+        id,
+        kind: "voltage",
+        label: nextTraceName(
+          draft.probes,
+          `${core.catalog.definitions[component.kind].name} ${positive}${negative ? ` − ${negative}` : ""}`
+        ),
+        positive: { kind: "pin", componentId, pinId: positive },
+        ...(negative
+          ? {
+              negative: { kind: "pin" as const, componentId, pinId: negative },
+              reference: "pins",
+            }
+          : { reference: "ground" }),
+      })
+    })
     setScopeOpen(true)
   }
   function plotMeter(componentId: string) {
@@ -764,13 +643,13 @@ export function CircuitEditor({
   }
   const title = editor.document.title
   const error = editor.simulation.error?.message || editor.error
-  function updateScopeCursor(value: number | null) {
+  function updateScopeCursor(value: number | null, immediate = false) {
     cursorValue.current = value
-    if (value === null) {
+    if (value === null || immediate) {
       if (cursorFrame.current !== null)
         cancelAnimationFrame(cursorFrame.current)
       cursorFrame.current = null
-      setScopeCursor(null)
+      setScopeCursor(value)
     } else if (cursorFrame.current === null) {
       cursorFrame.current = requestAnimationFrame(() => {
         cursorFrame.current = null
@@ -788,6 +667,8 @@ export function CircuitEditor({
         <ComponentProperties
           key={editingComponent.id}
           component={editingComponent}
+          components={editor.document.electrical.components}
+          label={editor.document.layout.components[editingComponent.id].label}
           onApply={applyEdit}
           onClose={() => closeProperties()}
           frame={frame}
@@ -795,46 +676,38 @@ export function CircuitEditor({
         />
       )}
       {editingProbe && (
-        <EditorDialog title="Rename trace" onClose={() => closeProperties()}>
-          <form
-            className="grid gap-3 text-sm"
-            onSubmit={(event) => {
-              event.preventDefault()
-              const label = String(
-                new FormData(event.currentTarget).get("label")
-              ).trim()
-              editor.session.transaction("Rename trace", (draft) => {
-                const probe = draft.probes.find(
-                  ({ id }) => id === editingProbe.id
-                )
-                if (probe)
-                  probe.label =
-                    label || nextTraceName(draft.probes, "Wire", probe.id)
-              })
-              closeProperties()
-            }}
-          >
-            <label className="grid gap-1">
-              Trace name
-              <Input
-                name="label"
-                defaultValue={editingProbe.label || ""}
-                placeholder="Wire"
-                maxLength={80}
-              />
-            </label>
-            <div className="flex justify-end gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => closeProperties()}
-              >
-                Cancel
-              </Button>
-              <Button type="submit">Apply</Button>
-            </div>
-          </form>
-        </EditorDialog>
+        <TraceProperties
+          key={editingProbe.id}
+          probe={editingProbe}
+          channel={scopeWindow(
+            editor.scopeData.channels,
+            editor.scopeData.times,
+            scopePropertiesSpan
+          ).channels.find((c) => c.id === editingProbe.id)}
+          span={scopePropertiesSpan}
+          onClose={closeProperties}
+          onApply={(settings) => {
+            editor.session.transaction("Trace properties", (draft) => {
+              const trace = draft.probes.find(
+                (probe) => probe.id === editingProbe.id
+              )
+              if (trace)
+                Object.assign(trace, settings, {
+                  label:
+                    settings.label ||
+                    nextTraceName(draft.probes, "Wire", trace.id),
+                })
+            })
+            closeProperties()
+          }}
+          onDelete={() => {
+            editor.execute({
+              type: "remove",
+              selection: [{ kind: "probe", id: editingProbe.id }],
+            })
+            closeProperties()
+          }}
+        />
       )}
       <header className="flex flex-wrap items-center gap-2 border-b p-2">
         <input
@@ -901,6 +774,12 @@ export function CircuitEditor({
           onToolChange={setTool}
           onAddProbe={addProbe}
           onEdit={beginEdit}
+          onConfigureSlider={(id) => {
+            cancelSliderAdjustment()
+            setEditingPropertySlider(undefined)
+            setSliderComponentId(id)
+          }}
+          onPlotComponent={plotComponent}
           onToggleComponent={toggleComponent}
           onPressComponent={pressComponent}
           onReleaseComponent={releaseComponent}
@@ -916,6 +795,7 @@ export function CircuitEditor({
           scopeOpen={scopeOpen}
           onToggleScope={() => setScopeOpen((open) => !open)}
           sliderPanelOpen={sliderPanelOpen}
+          sliderPanelRequired={sliderPanelRequired}
           onSliderPanelChange={setSliderPanelVisibility}
           onPlaceSlider={() =>
             setSliderPanel((current) => current ?? "placement")
@@ -930,9 +810,11 @@ export function CircuitEditor({
           }
           frame={frame}
           fitRequest={fitRequest}
+          onViewportChange={scopeViewport.publish}
         />
         <ComponentSliderPanel
           open={sliderPanelOpen}
+          dismissible={!sliderPanelRequired}
           focusOnOpen={sliderPanel === "manual"}
           documentId={editor.document.id}
           persistOrder={autosave}
@@ -942,10 +824,40 @@ export function CircuitEditor({
           onCommit={commitSlider}
           onCancelAdjustment={cancelSliderAdjustment}
           onClose={() => setSliderPanelVisibility(false)}
+          propertySliders={propertySliders}
+          allComponents={editor.document.electrical.components}
+          onPropertyPreview={previewPropertySlider}
+          onEditPropertySlider={(config) => {
+            cancelSliderAdjustment()
+            setEditingPropertySlider(config)
+            setSliderComponentId(config.componentId)
+          }}
+          onRemovePropertySlider={(id) => {
+            cancelSliderAdjustment()
+            updatePropertySliders((current) =>
+              current.filter((slider) => slider.id !== id)
+            )
+          }}
         />
-      </div>
-      <div className="border-y px-2 py-1 text-xs" role="status">
-        {error || notice}
+        {sliderComponent && (
+          <PropertySliderDialog
+            key={`${editor.document.id}:${sliderComponent.id}:${editingPropertySlider?.id ?? "new"}`}
+            existing={editingPropertySlider}
+            component={sliderComponent}
+            onClose={() => setSliderComponentId(null)}
+            onSave={(slider) => {
+              updatePropertySliders((current) =>
+                editingPropertySlider
+                  ? current.map((item) =>
+                      item.id === slider.id ? slider : item
+                    )
+                  : [...current, slider]
+              )
+              setSliderComponentId(null)
+              setSliderPanelVisibility(true)
+            }}
+          />
+        )}
       </div>
       <div
         className="flex min-h-9 items-center gap-3 border-b px-2 text-xs"
@@ -961,16 +873,12 @@ export function CircuitEditor({
           {scopeOpen ? "▾" : "▸"} Oscilloscope
         </Button>
         <span className="min-w-0 flex-1 truncate text-muted-foreground">
-          {editor.scopeData.channels.length} voltage{" "}
-          {editor.scopeData.channels.length === 1 ? "probe" : "probes"} ·{" "}
-          {(
-            editor.scopeData.stored ?? editor.scopeData.times.length
-          ).toLocaleString()}{" "}
-          samples ·{" "}
+          {editor.scopeData.channels.length}{" "}
+          {editor.scopeData.channels.length === 1 ? "trace" : "traces"} ·{" "}
           {editor.simulation.status === "error" ||
           editor.simulation.status === "empty" ||
           editor.simulation.status === "disposed"
-            ? "Waiting for valid circuit"
+            ? error || "Waiting for valid circuit"
             : editor.simulation.status === "loading"
               ? "Resetting"
               : editor.simulation.runRequested
@@ -988,172 +896,34 @@ export function CircuitEditor({
           Clear
         </Button>
       </div>
-      {scopeOpen && (
-        <div
-          className="grid max-h-[48vh] gap-2 overflow-auto border-b p-2"
-          data-layout={scopeLayout}
-        >
-          <div className="flex flex-wrap items-center gap-2 text-xs">
-            <label>
-              Time{" "}
-              <NativeSelect
-                size="sm"
-                aria-label="Oscilloscope time per division"
-                value={scopeTimeDivision}
-                onChange={(event) => {
-                  const value = event.target.value
-                  setScopeTimeDivision(value)
-                  updateScopeCursor(null)
-                  editor.setScopeTime(Number(value))
-                }}
-              >
-                {scopeTimeDivisions.map((value) => (
-                  <NativeSelectOption key={value} value={value}>
-                    {formatScope(value, "s")}/div
-                  </NativeSelectOption>
-                ))}
-              </NativeSelect>
-            </label>
-            <label>
-              Pane 1 voltage{" "}
-              <NativeSelect
-                size="sm"
-                aria-label="Pane 1 volts per division"
-                value={scopePanes[0].volts}
-                onChange={(event) =>
-                  setScopePanes((panes) =>
-                    panes.map((pane) =>
-                      pane.id === 1
-                        ? { ...pane, volts: event.target.value }
-                        : pane
-                    )
-                  )
-                }
-              >
-                <NativeSelectOption value="auto">Auto</NativeSelectOption>
-                {scopeVoltageDivisions.map((value) => (
-                  <NativeSelectOption key={value} value={value}>
-                    {formatScope(value, "V")}/div
-                  </NativeSelectOption>
-                ))}
-              </NativeSelect>
-            </label>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={scopePanes.length >= 4}
-              onClick={() =>
-                setScopePanes((panes) => [
-                  ...panes,
-                  {
-                    id: nextScopePane.current++,
-                    volts: "auto",
-                    hidden: [],
-                  },
-                ])
-              }
-            >
-              + Pane
-            </Button>
-            <NativeSelect
-              size="sm"
-              aria-label="Oscilloscope pane layout"
-              value={scopeLayout}
-              onChange={(event) =>
-                setScopeLayout(event.target.value as typeof scopeLayout)
-              }
-            >
-              <NativeSelectOption value="stacked">Stacked</NativeSelectOption>
-              <NativeSelectOption value="side">Side by side</NativeSelectOption>
-            </NativeSelect>
-            <span className="min-w-0 flex-1 text-muted-foreground">
-              Linked time/cursor · {formatScope(frame?.timeStep, "s")} sample
-              interval · {editor.scopeData.capacity.toLocaleString()} sample
-              buffer.{" "}
-              {Math.max(0, scopeInfo.channels.length - 32)
-                ? `First 32 probes shown (${scopeInfo.channels.length - 32} more). `
-                : ""}
-              {scopeInfo.unresolved.length
-                ? `${scopeInfo.unresolved.length} unconnected probe target(s).`
-                : ""}
-            </span>
-            {editor.simulation.runRequested ? (
-              <Button
-                size="sm"
-                onClick={() => void editor.run.current?.pause()}
-              >
-                Ⅱ Pause
-              </Button>
-            ) : (
-              <Button
-                size="sm"
-                disabled={
-                  !editor.simulation.accepted ||
-                  ["error", "empty", "disposed", "loading"].includes(
-                    editor.simulation.status
-                  )
-                }
-                onClick={() => void editor.run.current?.run()}
-              >
-                ▶ Run
-              </Button>
-            )}
-          </div>
-          <div
-            className={
-              scopeLayout === "side"
-                ? "grid grid-cols-[repeat(auto-fit,minmax(320px,1fr))] gap-2"
-                : "grid gap-2"
-            }
-          >
-            {scopePanes.map((pane) => (
-              <ScopePane
-                key={pane.id}
-                id={pane.id}
-                channels={editor.scopeData.channels}
-                times={editor.scopeData.times}
-                start={editor.scopeData.start}
-                end={editor.scopeData.end}
-                volts={pane.volts}
-                hidden={pane.hidden}
-                cursor={scopeCursor}
-                onVolts={(volts) =>
-                  setScopePanes((items) =>
-                    items.map((item) =>
-                      item.id === pane.id ? { ...item, volts } : item
-                    )
-                  )
-                }
-                onToggleChannel={(channelId) =>
-                  setScopePanes((items) =>
-                    items.map((item) =>
-                      item.id === pane.id
-                        ? {
-                            ...item,
-                            hidden: item.hidden.includes(channelId)
-                              ? item.hidden.filter((id) => id !== channelId)
-                              : [...item.hidden, channelId],
-                          }
-                        : item
-                    )
-                  )
-                }
-                onRenameChannel={(id) => beginEdit({ kind: "probe", id })}
-                onCursor={updateScopeCursor}
-                onLeave={() => updateScopeCursor(null)}
-                onRemove={
-                  pane.id > 1
-                    ? () =>
-                        setScopePanes((items) =>
-                          items.filter((item) => item.id !== pane.id)
-                        )
-                    : undefined
-                }
-              />
-            ))}
-          </div>
-        </div>
-      )}
+      <ScopeWorkspace
+        key={editor.document.id}
+        channels={editor.scopeData.channels}
+        times={editor.scopeData.times}
+        cursor={scopeCursor}
+        open={scopeOpen}
+        sheet={workspace}
+        viewport={scopeViewport}
+        savedLayout={editor.document.layout.scopes}
+        onLayoutChange={saveScopeLayout}
+        onDockOpen={() => setScopeOpen(true)}
+        onTimeWindow={editor.setScopeTime}
+        onDeleteScope={(ids) =>
+          editor.execute({
+            type: "remove",
+            selection: ids.map((id) => ({ kind: "probe", id })),
+          })
+        }
+        onTraceSettings={(id, patch) =>
+          editor.session.transaction("Scope trace settings", (draft) => {
+            const trace = draft.probes.find((probe) => probe.id === id)
+            if (trace) Object.assign(trace, patch)
+          })
+        }
+        onCursorCommit={(time) => updateScopeCursor(time, true)}
+        onLeave={() => updateScopeCursor(null)}
+        onProperties={(id, span) => beginEdit({ kind: "probe", id }, span)}
+      />
     </section>
   )
 }

@@ -3,6 +3,8 @@ import type { SymbolProps } from "../svg";
 
 export const kind = "andGate";
 export const metadata = {
+  // Original 16-unit artwork, scaled to the 50-unit sheet grid.
+  drawingScale: 3.125,
   prefix: "U",
   name: "AND gate",
   pins: {
@@ -12,9 +14,13 @@ export const metadata = {
   },
   parameters: {
     highVoltage: 5,
+    inputCount: 2,
+    propagationDelay: 0,
+    schmittInputs: false,
+    invertInputs: false,
   },
 } as const;
 
-export function Symbol({ pose }: SymbolProps) {
-  return <Gate pins={metadata.pins} label="AND" pose={pose} />;
+export function Symbol({ pose, parameters = metadata.parameters }: SymbolProps) {
+  return <Gate pins={metadata.pins} parameters={parameters} label="AND" pose={pose} />;
 }

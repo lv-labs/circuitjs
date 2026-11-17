@@ -3,6 +3,8 @@ import { Lead } from "../svg";
 // Authoritative symbol metadata. Generate the headless catalog with pnpm --dir wires symbols:generate.
 export const kind = "capacitor";
 export const metadata = {
+  // Original 16-unit artwork, scaled to the 50-unit sheet grid.
+  drawingScale: 3.125,
   prefix: "C",
   name: "Capacitor",
   pins: {

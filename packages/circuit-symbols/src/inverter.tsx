@@ -2,6 +2,8 @@ import { Lead } from "../svg";
 
 export const kind = "inverter";
 export const metadata = {
+  // Original 16-unit artwork, scaled to the 50-unit sheet grid.
+  drawingScale: 3.125,
   prefix: "U",
   name: "Inverter",
   pins: {

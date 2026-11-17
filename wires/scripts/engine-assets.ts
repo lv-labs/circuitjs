@@ -9,7 +9,7 @@ export function engineAssets(root: string): Plugin {
       "circuitjsworker/",
       resolve(root, "../build/engine-worker/circuitjsworker"),
     ],
-    ["", resolve(root, "../experiments/engine")],
+    ["", resolve(root, "../packages/circuit-runtime")],
   ]
   const required = resolve(
     root,
@@ -43,12 +43,8 @@ export function engineAssets(root: string): Plugin {
       mkdirSync(out, { recursive: true })
       for (const [prefix, source] of mappings.filter(([prefix]) => prefix))
         cpSync(source, resolve(out, prefix), { recursive: true })
-      for (const name of [
-        "revision-worker.js",
-        "document-adapter.js",
-        "revision-protocol.js",
-      ])
-        cpSync(resolve(root, "../experiments/engine", name), resolve(out, name))
+      for (const name of ["revision-worker.js"])
+        cpSync(resolve(root, "../packages/circuit-runtime", name), resolve(out, name))
     },
   }
 }

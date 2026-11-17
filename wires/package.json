@@ -8,10 +8,11 @@
     "build": "pnpm symbols:check && tsc -b && vite build",
     "lint": "eslint .",
     "format": "prettier --write \"**/*.{ts,tsx}\"",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc -b --pretty false",
     "preview": "vite preview",
     "symbols:generate": "node scripts/generate-symbols.mjs",
-    "symbols:check": "node scripts/generate-symbols.mjs --check"
+    "symbols:check": "node scripts/generate-symbols.mjs --check",
+    "check": "pnpm build && node scripts/test-editor-render.mjs && node scripts/test-worker-assets.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",

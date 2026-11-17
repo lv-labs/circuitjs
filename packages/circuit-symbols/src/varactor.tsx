@@ -1,6 +1,8 @@
 import { Lead } from "../svg";
 export const kind = "varactor";
 export const metadata = {
+  // Original 16-unit artwork, scaled to the 50-unit sheet grid.
+  drawingScale: 3.125,
   name: "Varactor",
   prefix: "D",
   pins: {

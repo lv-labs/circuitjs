@@ -3,6 +3,8 @@ import type { SymbolProps } from "../svg";
 
 export const kind = "ledArray";
 export const metadata = {
+  // Original 16-unit artwork, scaled to the 50-unit sheet grid.
+  drawingScale: 3.125,
   prefix: "LA",
   name: "LED array (8 × 8)",
   pins: {

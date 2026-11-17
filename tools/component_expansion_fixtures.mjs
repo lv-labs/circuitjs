@@ -1,4 +1,4 @@
-import '../experiments/engine/editor-model.js';
+import {editing as CircuitEditorModel} from '../packages/circuit-core/index.mjs';
 export const expansionKinds=['transformer','spdtSwitch','dpdtSwitch','led','zener'];
 export function expansionCircuit(kind,parameters={},voltage=5){
   const M=CircuitEditorModel,d=M.empty();d.id='expansion-'+kind;
@@ -8,7 +8,7 @@ export function expansionCircuit(kind,parameters={},voltage=5){
   };
   const wire=(a,ap,b,bp)=>{const id='w'+d.electrical.wires.length;d.electrical.wires.push({id,from:{kind:'pin',componentId:a,pinId:ap},to:{kind:'pin',componentId:b,pinId:bp}});d.layout.wires[id]={bends:[]};};
   const resistor=(id,from,pin,resistance=1000)=>{add(id,'resistor',{resistance});wire(from,pin,id,'a');wire(id,'b','g','g');};
-  add('part',kind,{...structuredClone(M.definitions[kind].parameters),...parameters});
+  add('part',kind,{...structuredClone(M.definitions[kind].parameters),...(kind==='spdtSwitch'?{centerOff:true}:{}),...parameters});
   add('g','ground',{});add('vin','voltageRail',{waveform:{kind:'dc',voltage}});
   if(kind==='transformer'){
     wire('vin','p','part','p1');wire('part','p2','g','g');wire('part','s2','g','g');resistor('load','part','s1');
@@ -20,5 +20,5 @@ export function expansionCircuit(kind,parameters={},voltage=5){
   }else{
     add('load','resistor',{resistance:1000});wire('vin','p','load','a');wire('load','b','part','anode');wire('part','cathode','g','g');
   }
-  return d;
+  return CircuitEditorModel.alignGrid(d);
 }

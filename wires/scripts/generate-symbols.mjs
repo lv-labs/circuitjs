@@ -107,6 +107,8 @@ for (const file of files) {
     )
   )
     throw new Error(`Invalid symbol metadata in ${file}`)
+  const drawingScale = metadata.drawingScale ?? 1
+  metadata.pins = Object.fromEntries(Object.entries(metadata.pins).map(([name, pin]) => [name, pin.map(value => value * drawingScale)]))
   const output = read("output")
   if (output) {
     const { name, prefix, pins, parameters } = metadata
@@ -125,6 +127,7 @@ for (const file of files) {
     outputSpecs.set(kind, {
       name,
       prefix,
+      drawingScale,
       pins,
       type,
       fields: withDefaults,

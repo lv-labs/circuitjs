@@ -49,20 +49,32 @@ If you only want the compiled web assets in `war/`:
 
 ## Local Preview
 
-An experimental editor-independent simulation prototype is also available. See
-[the project plan](docs/new-simulator/PLAN.md) and
-[Phase 0 build/verification instructions](docs/new-simulator/PHASE-0.md).
-The [saved-document worker example](docs/new-simulator/DOCUMENT-ADAPTER.md) loads
-the divider JSON and returns results using stable component/pin IDs.
-The [simulation coordinator](docs/new-simulator/COORDINATOR.md) adds revision
-handling, stale-result rejection and safe worker replacement/reset.
-The [live RC demo](docs/new-simulator/RUN-AND-LIVE-EDITS.md) adds continuous
-Run/Pause and state-preserving document switch changes.
-The [editor canvas prototype](docs/new-simulator/EDITOR-PROTOTYPE.md) adds component
-placement, selection, explicit wiring, pan/zoom and live simulation feedback.
-Its KiCad-like interaction pass adds grid-aligned pin contacts and connected wire
-stretching. Start with the [current handoff](docs/new-simulator/HANDOFF.md) to resume
-development on another machine.
+The active new editor is the React app in `wires/`, backed by the retained
+CircuitJS worker and `packages/circuit-core`. Start with the
+[current handoff](docs/new-simulator/HANDOFF.md) and
+[React editor README](wires/src/editor/README.md).
+
+```bash
+pnpm deps:install
+pnpm engine:build
+pnpm dev
+```
+
+These commands require Java 8, Node 24+ and pnpm 10.30.3. Root scripts orchestrate
+the existing app; its dependencies and lockfile remain in `wires/`.
+`pnpm build` builds the engine plus React; `pnpm check` runs all computational
+checks, builds React and checks SSR/worker packaging. `pnpm verify` performs a
+fresh engine build followed by those checks. No browser interaction checks or
+deployment are performed by these commands.
+
+`pnpm --dir wires build` produces the React deployment in `wires/dist/`.
+Worker entry points live in `packages/circuit-runtime`; development-only engine
+verification pages live in `tools/engine-harness` and are assembled into
+`build/engine-site`. The intermediate JavaScript editor has been removed.
+The original Falstad interface and its existing build/deployment remain available
+through `makeSite`; this cleanup does not change that deployment workflow.
+See [upstream architecture](docs/new-simulator/UPSTREAM-ARCHITECTURE.md) for the
+proposed next steps; no submodule or repository split has been made.
 
 After `makeSite`:
 

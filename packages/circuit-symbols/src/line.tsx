@@ -6,7 +6,7 @@ export const metadata = {
   name: "Line",
   pins: {},
   parameters: {
-    width: 128,
+    width: 400,
     height: 0,
   },
 } as const;

@@ -38,7 +38,7 @@
       const e={a,b,source,axis:Math.abs(a.y-b.y)<.001?'x':'y',temporary:false,...options};edges.push(e);return e;
     }
     function replaceEnd(e,old,n){if(e.a===old)e.a=n;else e.b=n;}
-    for(const c of base.electrical.components)for(const pinId of Object.keys(definitions[c.kind].pins))node({kind:'pin',componentId:c.id,pinId});
+    for(const c of base.electrical.components)for(const pinId of Object.keys(Catalog.componentPins(c)))node({kind:'pin',componentId:c.id,pinId});
     for(const j of base.electrical.junctions)node({kind:'junction',junctionId:j.id});
     for(const p of base.probes)for(const side of ['positive','negative'])if(p[side])probeNodes.add(node(p[side]));
     for(const w of base.electrical.wires){
@@ -70,7 +70,7 @@
     const originalNodes=[...nodes.values()].filter(n=>!n.temporary);
     const pinAxis=n=>{
       if(n.ref.kind!=='pin')return 'x';
-      const pose=base.layout.components[n.ref.componentId],p=definitions[base.electrical.components.find(c=>c.id===n.ref.componentId).kind].pins[n.ref.pinId];
+      const pose=base.layout.components[n.ref.componentId],p=Catalog.componentPins(base.electrical.components.find(c=>c.id===n.ref.componentId))[n.ref.pinId];
       const horizontal=Math.abs(p[0])>=Math.abs(p[1]);return (pose.rotation%180===0)===horizontal?'x':'y';
     };
     for(const e of edges)if(equal(e.a,e.b))e.axis=e.a.ref.kind==='pin'?pinAxis(e.a):e.b.ref.kind==='pin'?pinAxis(e.b):e.axis;

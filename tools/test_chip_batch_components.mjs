@@ -1,5 +1,5 @@
+import {editing as CircuitEditorModel, adapter as CircuitDocumentAdapter} from '../packages/circuit-core/index.mjs';
 import assert from 'node:assert/strict';
-import '../experiments/engine/document-adapter.js';
 import {createEngine} from './engine_node_runtime.mjs';
 import {chipBatchKinds,chipOutputs,chipBatchCircuit} from './chip_batch_fixtures.mjs';
 const M=CircuitEditorModel,A=CircuitDocumentAdapter,engine=createEngine(),session=A.createSession(engine);
@@ -10,7 +10,7 @@ for(const kind of chipBatchKinds){
  const d=chipBatchCircuit(kind),compiled=A.compile(d);M.validate(d);assert.equal(A.fromProjection(JSON.parse(compiled.canonical),d.id).canonical,compiled.canonical);
  for(const rotation of [0,90,180,270])for(const mirror of [false,true]){
   const rotated=structuredClone(d);Object.assign(rotated.layout.components.part,{rotation,mirror});
-  for(const pinId of Object.keys(M.definitions[kind].pins)){const p=M.pin(rotated,{kind:'pin',componentId:'part',pinId});assert.equal(Math.abs(p.x%16),0);assert.equal(Math.abs(p.y%16),0);}
+  for(const pinId of Object.keys(M.definitions[kind].pins)){const p=M.pin(rotated,{kind:'pin',componentId:'part',pinId});assert.equal(Math.abs(p.x%M.grid),0);assert.equal(Math.abs(p.y%M.grid),0);}
   assert.equal(A.compile(rotated).canonical,compiled.canonical);
  }
  const model=M.create(d),before=model.document;model.transaction('Edit',next=>{next.electrical.components[0].parameters.highVoltage=3.3;});const after=model.document;model.undo();assert.deepEqual(model.document,before);model.redo();assert.deepEqual(model.document,after);

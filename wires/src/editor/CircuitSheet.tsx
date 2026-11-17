@@ -2,6 +2,7 @@ import {
   memo,
   useEffect,
   useEffectEvent,
+  useLayoutEffect,
   useId,
   useMemo,
   useRef,
@@ -21,6 +22,8 @@ import {
   MenubarTrigger,
 } from "@/components/ui/menubar"
 import { core } from "./core"
+import { symbolBodyHit } from "./symbolHit"
+import { moveAnchor } from "./moveAnchor"
 import type {
   CircuitDocument,
   Component,
@@ -48,6 +51,7 @@ type Gesture =
       drag?: Drag
       wireRoute?: { wireId: string; segment: number }
       collapseTo?: Entity
+      probeAnchor?: string
       reconnectTo?: Target
       detached: boolean
       keyboard: boolean
@@ -108,6 +112,8 @@ export const CircuitSheet = memo(function CircuitSheet({
   onToolChange,
   onAddProbe,
   onEdit,
+  onConfigureSlider,
+  onPlotComponent,
   onToggleComponent,
   onPressComponent,
   onReleaseComponent,
@@ -123,6 +129,7 @@ export const CircuitSheet = memo(function CircuitSheet({
   scopeOpen,
   onToggleScope,
   sliderPanelOpen,
+  sliderPanelRequired,
   onSliderPanelChange,
   onPlaceSlider,
   sliderPreview,
@@ -131,6 +138,7 @@ export const CircuitSheet = memo(function CircuitSheet({
   onNotice,
   frame,
   fitRequest,
+  onViewportChange,
 }: {
   document: CircuitDocument
   execute: (c: Command) => unknown
@@ -141,6 +149,8 @@ export const CircuitSheet = memo(function CircuitSheet({
   tool: string
   onToolChange: (tool: string) => void
   onAddProbe: (target: Target) => void
+  onConfigureSlider: (id: string) => void
+  onPlotComponent: (id: string, pin?: string) => void
   onEdit: (entity: Entity) => void
   onToggleComponent: (id: string) => void
   onPressComponent: (id: string) => void
@@ -157,6 +167,7 @@ export const CircuitSheet = memo(function CircuitSheet({
   scopeOpen: boolean
   onToggleScope: () => void
   sliderPanelOpen: boolean
+  sliderPanelRequired: boolean
   onSliderPanelChange: (open: boolean) => void
   onPlaceSlider: () => void
   sliderPreview: SliderAdjustment | null
@@ -165,11 +176,44 @@ export const CircuitSheet = memo(function CircuitSheet({
   onNotice: (message: string) => void
   frame?: Frame | null
   fitRequest: number
+  onViewportChange?: (camera: {
+    x: number
+    y: number
+    scale: number
+    top: number
+  }) => void
 }) {
+  const [crosshairMode, setCrosshairMode] = useState<"off" | "small" | "full">(
+    () => {
+      try {
+        const saved = localStorage.getItem("circuit-editor.crosshairs.v1")
+        return saved === "small" || saved === "full" ? saved : "off"
+      } catch {
+        return "off"
+      }
+    }
+  )
+  const [crosshairPointer, setCrosshairPointer] = useState<Point | null>(null)
+  useEffect(() => {
+    try {
+      localStorage.setItem("circuit-editor.crosshairs.v1", crosshairMode)
+    } catch {
+      // Keep the preference for this session when storage is unavailable.
+    }
+  }, [crosshairMode])
   const svg = useRef<SVGSVGElement>(null),
     gesture = useRef<Gesture | null>(null)
   const clipboard = useRef<CircuitDocument | null>(null)
+  const [itemMenu, setItemMenu] = useState<{
+    x: number
+    y: number
+    entity: Entity
+    target: Target
+  } | null>(null)
   const [componentMenuOpen, setComponentMenuOpen] = useState(false)
+  const [componentMenuPosition, setComponentMenuPosition] =
+    useState<Point | null>(null)
+  const clientPointer = useRef<Point | null>(null)
   const [placement, setPlacement] = useState<Placement | null>(null)
   const [hasClipboard, setHasClipboard] = useState(false)
   const lastBodyClick = useRef<{
@@ -177,12 +221,49 @@ export const CircuitSheet = memo(function CircuitSheet({
     time: number
     x: number
     y: number
-    timer?: number
   } | null>(null)
   const spacePan = useRef(false)
   const pressedPush = useRef<string | null>(null)
   const [pressedSwitch, setPressedSwitch] = useState<string | null>(null)
-  const [camera, setCamera] = useState({ x: 150, y: 100, scale: 1.4 })
+  const selectedComponents = useMemo(
+    () =>
+      selection
+        .filter((item) => item.kind === "component")
+        .map((item) => item.id),
+    [selection]
+  )
+  const [camera, setCamera] = useState({ x: 150, y: 100, scale: 0.448 })
+  const viewportOffset = useRef({ x: 0, y: 0 })
+  const publishViewport = useEffectEvent(() => {
+    const offset = viewportOffset.current
+    onViewportChange?.({
+      x: camera.x + offset.x,
+      y: camera.y + offset.y,
+      scale: camera.scale,
+      top: offset.y,
+    })
+  })
+  // Read geometry only when the SVG actually resizes, never during pan/zoom.
+  useLayoutEffect(() => {
+    const element = svg.current
+    if (!element || !onViewportChange) return
+    const measure = () => {
+      const rect = element.getBoundingClientRect()
+      const parent = element.parentElement!.getBoundingClientRect()
+      viewportOffset.current = {
+        x: rect.left - parent.left,
+        y: rect.top - parent.top,
+      }
+      publishViewport()
+    }
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [onViewportChange])
+  useLayoutEffect(() => {
+    publishViewport()
+  }, [camera, onViewportChange])
   const [preview, setPreview] = useState<CircuitDocument | null>(null)
   const [box, setBox] = useState<{ a: Point; b: Point } | null>(null)
   const [route, setRoute] = useState<WireDraft | null>(null)
@@ -217,14 +298,20 @@ export const CircuitSheet = memo(function CircuitSheet({
     setRoute(null)
     setHover(null)
     setPlacement((current) => (current?.kind === "paste" ? null : current))
-    if (lastBodyClick.current?.timer) clearTimeout(lastBodyClick.current.timer)
     lastBodyClick.current = null
     pressedPush.current = null
     setPressedSwitch(null)
   }, [document])
   useEffect(() => {
     const element = svg.current!
+    const surface = element.parentElement!
     const wheel = (event: WheelEvent) => {
+      const target = event.target
+      if (
+        !(target instanceof Element) ||
+        (!element.contains(target) && !target.closest("[data-sheet-scope]"))
+      )
+        return
       event.preventDefault()
       if (gesture.current && gesture.current.kind !== "pan") return
       if (!event.ctrlKey && !event.metaKey) {
@@ -244,8 +331,73 @@ export const CircuitSheet = memo(function CircuitSheet({
         )
       )
     }
-    element.addEventListener("wheel", wheel, { passive: false })
-    return () => element.removeEventListener("wheel", wheel)
+    surface.addEventListener("wheel", wheel, { passive: false })
+    return () => surface.removeEventListener("wheel", wheel)
+  }, [])
+  const scopePanPointer = useRef<number | null>(null)
+  const startScopePan = useEffectEvent((event: globalThis.PointerEvent) => {
+    if (
+      !(event.target instanceof Element) ||
+      !event.target.closest("[data-sheet-scope]")
+    )
+      return
+    if (
+      event.button !== 1 &&
+      !(event.button === 0 && (tool === "pan" || spacePan.current))
+    )
+      return
+    if (gesture.current || pressedPush.current) return
+    event.preventDefault()
+    event.stopPropagation()
+    const element = svg.current!
+    element.focus({ preventScroll: true })
+    scopePanPointer.current = event.pointerId
+    gesture.current = {
+      kind: "pan",
+      origin: local(event.clientX, event.clientY),
+      camera,
+    }
+    element.parentElement!.setPointerCapture(event.pointerId)
+  })
+  const moveScopePan = useEffectEvent((event: globalThis.PointerEvent) => {
+    if (scopePanPointer.current !== event.pointerId) return
+    event.preventDefault()
+    event.stopPropagation()
+    const active = gesture.current
+    if (active?.kind !== "pan") return
+    const screen = local(event.clientX, event.clientY)
+    pointer.current = screen
+    clientPointer.current = { x: event.clientX, y: event.clientY }
+    setCamera((current) => ({
+      ...current,
+      x: active.camera.x + screen.x - active.origin.x,
+      y: active.camera.y + screen.y - active.origin.y,
+    }))
+  })
+  useEffect(() => {
+    const surface = svg.current!.parentElement!
+    const down = (event: globalThis.PointerEvent) => startScopePan(event)
+    const move = (event: globalThis.PointerEvent) => moveScopePan(event)
+    const end = (event: globalThis.PointerEvent) => {
+      if (scopePanPointer.current !== event.pointerId) return
+      scopePanPointer.current = null
+      if (gesture.current?.kind === "pan") gesture.current = null
+      event.stopPropagation()
+      if (surface.hasPointerCapture(event.pointerId))
+        surface.releasePointerCapture(event.pointerId)
+    }
+    surface.addEventListener("pointerdown", down, true)
+    surface.addEventListener("pointermove", move, true)
+    surface.addEventListener("pointerup", end, true)
+    surface.addEventListener("pointercancel", end, true)
+    surface.addEventListener("lostpointercapture", end, true)
+    return () => {
+      surface.removeEventListener("pointerdown", down, true)
+      surface.removeEventListener("pointermove", move, true)
+      surface.removeEventListener("pointerup", end, true)
+      surface.removeEventListener("pointercancel", end, true)
+      surface.removeEventListener("lostpointercapture", end, true)
+    }
   }, [])
   useEffect(() => {
     const up = (event: globalThis.KeyboardEvent) => {
@@ -256,8 +408,6 @@ export const CircuitSheet = memo(function CircuitSheet({
       if (pressedPush.current) releaseMomentary(pressedPush.current)
       pressedPush.current = null
       setPressedSwitch(null)
-      if (lastBodyClick.current?.timer)
-        clearTimeout(lastBodyClick.current.timer)
       lastBodyClick.current = null
       if (gesture.current?.kind === "drag") gesture.current.drag?.cancel()
       gesture.current = null
@@ -270,8 +420,6 @@ export const CircuitSheet = memo(function CircuitSheet({
     return () => {
       window.removeEventListener("keyup", up)
       window.removeEventListener("blur", blur)
-      if (lastBodyClick.current?.timer)
-        clearTimeout(lastBodyClick.current.timer)
     }
   }, [])
   function local(clientX: number, clientY: number) {
@@ -290,7 +438,6 @@ export const CircuitSheet = memo(function CircuitSheet({
   })
   function changeTool(next: string) {
     if (gesture.current?.kind === "drag") gesture.current.drag?.cancel()
-    if (lastBodyClick.current?.timer) clearTimeout(lastBodyClick.current.timer)
     lastBodyClick.current = null
     if (pressedPush.current) onReleaseComponent(pressedPush.current)
     pressedPush.current = null
@@ -309,9 +456,7 @@ export const CircuitSheet = memo(function CircuitSheet({
   function selectForCommand() {
     if (selection.length) return selection
     const hit = pointer.current
-      ? entityFromHit(
-          core.geometry.hit(document, world(pointer.current), camera.scale)
-        )
+      ? entityFromHit(selectionHit(world(pointer.current)))
       : null
     if (!hit) return []
     onSelection([hit])
@@ -393,7 +538,7 @@ export const CircuitSheet = memo(function CircuitSheet({
     const rect = svg.current?.getBoundingClientRect()
     if (!rect) return
     if (!points.length) {
-      setCamera({ x: rect.width / 2, y: rect.height / 2, scale: 1 })
+      setCamera({ x: rect.width / 2, y: rect.height / 2, scale: 0.32 })
       return
     }
     const left = Math.min(...points.map((p) => p.x)),
@@ -401,9 +546,9 @@ export const CircuitSheet = memo(function CircuitSheet({
     const top = Math.min(...points.map((p) => p.y)),
       bottom = Math.max(...points.map((p) => p.y))
     const scale = Math.max(
-      0.2,
+      0.064,
       Math.min(
-        1.3,
+        0.416,
         (rect.width - 150) / (right - left + 50),
         (rect.height - 150) / (bottom - top + 50)
       )
@@ -468,7 +613,7 @@ export const CircuitSheet = memo(function CircuitSheet({
     const chosen = selectForCommand()
     if (!chosen.length) return
     const point = pointer.current ? world(pointer.current) : cursor
-    const hit = core.geometry.hit(document, point, camera.scale)
+    const hit = selectionHit(point)
     const wire =
       chosen.length === 1 && chosen[0].kind === "wire" ? chosen[0] : null
     startDrag(
@@ -486,6 +631,15 @@ export const CircuitSheet = memo(function CircuitSheet({
           }
         : undefined
     )
+    const moving = gesture.current as Gesture | null
+    if (
+      moving?.kind === "drag" &&
+      chosen.some(({ kind }) => kind === "component")
+    ) {
+      moving.origin = moveAnchor(document, chosen, point)
+      setCursor(snapped(point))
+      updateDragPosition(moving, point)
+    }
     svg.current?.focus()
   }
   function beginPlacement(symbol: string) {
@@ -506,17 +660,38 @@ export const CircuitSheet = memo(function CircuitSheet({
       event.defaultPrevented ||
       event.altKey ||
       componentMenuOpen ||
+      itemMenu !== null ||
       !(target instanceof Element)
     )
       return
     const key = event.key.toLowerCase()
     const command = event.ctrlKey || event.metaKey
+    // Scope editing owns Delete etc.; sheet navigation remains available over sheet scopes.
+    if (
+      target.closest("[data-sheet-scope]") &&
+      !target.closest(
+        "input, textarea, select, button, [role=menu], [role=dialog], [contenteditable=true]"
+      ) &&
+      !command
+    ) {
+      if (key === " ") {
+        event.preventDefault()
+        spacePan.current = true
+        return
+      }
+      if (["+", "=", "-", "0"].includes(key)) {
+        event.preventDefault()
+        if (key === "0") fit()
+        else zoom(key === "-" ? 1 / 1.2 : 1.2)
+        return
+      }
+    }
     const sliderHistoryShortcut =
       command && key === "z" && target.closest("[data-component-slider-panel]")
     if (
       (!sliderHistoryShortcut &&
         target.closest(
-          "input, textarea, select, [role=checkbox], [role=menu], [role=dialog], [data-component-slider-panel]"
+          "input, textarea, select, [role=checkbox], [role=menu], [role=dialog], [data-component-slider-panel], [data-scope-workspace]"
         )) ||
       (target instanceof HTMLElement && target.isContentEditable)
     )
@@ -552,7 +727,9 @@ export const CircuitSheet = memo(function CircuitSheet({
       return
     }
     if (key === "escape") {
+      event.preventDefault()
       cancel()
+      onSelection([])
       return
     }
     if (key === "delete" || key === "backspace") {
@@ -564,6 +741,13 @@ export const CircuitSheet = memo(function CircuitSheet({
     if (key === "a" && !event.shiftKey) {
       event.preventDefault()
       cancel()
+      const rect = svg.current?.getBoundingClientRect()
+      setComponentMenuPosition(
+        clientPointer.current ??
+          (rect
+            ? { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 }
+            : null)
+      )
       setComponentMenuOpen(true)
       return
     }
@@ -645,8 +829,19 @@ export const CircuitSheet = memo(function CircuitSheet({
     wireRoute?: { wireId: string; segment: number },
     collapseTo?: Entity
   ) {
+    const hit = selectionHit(p)
+    const probeAnchor =
+      chosen.length === 1 &&
+      chosen[0].kind === "probe" &&
+      hit?.kind === "probe" &&
+      "anchor" in hit &&
+      hit.anchor &&
+      hit.id === chosen[0].id
+        ? hit.id
+        : undefined
     gesture.current = {
       kind: "drag",
+      probeAnchor,
       origin: snapped(p),
       original: document,
       selection: chosen,
@@ -692,6 +887,18 @@ export const CircuitSheet = memo(function CircuitSheet({
         })
         return
       }
+      if (g.probeAnchor) {
+        if (g.reconnectTo && (g.dx || g.dy)) {
+          const next = structuredClone(g.original)
+          core.editing.retargetProbe(next, g.probeAnchor, g.reconnectTo)
+          execute({ type: "replace", document: next })
+        }
+        g.drag?.cancel()
+        gesture.current = null
+        setPreview(null)
+        setHover(null)
+        return
+      }
       if (g.dx || g.dy || g.orientations.length) {
         if (loose && g.drag && g.reconnectTo) {
           try {
@@ -723,8 +930,21 @@ export const CircuitSheet = memo(function CircuitSheet({
     setPreview(null)
     setBox(null)
   }
-  function target(p: Point): Target {
-    const hit = core.geometry.hit(document, p, camera.scale)
+  function selectionHit(point: Point): Hit | null {
+    const hit = core.geometry.hit(document, point, camera.scale)
+    // Keep electrical contacts and probe handles available over artwork.
+    if (hit && ["pin", "junction", "probe"].includes(hit.kind)) return hit
+    const id =
+      svg.current &&
+      symbolBodyHit(
+        svg.current,
+        point.x * camera.scale + camera.x,
+        point.y * camera.scale + camera.y
+      )
+    return id ? { kind: "component", id } : hit
+  }
+  function target(p: Point, ignoreProbes = false): Target {
+    const hit = core.geometry.hit(document, p, camera.scale, ignoreProbes)
     if (
       hit &&
       (hit.kind === "pin" ||
@@ -763,13 +983,12 @@ export const CircuitSheet = memo(function CircuitSheet({
   }
   function componentClick(id: string, point: Point) {
     const kind = document.electrical.components.find((c) => c.id === id)?.kind
-    const toggleable = [
-      "switch",
-      "spdtSwitch",
-      "dpdtSwitch",
-      "mbbSwitch",
-      "logicInput",
-    ].includes(kind || "")
+    // Switch operation takes priority over double-click property editing.
+    if (core.catalog.switchKind(kind || "") || kind === "logicInput") {
+      lastBodyClick.current = null
+      onToggleComponent(id)
+      return
+    }
     const prior = lastBodyClick.current
     if (
       prior &&
@@ -777,28 +996,19 @@ export const CircuitSheet = memo(function CircuitSheet({
       Date.now() - prior.time < 450 &&
       Math.hypot(point.x - prior.x, point.y - prior.y) < 8
     ) {
-      if (prior.timer) clearTimeout(prior.timer)
       cancel()
       onEdit({ kind: "component", id })
       return
     }
-    if (prior?.timer) clearTimeout(prior.timer)
-    if (!toggleable) {
-      lastBodyClick.current = { id, time: Date.now(), x: point.x, y: point.y }
-      return
-    }
-    const click = { id, time: Date.now(), x: point.x, y: point.y, timer: 0 }
-    click.timer = window.setTimeout(() => {
-      lastBodyClick.current = null
-      onToggleComponent(id)
-    }, 450)
-    lastBodyClick.current = click
+    lastBodyClick.current = { id, time: Date.now(), x: point.x, y: point.y }
   }
   function down(e: PointerEvent<SVGSVGElement>) {
     e.currentTarget.focus()
     const screen = local(e.clientX, e.clientY),
       p = world(screen)
+    clientPointer.current = { x: e.clientX, y: e.clientY }
     pointer.current = screen
+    setCrosshairPointer(e.pointerType === "touch" ? null : screen)
     setCursor(snapped(p))
     if (e.button === 2 || pressedPush.current) return
     if (gesture.current?.kind === "drag" && gesture.current.keyboard) {
@@ -819,14 +1029,14 @@ export const CircuitSheet = memo(function CircuitSheet({
       place(p)
       return
     }
-    const hit = core.geometry.hit(document, p, camera.scale)
+    const hit = selectionHit(p)
     if (
       tool === "select" &&
       !e.shiftKey &&
       hit?.kind === "component" &&
-      document.electrical.components.find(
+      core.catalog.momentary(document.electrical.components.find(
         (component) => component.id === hit.id
-      )?.kind === "pushSwitch"
+      ))
     ) {
       onSelection([{ kind: "component", id: hit.id }])
       pressedPush.current = hit.id
@@ -911,7 +1121,9 @@ export const CircuitSheet = memo(function CircuitSheet({
   function move(e: PointerEvent<SVGSVGElement>) {
     const screen = local(e.clientX, e.clientY),
       p = world(screen)
+    clientPointer.current = { x: e.clientX, y: e.clientY }
     pointer.current = screen
+    setCrosshairPointer(e.pointerType === "touch" ? null : screen)
     setCursor(snapped(p))
     const g = gesture.current
     if (g?.kind === "pan")
@@ -928,8 +1140,30 @@ export const CircuitSheet = memo(function CircuitSheet({
     } else setHover(null)
   }
   function updateDragPosition(g: Extract<Gesture, { kind: "drag" }>, p: Point) {
-    g.dx = core.geometry.snap(p.x - g.origin.x)
-    g.dy = core.geometry.snap(p.y - g.origin.y)
+    const symbolMove =
+      g.keyboard && g.selection.some(({ kind }) => kind === "component")
+    g.dx = symbolMove
+      ? core.geometry.snap(p.x) - g.origin.x
+      : core.geometry.snap(p.x - g.origin.x)
+    g.dy = symbolMove
+      ? core.geometry.snap(p.y) - g.origin.y
+      : core.geometry.snap(p.y - g.origin.y)
+    if (g.probeAnchor) {
+      const to = target(p, true)
+      g.reconnectTo = to.kind === "point" ? undefined : to
+      const next = structuredClone(g.original)
+      const probe = next.probes.find(({ id }) => id === g.probeAnchor)!
+      if (g.reconnectTo) core.editing.retargetProbe(next, g.probeAnchor, to)
+      else {
+        const id = "__probe_preview__"
+        next.electrical.junctions.push({ id })
+        next.layout.junctions[id] = snapped(p)
+        probe.positive = { kind: "junction", junctionId: id }
+      }
+      setHover(g.reconnectTo ? targetPoint(to) : null)
+      setPreview(next)
+      return
+    }
     const item = g.selection.length === 1 ? g.selection[0] : null
     const loose =
       item?.kind === "junction" &&
@@ -1031,6 +1265,15 @@ export const CircuitSheet = memo(function CircuitSheet({
             ? componentDefinition.kind || placement.symbol
             : "",
         parameters: componentDefinition.parameters,
+      }
+    : null
+  const crosshairWorld = crosshairPointer
+    ? snapped(world(crosshairPointer))
+    : null
+  const crosshairScreen = crosshairWorld
+    ? {
+        x: crosshairWorld.x * camera.scale + camera.x,
+        y: crosshairWorld.y * camera.scale + camera.y,
       }
     : null
   return (
@@ -1172,11 +1415,32 @@ export const CircuitSheet = memo(function CircuitSheet({
               </MenubarItem>
               <MenubarCheckboxItem
                 checked={sliderPanelOpen}
+                disabled={sliderPanelRequired}
                 onCheckedChange={onSliderPanelChange}
                 closeOnClick
               >
                 Sliders
               </MenubarCheckboxItem>
+              <MenubarSeparator />
+              <MenubarSub>
+                <MenubarSubTrigger>Cursor crosshairs</MenubarSubTrigger>
+                <MenubarSubContent>
+                  {(["off", "small", "full"] as const).map((mode) => (
+                    <MenubarCheckboxItem
+                      key={mode}
+                      checked={crosshairMode === mode}
+                      onCheckedChange={() => setCrosshairMode(mode)}
+                      closeOnClick
+                    >
+                      {mode === "off"
+                        ? "Off"
+                        : mode === "small"
+                          ? "Small"
+                          : "Full sheet"}
+                    </MenubarCheckboxItem>
+                  ))}
+                </MenubarSubContent>
+              </MenubarSub>
               <MenubarSeparator />
               <MenubarItem onClick={() => onGridModeChange("dots")}>
                 Grid: dots {gridMode === "dots" ? "✓" : ""}
@@ -1195,8 +1459,12 @@ export const CircuitSheet = memo(function CircuitSheet({
           </MenubarMenu>
           <ComponentMenu
             open={componentMenuOpen}
+            position={componentMenuPosition}
             onOpenChange={(open) => {
-              if (open) cancel()
+              if (open) {
+                cancel()
+                setComponentMenuPosition(null)
+              }
               setComponentMenuOpen(open)
             }}
             onChoose={(choice) => {
@@ -1225,26 +1493,179 @@ export const CircuitSheet = memo(function CircuitSheet({
           </span>
         )}
       </div>
+      <MenubarMenu
+        open={!!itemMenu}
+        onOpenChange={(open) => {
+          if (!open) setItemMenu(null)
+        }}
+      >
+        <MenubarContent
+          anchor={
+            itemMenu
+              ? {
+                  getBoundingClientRect: () =>
+                    new DOMRect(itemMenu.x, itemMenu.y, 0, 0),
+                }
+              : undefined
+          }
+          alignOffset={0}
+          sideOffset={0}
+          finalFocus={() => {
+            svg.current?.focus()
+            return false
+          }}
+        >
+          <MenubarItem
+            disabled={
+              itemMenu?.entity.kind !== "component" &&
+              itemMenu?.entity.kind !== "probe"
+            }
+            onClick={() => itemMenu && onEdit(itemMenu.entity)}
+          >
+            Edit
+          </MenubarItem>
+          <MenubarSeparator />
+          <MenubarItem onClick={() => beginTransform(false)}>
+            Drag (G)
+          </MenubarItem>
+          <MenubarItem onClick={() => beginTransform(true)}>
+            Move (M)
+          </MenubarItem>
+          <MenubarItem onClick={() => orient({ rotate: 90 })}>
+            Rotate clockwise
+          </MenubarItem>
+          <MenubarItem onClick={() => orient({ rotate: -90 })}>
+            Rotate counterclockwise
+          </MenubarItem>
+          <MenubarItem onClick={() => orient({ axis: "x" })}>
+            Flip X
+          </MenubarItem>
+          <MenubarItem onClick={() => orient({ axis: "y" })}>
+            Flip Y
+          </MenubarItem>
+          <MenubarSeparator />
+          <MenubarItem onClick={copyItems}>Copy</MenubarItem>
+          <MenubarItem
+            onClick={() => {
+              if (copyItems()) removeSelection()
+            }}
+          >
+            Cut
+          </MenubarItem>
+          <MenubarItem
+            onClick={() => {
+              if (copyItems()) pasteItems()
+            }}
+          >
+            Duplicate
+          </MenubarItem>
+          <MenubarItem onClick={removeSelection}>Delete</MenubarItem>
+          {itemMenu?.entity.kind === "component" &&
+            (() => {
+              const component = document.electrical.components.find(
+                ({ id }) => id === itemMenu.entity.id
+              )
+              if (!component) return null
+              const pins = Object.keys(core.catalog.componentPins(component))
+              return (
+                <>
+                  <MenubarSeparator />
+                  <MenubarItem onClick={() => onConfigureSlider(component.id)}>
+                    Add property slider…
+                  </MenubarItem>
+                  {!!pins.length && (
+                    <MenubarSub>
+                      <MenubarSubTrigger>Add to scope</MenubarSubTrigger>
+                      <MenubarSubContent>
+                        {core.catalog.simulationModels[component.kind]?.sign !=
+                          null && (
+                          <MenubarItem
+                            onClick={() =>
+                              onPlotComponent(component.id, "__current")
+                            }
+                          >
+                            Current through component
+                          </MenubarItem>
+                        )}
+                        {pins.length >= 2 && (
+                          <MenubarItem
+                            onClick={() => onPlotComponent(component.id)}
+                          >
+                            Voltage across {pins[0]} → {pins[1]}
+                          </MenubarItem>
+                        )}
+                        {pins.map((pin) => (
+                          <MenubarItem
+                            key={pin}
+                            onClick={() => onPlotComponent(component.id, pin)}
+                          >
+                            Pin {pin} voltage to ground
+                          </MenubarItem>
+                        ))}
+                      </MenubarSubContent>
+                    </MenubarSub>
+                  )}
+                </>
+              )
+            })()}
+          {itemMenu && ["wire", "junction"].includes(itemMenu.entity.kind) && (
+            <>
+              <MenubarSeparator />
+              <MenubarItem onClick={() => onAddProbe(itemMenu.target)}>
+                Add voltage to scope
+              </MenubarItem>
+            </>
+          )}
+          {itemMenu?.entity.kind === "probe" && (
+            <MenubarItem
+              onClick={() => {
+                if (!scopeOpen) onToggleScope()
+              }}
+            >
+              Show in scope
+            </MenubarItem>
+          )}
+        </MenubarContent>
+      </MenubarMenu>
       <svg
         ref={svg}
         tabIndex={0}
-        aria-label="Circuit sheet. Select and drag; G connected move, M detached move, R rotate, X/Y flip, W wire, Escape cancel."
+        aria-label="Circuit sheet. Select and drag; G connected move, M detached move, R rotate, X/Y flip, W wire, Escape cancel and clear selection."
         className="min-h-[450px] w-full flex-1 touch-none outline-none"
-        onContextMenu={(e) => e.preventDefault()}
+        onContextMenu={(e) => {
+          e.preventDefault()
+          cancel()
+          const screen = local(e.clientX, e.clientY)
+          pointer.current = screen
+          const point = world(screen)
+          const entity = entityFromHit(selectionHit(point))
+          if (!entity) return
+          if (
+            !selection.some(
+              (item) => item.kind === entity.kind && item.id === entity.id
+            )
+          )
+            onSelection([entity])
+          setItemMenu({
+            x: e.clientX,
+            y: e.clientY,
+            entity,
+            target: target(point),
+          })
+        }}
         onPointerDown={down}
         onPointerMove={move}
-        onPointerLeave={() => setHover(null)}
+        onPointerLeave={() => {
+          setHover(null)
+          setCrosshairPointer(null)
+        }}
         onPointerCancel={cancel}
         onDoubleClick={(e) => {
           if (placement || tool !== "select" || route) return
           const point = world(local(e.clientX, e.clientY))
-          const hit = core.geometry.hit(document, point, camera.scale)
+          const hit = selectionHit(point)
           if (hit?.kind !== "component" && hit?.kind !== "probe") return
-          if (
-            hit.kind === "probe" ||
-            document.electrical.components.find(({ id }) => id === hit.id)
-              ?.kind === "pushSwitch"
-          ) {
+          if (hit.kind === "probe") {
             e.preventDefault()
             cancel()
             onEdit(hit)
@@ -1308,8 +1729,6 @@ export const CircuitSheet = memo(function CircuitSheet({
                 point
               )
             } else if (lastBodyClick.current) {
-              if (lastBodyClick.current.timer)
-                clearTimeout(lastBodyClick.current.timer)
               lastBodyClick.current = null
             }
             finish(e.shiftKey)
@@ -1321,15 +1740,15 @@ export const CircuitSheet = memo(function CircuitSheet({
         <defs>
           <pattern
             id={grid}
-            width={16 * camera.scale}
-            height={16 * camera.scale}
+            width={core.geometry.grid * camera.scale}
+            height={core.geometry.grid * camera.scale}
             x={camera.x}
             y={camera.y}
             patternUnits="userSpaceOnUse"
           >
             {gridMode === "lines" ? (
               <path
-                d={`M${16 * camera.scale} 0H0V${16 * camera.scale}`}
+                d={`M${core.geometry.grid * camera.scale} 0H0V${core.geometry.grid * camera.scale}`}
                 fill="none"
                 stroke="currentColor"
                 opacity={0.16}
@@ -1350,9 +1769,7 @@ export const CircuitSheet = memo(function CircuitSheet({
             document={shown}
             frame={frame}
             sliderPreview={sliderPreview}
-            selected={selection
-              .filter((s) => s.kind === "component")
-              .map((s) => s.id)}
+            selected={selectedComponents}
           />
           {shown.probes
             .filter(
@@ -1364,6 +1781,29 @@ export const CircuitSheet = memo(function CircuitSheet({
             .map((probe) => {
               const anchor = core.geometry.pin(shown, probe.positive!)
               const label = core.geometry.probePoint(shown, probe)
+              // The rounded label is an inner rectangle expanded by its radius.
+              // Project onto that shape to find the shortest connector.
+              const radius = 12.5
+              const inner = {
+                x: Math.max(
+                  label.x - 15.625 + radius,
+                  Math.min(anchor.x, label.x - 15.625 + 350 - radius)
+                ),
+                y: Math.max(
+                  label.y - 43.75 + radius,
+                  Math.min(anchor.y, label.y - 43.75 + 81.25 - radius)
+                ),
+              }
+              const dx = anchor.x - inner.x
+              const dy = anchor.y - inner.y
+              const distance = Math.hypot(dx, dy)
+              const attachment =
+                distance <= radius
+                  ? anchor
+                  : {
+                      x: inner.x + (dx * radius) / distance,
+                      y: inner.y + (dy * radius) / distance,
+                    }
               const active = selection.some(
                 (item) => item.kind === "probe" && item.id === probe.id
               )
@@ -1378,28 +1818,28 @@ export const CircuitSheet = memo(function CircuitSheet({
                   className={active ? "text-primary" : "text-amber-500"}
                 >
                   <path
-                    d={`M${anchor.x} ${anchor.y}L${label.x} ${label.y + 4}`}
+                    d={`M${anchor.x} ${anchor.y}L${attachment.x} ${attachment.y}`}
                   />
                   <circle
                     cx={anchor.x}
                     cy={anchor.y}
-                    r={3}
+                    r={9.375}
                     fill="currentColor"
                   />
                   <rect
-                    x={label.x - 5}
-                    y={label.y - 14}
-                    width={112}
-                    height={26}
-                    rx={4}
+                    x={label.x - 15.625}
+                    y={label.y - 43.75}
+                    width={350}
+                    height={81.25}
+                    rx={12.5}
                     fill="var(--background)"
                   />
                   <text
                     x={label.x}
-                    y={label.y + 4}
+                    y={label.y + 12.5}
                     fill="currentColor"
                     stroke="none"
-                    fontSize={12}
+                    fontSize={37.5}
                   >
                     {probe.label || "Wire"} ·{" "}
                     {voltage === undefined ? "—" : `${voltage.toFixed(3)} V`}
@@ -1413,7 +1853,7 @@ export const CircuitSheet = memo(function CircuitSheet({
               pointerEvents="none"
               fill="none"
               stroke="currentColor"
-              strokeWidth={2}
+              strokeWidth={6.25}
               opacity={0.65}
             >
               <SymbolBody component={previewComponent} pose={placement} />
@@ -1436,8 +1876,8 @@ export const CircuitSheet = memo(function CircuitSheet({
               points={routePoints.map((p) => `${p.x},${p.y}`).join(" ")}
               fill="none"
               stroke="var(--primary)"
-              strokeWidth={2}
-              strokeDasharray="5 3"
+              strokeWidth={6.25}
+              strokeDasharray="15.625 9.375"
             />
           )}
           {box && (
@@ -1461,6 +1901,28 @@ export const CircuitSheet = memo(function CircuitSheet({
             />
           )}
         </g>
+        {crosshairMode !== "off" && crosshairScreen && (
+          <g
+            aria-hidden="true"
+            pointerEvents="none"
+            stroke="currentColor"
+            strokeWidth={1}
+            opacity={0.3}
+          >
+            <line
+              x1={crosshairMode === "full" ? 0 : crosshairScreen.x - 20}
+              x2={crosshairMode === "full" ? "100%" : crosshairScreen.x + 20}
+              y1={crosshairScreen.y}
+              y2={crosshairScreen.y}
+            />
+            <line
+              x1={crosshairScreen.x}
+              x2={crosshairScreen.x}
+              y1={crosshairMode === "full" ? 0 : crosshairScreen.y - 20}
+              y2={crosshairMode === "full" ? "100%" : crosshairScreen.y + 20}
+            />
+          </g>
+        )}
       </svg>
     </>
   )

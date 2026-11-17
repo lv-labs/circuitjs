@@ -1,4 +1,4 @@
-# React editor slice
+# React editor
 
 `CircuitEditor` is independently mountable; `App.tsx` belongs to the application
 shell and was left untouched by this work:
@@ -20,6 +20,7 @@ to the URL printed by Vite.
 - `useCircuitSession.ts`: committed editing/history session and worker lifecycle.
 - `CircuitSheet.tsx`: camera and gesture state, separate uncommitted previews.
 - `WireLayer.tsx`, `SymbolLayer.tsx`: SVG views, memoized independently of readings.
+- `menu/`: generated Falstad menu hierarchy and supported placement mapping.
 - `core.ts`: typed boundary for the subset of the existing JS API consumed here.
 - `../../../packages/circuit-symbols/src` from the editor source directory:
   authoritative per-symbol metadata and SVG views.
@@ -60,7 +61,7 @@ Base Mira.
 
 Committed edits reach history. Momentary switches and sliders can also
 preview updates in simulation. Simulation uses the retained
-revision coordinator and classic worker. `scripts/engine-assets.ts` serves the
+revision coordinator and classic worker in `packages/circuit-runtime`. `scripts/engine-assets.ts` serves the
 worker/imports under `/engine/` in dev and copies them into the production bundle.
 Compile the engine first (`makeEngineSite` or `tools/build_engine_cached.py`).
 Missing compiled worker assets produce a build error. Static deployment must
@@ -84,3 +85,8 @@ The [parity inventory](../../../docs/new-simulator/REACT-PARITY.md) records the
 reference behavior, migrated features, and remaining checks. The Add menu lists
 the reference catalog and disables unsupported entries. All 84 supported
 models use their authored TSX views for both placement and the sheet.
+
+The intermediate JavaScript editor has been removed. Engine verification pages
+and test adapters live in `tools/engine-harness`; React does not import them.
+Regenerate the menu hierarchy with `python3 tools/generate_component_menu.py`.
+The original Java/GWT Falstad interface is still available through `makeSite`.

@@ -1,4 +1,4 @@
-import '../experiments/engine/editor-model.js';
+import {editing as CircuitEditorModel} from '../packages/circuit-core/index.mjs';
 export const chipBatchKinds=['counter','latch','halfAdder','fullAdder'];
 export const chipOutputs={counter:['Q3','Q2','Q1','Q0'],latch:['O0','O1','O2','O3'],halfAdder:['sum','carry'],fullAdder:['S0','S1','S2','S3','carryOut']};
 export function chipBatchCircuit(kind,parameters={},levels={}){
@@ -14,5 +14,5 @@ export function chipBatchCircuit(kind,parameters={},levels={}){
       add('in'+pin,'voltageRail',{waveform:typeof value==='number'?{kind:'dc',voltage:value}:value});wire('in'+pin,'p','part',pin);
     }
   }
-  return d;
+  return CircuitEditorModel.alignGrid(d);
 }

@@ -81,3 +81,6 @@ Temporary Items
 /.apt_generated/
 /.apt_generated_tests/
 /.wrangler/
+
+# Root Vite dependency cache
+/.vite/

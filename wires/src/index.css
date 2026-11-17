@@ -126,6 +126,14 @@
     }
   body {
     @apply bg-background text-foreground;
+    -webkit-user-select: none;
+    user-select: none;
+    }
+  input,
+  textarea,
+  [contenteditable]:not([contenteditable="false"]) {
+    -webkit-user-select: text;
+    user-select: text;
     }
   html,
   body,

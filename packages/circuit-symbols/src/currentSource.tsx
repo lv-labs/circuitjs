@@ -2,6 +2,8 @@ import { Lead } from "../svg";
 
 export const kind = "currentSource";
 export const metadata = {
+  // Original 16-unit artwork, scaled to the 50-unit sheet grid.
+  drawingScale: 3.125,
   prefix: "I",
   name: "DC current source",
   pins: {

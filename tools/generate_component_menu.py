@@ -24,5 +24,5 @@ def extract_menu():
     return result
 if __name__ == '__main__':
     tree = extract_menu()
-    (ROOT/'experiments/engine/legacy-component-menu.js').write_text("'use strict';\n// Generated from Menus.composeMainMenu; run tools/generate_component_menu.py.\nglobalThis.CircuitLegacyComponentMenu = "+json.dumps(tree,indent=2)+';\n')
+    (ROOT/'wires/src/editor/menu/legacy-component-menu.js').write_text("'use strict';\n// Generated from Menus.composeMainMenu; run tools/generate_component_menu.py.\nglobalThis.CircuitLegacyComponentMenu = "+json.dumps(tree,indent=2)+';\n')
     print(f'Generated {len(tree)} root entries and {sum(len(e.get("children",[])) for e in tree)} submenu entries.')

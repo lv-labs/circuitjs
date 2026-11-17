@@ -1,3 +1,5 @@
+import type { Component } from "./core"
+
 export const componentSliders = {
   variableVoltage: {
     field: "voltage",
@@ -20,7 +22,35 @@ export function hasSlider<T extends { kind: string }>(
 }
 
 export type SliderAdjustment = {
-  kind: SliderKind
+  kind: string
+  field?: string
   id: string
   value: number
+}
+
+export function sliderField(adjustment: SliderAdjustment): string {
+  if (adjustment.field) return adjustment.field
+  if (hasSlider(adjustment)) return componentSliders[adjustment.kind].field
+  throw new Error("Missing slider property")
+}
+
+export function setProperty(
+  parameters: Component["parameters"],
+  path: string,
+  value: number
+) {
+  const keys = path.split(".")
+  let target = parameters
+  for (const key of keys.slice(0, -1))
+    target = target[key] as Component["parameters"]
+  target[keys[keys.length - 1]] = value
+}
+
+// Keep both pot track sections resistive; exact endpoints create ideal shorts.
+export const potPositionRange = { min: 0.001, max: 0.999 } as const
+
+export function clampSliderValue(kind: string, field: string, value: number) {
+  return kind === "potentiometer" && field === "position"
+    ? Math.max(potPositionRange.min, Math.min(potPositionRange.max, value))
+    : value
 }

@@ -1,0 +1,2705 @@
+{
+  "scope": "Bundled Falstad fork, all menu classes. Dump-type matches are candidates, not proof of equivalent behavior. Includes inherited options; conditional/dynamic labels and model dialogs require manual review. No row is marked complete by this inventory.",
+  "rows": [
+    {
+      "legacy": "ACRailElm",
+      "dumpType": "R",
+      "source": "src/com/lushprojects/circuitjs1/client/ACRailElm.java",
+      "reactCandidates": [
+        "noiseSource",
+        "voltageRail"
+      ],
+      "legacyOptions": [
+        "Waveform",
+        "DC Offset (V)",
+        "Internal Resistance (ohms)",
+        "Show Voltage",
+        "Circle Symbol",
+        "Specify As",
+        "High Time (s)",
+        "Frequency (Hz)",
+        "Phase Offset (degrees)",
+        "Low Time (s)",
+        "Duty Cycle",
+        "Rise/Fall Time (s)"
+      ],
+      "reactParameters": {
+        "noiseSource": [
+          "amplitude",
+          "offset"
+        ],
+        "voltageRail": [
+          "waveform"
+        ]
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "ACVoltageElm",
+      "dumpType": "v",
+      "source": "src/com/lushprojects/circuitjs1/client/ACVoltageElm.java",
+      "reactCandidates": [
+        "voltageSource"
+      ],
+      "legacyOptions": [
+        "Waveform",
+        "DC Offset (V)",
+        "Internal Resistance (ohms)",
+        "Show Voltage",
+        "Circle Symbol",
+        "Specify As",
+        "High Time (s)",
+        "Frequency (Hz)",
+        "Phase Offset (degrees)",
+        "Low Time (s)",
+        "Duty Cycle",
+        "Rise/Fall Time (s)"
+      ],
+      "reactParameters": {
+        "voltageSource": [
+          "waveform"
+        ]
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "ADCElm",
+      "dumpType": "167",
+      "source": "src/com/lushprojects/circuitjs1/client/ADCElm.java",
+      "reactCandidates": [],
+      "legacyOptions": [
+        "High Logic Voltage",
+        "Bit Order"
+      ],
+      "reactParameters": {},
+      "status": "Missing React component"
+    },
+    {
+      "legacy": "AMElm",
+      "dumpType": "200",
+      "source": "src/com/lushprojects/circuitjs1/client/AMElm.java",
+      "reactCandidates": [
+        "amSource"
+      ],
+      "legacyOptions": [
+        "Max Voltage",
+        "Carrier Frequency (Hz)",
+        "Signal Frequency (Hz)"
+      ],
+      "reactParameters": {
+        "amSource": [
+          "carrierFrequency",
+          "signalFrequency",
+          "amplitude"
+        ]
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "AmmeterElm",
+      "dumpType": "370",
+      "source": "src/com/lushprojects/circuitjs1/client/AmmeterElm.java",
+      "reactCandidates": [
+        "ammeter"
+      ],
+      "legacyOptions": [
+        "Value",
+        "Scale",
+        "Circular Symbol"
+      ],
+      "reactParameters": {
+        "ammeter": [
+          "mode"
+        ]
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "AnalogMuxElm",
+      "dumpType": "432",
+      "source": "src/com/lushprojects/circuitjs1/client/AnalogMuxElm.java",
+      "reactCandidates": [],
+      "legacyOptions": [
+        "High Logic Voltage",
+        "Bit Order"
+      ],
+      "reactParameters": {},
+      "status": "Missing React component"
+    },
+    {
+      "legacy": "AnalogSwitch2Elm",
+      "dumpType": "160",
+      "source": "src/com/lushprojects/circuitjs1/client/AnalogSwitch2Elm.java",
+      "reactCandidates": [
+        "analogSpdtSwitch"
+      ],
+      "legacyOptions": [
+        "Normally closed",
+        "On Resistance (ohms)",
+        "Off Resistance (ohms)",
+        "Pulldown Resistor",
+        "Threshold"
+      ],
+      "reactParameters": {
+        "analogSpdtSwitch": [
+          "onResistance",
+          "offResistance",
+          "threshold",
+          "inverted",
+          "pulldown"
+        ]
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "AnalogSwitchElm",
+      "dumpType": "159",
+      "source": "src/com/lushprojects/circuitjs1/client/AnalogSwitchElm.java",
+      "reactCandidates": [
+        "analogSwitch"
+      ],
+      "legacyOptions": [
+        "Normally closed",
+        "On Resistance (ohms)",
+        "Off Resistance (ohms)",
+        "Pulldown Resistor",
+        "Threshold"
+      ],
+      "reactParameters": {
+        "analogSwitch": [
+          "onResistance",
+          "offResistance",
+          "threshold",
+          "inverted",
+          "pulldown"
+        ]
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "AndGateElm",
+      "dumpType": "150",
+      "source": "src/com/lushprojects/circuitjs1/client/AndGateElm.java",
+      "reactCandidates": [
+        "andGate"
+      ],
+      "legacyOptions": [
+        "# of Inputs",
+        "High Logic Voltage",
+        "Schmitt Inputs",
+        "Invert Inputs",
+        "Propagation Delay (s)"
+      ],
+      "reactParameters": {
+        "andGate": [
+          "highVoltage",
+          "inputCount",
+          "propagationDelay",
+          "schmittInputs",
+          "invertInputs"
+        ]
+      },
+      "status": "Properties implemented; bundled-source review recorded in PROPERTY-PARITY.md"
+    },
+    {
+      "legacy": "AntennaElm",
+      "dumpType": "A",
+      "source": "src/com/lushprojects/circuitjs1/client/AntennaElm.java",
+      "reactCandidates": [
+        "antennaSource"
+      ],
+      "legacyOptions": [
+        "Waveform",
+        "DC Offset (V)",
+        "Internal Resistance (ohms)",
+        "Show Voltage",
+        "Circle Symbol",
+        "Specify As",
+        "High Time (s)",
+        "Frequency (Hz)",
+        "Phase Offset (degrees)",
+        "Low Time (s)",
+        "Duty Cycle",
+        "Rise/Fall Time (s)"
+      ],
+      "reactParameters": {
+        "antennaSource": []
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "AudioInputElm",
+      "dumpType": "411",
+      "source": "src/com/lushprojects/circuitjs1/client/AudioInputElm.java",
+      "reactCandidates": [],
+      "legacyOptions": [
+        "Max Voltage",
+        "Start Position (s)",
+        "Waveform",
+        "DC Offset (V)",
+        "Internal Resistance (ohms)",
+        "Show Voltage",
+        "Circle Symbol",
+        "Specify As",
+        "High Time (s)",
+        "Frequency (Hz)",
+        "Phase Offset (degrees)",
+        "Low Time (s)",
+        "Duty Cycle",
+        "Rise/Fall Time (s)"
+      ],
+      "reactParameters": {},
+      "status": "Missing React component"
+    },
+    {
+      "legacy": "AudioOutputElm",
+      "dumpType": "211",
+      "source": "src/com/lushprojects/circuitjs1/client/AudioOutputElm.java",
+      "reactCandidates": [
+        "audioOutput"
+      ],
+      "legacyOptions": [
+        "Duration (s)",
+        "Sampling Rate"
+      ],
+      "reactParameters": {
+        "audioOutput": [
+          "duration",
+          "sampleRate"
+        ]
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "BoxElm",
+      "dumpType": "b",
+      "source": "src/com/lushprojects/circuitjs1/client/BoxElm.java",
+      "reactCandidates": [
+        "box"
+      ],
+      "legacyOptions": [],
+      "reactParameters": {
+        "box": [
+          "width",
+          "height"
+        ]
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "BusLogicInputElm",
+      "dumpType": "0",
+      "source": "src/com/lushprojects/circuitjs1/client/BusLogicInputElm.java",
+      "reactCandidates": [],
+      "legacyOptions": [
+        "Bus Width",
+        "Value",
+        "High Voltage",
+        "Low Voltage",
+        "Momentary Switch",
+        "IEC Symbol",
+        "Label (for linking)",
+        "On Resistance (ohms)"
+      ],
+      "reactParameters": {},
+      "status": "Missing React component"
+    },
+    {
+      "legacy": "BusSplitterElm",
+      "dumpType": "433",
+      "source": "src/com/lushprojects/circuitjs1/client/BusSplitterElm.java",
+      "reactCandidates": [],
+      "legacyOptions": [
+        "High Logic Voltage",
+        "Bit Order"
+      ],
+      "reactParameters": {},
+      "status": "Missing React component"
+    },
+    {
+      "legacy": "BusTransceiverElm",
+      "dumpType": null,
+      "source": "src/com/lushprojects/circuitjs1/client/BusTransceiverElm.java",
+      "reactCandidates": [],
+      "legacyOptions": [
+        "High Logic Voltage",
+        "Bit Order"
+      ],
+      "reactParameters": {},
+      "status": "Missing React component"
+    },
+    {
+      "legacy": "CC2Elm",
+      "dumpType": "179",
+      "source": "src/com/lushprojects/circuitjs1/client/CC2Elm.java",
+      "reactCandidates": [],
+      "legacyOptions": [
+        "High Logic Voltage",
+        "Bit Order"
+      ],
+      "reactParameters": {},
+      "status": "Missing React component"
+    },
+    {
+      "legacy": "CCCSElm",
+      "dumpType": "215",
+      "source": "src/com/lushprojects/circuitjs1/client/CCCSElm.java",
+      "reactCandidates": [],
+      "legacyOptions": [
+        "High Logic Voltage",
+        "Bit Order"
+      ],
+      "reactParameters": {},
+      "status": "Missing React component"
+    },
+    {
+      "legacy": "CCVSElm",
+      "dumpType": "214",
+      "source": "src/com/lushprojects/circuitjs1/client/CCVSElm.java",
+      "reactCandidates": [],
+      "legacyOptions": [
+        "High Logic Voltage",
+        "Bit Order"
+      ],
+      "reactParameters": {},
+      "status": "Missing React component"
+    },
+    {
+      "legacy": "CapacitorElm",
+      "dumpType": "c",
+      "source": "src/com/lushprojects/circuitjs1/client/CapacitorElm.java",
+      "reactCandidates": [
+        "capacitor"
+      ],
+      "legacyOptions": [
+        "Capacitance (F)",
+        "Trapezoidal Approximation",
+        "Initial Voltage (on Reset)",
+        "Series Resistance"
+      ],
+      "reactParameters": {
+        "capacitor": [
+          "capacitance",
+          "initialVoltage",
+          "integration"
+        ]
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "ClockElm",
+      "dumpType": "R",
+      "source": "src/com/lushprojects/circuitjs1/client/ClockElm.java",
+      "reactCandidates": [
+        "noiseSource",
+        "voltageRail"
+      ],
+      "legacyOptions": [
+        "Waveform",
+        "DC Offset (V)",
+        "Internal Resistance (ohms)",
+        "Show Voltage",
+        "Circle Symbol",
+        "Specify As",
+        "High Time (s)",
+        "Frequency (Hz)",
+        "Phase Offset (degrees)",
+        "Low Time (s)",
+        "Duty Cycle",
+        "Rise/Fall Time (s)"
+      ],
+      "reactParameters": {
+        "noiseSource": [
+          "amplitude",
+          "offset"
+        ],
+        "voltageRail": [
+          "waveform"
+        ]
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "ComparatorElm",
+      "dumpType": "401",
+      "source": "src/com/lushprojects/circuitjs1/client/ComparatorElm.java",
+      "reactCandidates": [],
+      "legacyOptions": [],
+      "reactParameters": {},
+      "status": "Missing React component"
+    },
+    {
+      "legacy": "Counter2Elm",
+      "dumpType": "421",
+      "source": "src/com/lushprojects/circuitjs1/client/Counter2Elm.java",
+      "reactCandidates": [],
+      "legacyOptions": [
+        "High Logic Voltage",
+        "Bit Order"
+      ],
+      "reactParameters": {},
+      "status": "Missing React component"
+    },
+    {
+      "legacy": "CounterElm",
+      "dumpType": "164",
+      "source": "src/com/lushprojects/circuitjs1/client/CounterElm.java",
+      "reactCandidates": [
+        "counter"
+      ],
+      "legacyOptions": [
+        "High Logic Voltage",
+        "Bit Order"
+      ],
+      "reactParameters": {
+        "counter": [
+          "highVoltage",
+          "initialValue",
+          "modulus",
+          "invertReset",
+          "negativeEdge"
+        ]
+      },
+      "status": "Confirmed gaps: Variable bit width and bit order"
+    },
+    {
+      "legacy": "CrossSwitchElm",
+      "dumpType": "430",
+      "source": "src/com/lushprojects/circuitjs1/client/CrossSwitchElm.java",
+      "reactCandidates": [],
+      "legacyOptions": [
+        "IEC Symbol",
+        "On Resistance (ohms)",
+        "Momentary Switch",
+        "Label (for linking)"
+      ],
+      "reactParameters": {},
+      "status": "Missing React component"
+    },
+    {
+      "legacy": "CrystalElm",
+      "dumpType": "412",
+      "source": "src/com/lushprojects/circuitjs1/client/CrystalElm.java",
+      "reactCandidates": [],
+      "legacyOptions": [
+        "Series Capacitance (F)",
+        "Inductance (H)",
+        "Resistance (",
+        "Show Frequency"
+      ],
+      "reactParameters": {},
+      "status": "Missing React component"
+    },
+    {
+      "legacy": "CurrentElm",
+      "dumpType": "i",
+      "source": "src/com/lushprojects/circuitjs1/client/CurrentElm.java",
+      "reactCandidates": [
+        "currentSource"
+      ],
+      "legacyOptions": [
+        "Current (A)",
+        "Max Voltage (V, 0=unlimited)"
+      ],
+      "reactParameters": {
+        "currentSource": [
+          "current",
+          "maxVoltage"
+        ]
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "CustomCompositeElm",
+      "dumpType": "410",
+      "source": "src/com/lushprojects/circuitjs1/client/CustomCompositeElm.java",
+      "reactCandidates": [],
+      "legacyOptions": [
+        "Edit Pin Layout",
+        "View Components",
+        "High Logic Voltage (0=default)",
+        "Edit Model"
+      ],
+      "reactParameters": {},
+      "status": "Missing React component"
+    },
+    {
+      "legacy": "CustomTransformerElm",
+      "dumpType": "406",
+      "source": "src/com/lushprojects/circuitjs1/client/CustomTransformerElm.java",
+      "reactCandidates": [
+        "customTransformer"
+      ],
+      "legacyOptions": [
+        "Base Inductance (H)",
+        "Coupling Coefficient",
+        "Trapezoidal Approximation"
+      ],
+      "reactParameters": {
+        "customTransformer": [
+          "inductance",
+          "coupling",
+          "turns1",
+          "turns2",
+          "turns3",
+          "integration"
+        ]
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "DACElm",
+      "dumpType": "166",
+      "source": "src/com/lushprojects/circuitjs1/client/DACElm.java",
+      "reactCandidates": [],
+      "legacyOptions": [
+        "High Logic Voltage",
+        "Bit Order"
+      ],
+      "reactParameters": {},
+      "status": "Missing React component"
+    },
+    {
+      "legacy": "DCMotorElm",
+      "dumpType": "415",
+      "source": "src/com/lushprojects/circuitjs1/client/DCMotorElm.java",
+      "reactCandidates": [
+        "dcMotor"
+      ],
+      "legacyOptions": [
+        "Armature inductance (H)",
+        "Armature Resistance (ohms)",
+        "Torque constant (Nm/A)",
+        "Moment of inertia (Kg.m^2)",
+        "Friction coefficient (Nms/rad)",
+        "Gear Ratio"
+      ],
+      "reactParameters": {
+        "dcMotor": [
+          "inductance",
+          "resistance",
+          "torqueConstant",
+          "backEmfConstant",
+          "inertia",
+          "friction",
+          "gearRatio",
+          "loadTorque"
+        ]
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "DCVoltageElm",
+      "dumpType": "v",
+      "source": "src/com/lushprojects/circuitjs1/client/DCVoltageElm.java",
+      "reactCandidates": [
+        "voltageSource"
+      ],
+      "legacyOptions": [
+        "Waveform",
+        "DC Offset (V)",
+        "Internal Resistance (ohms)",
+        "Show Voltage",
+        "Circle Symbol",
+        "Specify As",
+        "High Time (s)",
+        "Frequency (Hz)",
+        "Phase Offset (degrees)",
+        "Low Time (s)",
+        "Duty Cycle",
+        "Rise/Fall Time (s)"
+      ],
+      "reactParameters": {
+        "voltageSource": [
+          "waveform"
+        ]
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "DFlipFlopElm",
+      "dumpType": "155",
+      "source": "src/com/lushprojects/circuitjs1/client/DFlipFlopElm.java",
+      "reactCandidates": [
+        "dFlipFlop"
+      ],
+      "legacyOptions": [
+        "High Logic Voltage",
+        "Bit Order"
+      ],
+      "reactParameters": {
+        "dFlipFlop": [
+          "highVoltage",
+          "initialState"
+        ]
+      },
+      "status": "Confirmed gaps: Set/reset pins and bit order"
+    },
+    {
+      "legacy": "DPDTSwitchElm",
+      "dumpType": "429",
+      "source": "src/com/lushprojects/circuitjs1/client/DPDTSwitchElm.java",
+      "reactCandidates": [
+        "dpdtSwitch"
+      ],
+      "legacyOptions": [
+        "# of Poles",
+        "IEC Symbol",
+        "On Resistance (ohms)",
+        "Momentary Switch",
+        "Label (for linking)"
+      ],
+      "reactParameters": {
+        "dpdtSwitch": [
+          "onResistance",
+          "momentary",
+          "linkLabel",
+          "iecSymbol",
+          "poleCount",
+          "position"
+        ]
+      },
+      "status": "Confirmed gaps: Keyboard shortcut"
+    },
+    {
+      "legacy": "DataInputElm",
+      "dumpType": "424",
+      "source": "src/com/lushprojects/circuitjs1/client/DataInputElm.java",
+      "reactCandidates": [],
+      "legacyOptions": [
+        "Scale Factor",
+        "Sample Length (s)",
+        "Repeat",
+        "Waveform",
+        "DC Offset (V)",
+        "Internal Resistance (ohms)",
+        "Show Voltage",
+        "Circle Symbol",
+        "Specify As",
+        "High Time (s)",
+        "Frequency (Hz)",
+        "Phase Offset (degrees)",
+        "Low Time (s)",
+        "Duty Cycle",
+        "Rise/Fall Time (s)"
+      ],
+      "reactParameters": {},
+      "status": "Missing React component"
+    },
+    {
+      "legacy": "DataRecorderElm",
+      "dumpType": "210",
+      "source": "src/com/lushprojects/circuitjs1/client/DataRecorderElm.java",
+      "reactCandidates": [
+        "dataExport"
+      ],
+      "legacyOptions": [
+        "# of Data Points"
+      ],
+      "reactParameters": {
+        "dataExport": [
+          "capacity"
+        ]
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "DeMultiplexerElm",
+      "dumpType": "185",
+      "source": "src/com/lushprojects/circuitjs1/client/DeMultiplexerElm.java",
+      "reactCandidates": [],
+      "legacyOptions": [
+        "High Logic Voltage",
+        "Bit Order"
+      ],
+      "reactParameters": {},
+      "status": "Missing React component"
+    },
+    {
+      "legacy": "DecimalDisplayElm",
+      "dumpType": "419",
+      "source": "src/com/lushprojects/circuitjs1/client/DecimalDisplayElm.java",
+      "reactCandidates": [
+        "decimalDisplay"
+      ],
+      "legacyOptions": [
+        "High Logic Voltage",
+        "Bit Order"
+      ],
+      "reactParameters": {
+        "decimalDisplay": [
+          "mode"
+        ]
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "DelayBufferElm",
+      "dumpType": "422",
+      "source": "src/com/lushprojects/circuitjs1/client/DelayBufferElm.java",
+      "reactCandidates": [],
+      "legacyOptions": [
+        "Delay (s)",
+        "Threshold (V)",
+        "High Logic Voltage"
+      ],
+      "reactParameters": {},
+      "status": "Missing React component"
+    },
+    {
+      "legacy": "DiacElm",
+      "dumpType": "203",
+      "source": "src/com/lushprojects/circuitjs1/client/DiacElm.java",
+      "reactCandidates": [
+        "diac"
+      ],
+      "legacyOptions": [
+        "On resistance (ohms)",
+        "Off resistance (ohms)",
+        "Breakdown voltage (volts)",
+        "Hold current (amps)"
+      ],
+      "reactParameters": {
+        "diac": [
+          "onResistance",
+          "offResistance",
+          "breakdownVoltage",
+          "holdingCurrent"
+        ]
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "DiodeElm",
+      "dumpType": "d",
+      "source": "src/com/lushprojects/circuitjs1/client/DiodeElm.java",
+      "reactCandidates": [
+        "diode"
+      ],
+      "legacyOptions": [
+        "Model",
+        "Create New Simple Model",
+        "Create New Advanced Model",
+        "Edit Model"
+      ],
+      "reactParameters": {
+        "diode": [
+          "model"
+        ]
+      },
+      "status": "Properties implemented; bundled-source review recorded in PROPERTY-PARITY.md"
+    },
+    {
+      "legacy": "ExtVoltageElm",
+      "dumpType": "418",
+      "source": "src/com/lushprojects/circuitjs1/client/ExtVoltageElm.java",
+      "reactCandidates": [],
+      "legacyOptions": [
+        "Name",
+        "Waveform",
+        "DC Offset (V)",
+        "Internal Resistance (ohms)",
+        "Show Voltage",
+        "Circle Symbol",
+        "Specify As",
+        "High Time (s)",
+        "Frequency (Hz)",
+        "Phase Offset (degrees)",
+        "Low Time (s)",
+        "Duty Cycle",
+        "Rise/Fall Time (s)"
+      ],
+      "reactParameters": {},
+      "status": "Missing React component"
+    },
+    {
+      "legacy": "FMElm",
+      "dumpType": "201",
+      "source": "src/com/lushprojects/circuitjs1/client/FMElm.java",
+      "reactCandidates": [
+        "fmSource"
+      ],
+      "legacyOptions": [
+        "Max Voltage",
+        "Carrier Frequency (Hz)",
+        "Signal Frequency (Hz)",
+        "Deviation (Hz)"
+      ],
+      "reactParameters": {
+        "fmSource": [
+          "carrierFrequency",
+          "signalFrequency",
+          "amplitude",
+          "deviation"
+        ]
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "FullAdderElm",
+      "dumpType": "196",
+      "source": "src/com/lushprojects/circuitjs1/client/FullAdderElm.java",
+      "reactCandidates": [
+        "fullAdder"
+      ],
+      "legacyOptions": [
+        "High Logic Voltage",
+        "Bit Order"
+      ],
+      "reactParameters": {
+        "fullAdder": [
+          "highVoltage"
+        ]
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "FuseElm",
+      "dumpType": "404",
+      "source": "src/com/lushprojects/circuitjs1/client/FuseElm.java",
+      "reactCandidates": [
+        "fuse"
+      ],
+      "legacyOptions": [
+        "I2t",
+        "Resistance",
+        "IEC Symbol"
+      ],
+      "reactParameters": {
+        "fuse": [
+          "resistance",
+          "i2t"
+        ]
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "GroundElm",
+      "dumpType": "g",
+      "source": "src/com/lushprojects/circuitjs1/client/GroundElm.java",
+      "reactCandidates": [
+        "ground"
+      ],
+      "legacyOptions": [
+        "Symbol"
+      ],
+      "reactParameters": {
+        "ground": []
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "GyratorElm",
+      "dumpType": null,
+      "source": "src/com/lushprojects/circuitjs1/client/GyratorElm.java",
+      "reactCandidates": [],
+      "legacyOptions": [
+        "Gyration Resistance (\\u2126)"
+      ],
+      "reactParameters": {},
+      "status": "Missing React component"
+    },
+    {
+      "legacy": "HalfAdderElm",
+      "dumpType": "195",
+      "source": "src/com/lushprojects/circuitjs1/client/HalfAdderElm.java",
+      "reactCandidates": [
+        "halfAdder"
+      ],
+      "legacyOptions": [
+        "High Logic Voltage",
+        "Bit Order"
+      ],
+      "reactParameters": {
+        "halfAdder": [
+          "highVoltage"
+        ]
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "InductorElm",
+      "dumpType": "l",
+      "source": "src/com/lushprojects/circuitjs1/client/InductorElm.java",
+      "reactCandidates": [
+        "inductor"
+      ],
+      "legacyOptions": [
+        "Inductance (H)",
+        "Trapezoidal Approximation",
+        "Initial Current (on Reset) (A)",
+        "Saturation Current (A) (0=none)"
+      ],
+      "reactParameters": {
+        "inductor": [
+          "inductance",
+          "initialCurrent",
+          "integration"
+        ]
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "InstructionDisplayElm",
+      "dumpType": null,
+      "source": "src/com/lushprojects/circuitjs1/client/InstructionDisplayElm.java",
+      "reactCandidates": [],
+      "legacyOptions": [
+        "Bus Width",
+        "Threshold Voltage",
+        "Lookup Table"
+      ],
+      "reactParameters": {},
+      "status": "Missing React component"
+    },
+    {
+      "legacy": "InverterElm",
+      "dumpType": "I",
+      "source": "src/com/lushprojects/circuitjs1/client/InverterElm.java",
+      "reactCandidates": [
+        "inverter"
+      ],
+      "legacyOptions": [
+        "Slew Rate (V/ns)",
+        "High Logic Voltage"
+      ],
+      "reactParameters": {
+        "inverter": [
+          "highVoltage",
+          "slewRate"
+        ]
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "InvertingSchmittElm",
+      "dumpType": "183",
+      "source": "src/com/lushprojects/circuitjs1/client/InvertingSchmittElm.java",
+      "reactCandidates": [
+        "invertingSchmittTrigger"
+      ],
+      "legacyOptions": [
+        "Lower threshold (V)",
+        "Upper threshold (V)",
+        "Slew Rate (V/ns)",
+        "High Logic Voltage",
+        "Low Voltage (V)"
+      ],
+      "reactParameters": {
+        "invertingSchmittTrigger": [
+          "slewRate",
+          "lowerThreshold",
+          "upperThreshold",
+          "highVoltage",
+          "lowVoltage"
+        ]
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "JKFlipFlopElm",
+      "dumpType": "156",
+      "source": "src/com/lushprojects/circuitjs1/client/JKFlipFlopElm.java",
+      "reactCandidates": [
+        "jkFlipFlop"
+      ],
+      "legacyOptions": [
+        "High Logic Voltage",
+        "Bit Order"
+      ],
+      "reactParameters": {
+        "jkFlipFlop": [
+          "highVoltage",
+          "initialState",
+          "positiveEdge"
+        ]
+      },
+      "status": "Confirmed gaps: Reset pin and bit order"
+    },
+    {
+      "legacy": "LDRElm",
+      "dumpType": "374",
+      "source": "src/com/lushprojects/circuitjs1/client/LDRElm.java",
+      "reactCandidates": [
+        "photoresistor"
+      ],
+      "legacyOptions": [
+        "Slider Text"
+      ],
+      "reactParameters": {
+        "photoresistor": [
+          "position"
+        ]
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "LEDArrayElm",
+      "dumpType": "405",
+      "source": "src/com/lushprojects/circuitjs1/client/LEDArrayElm.java",
+      "reactCandidates": [
+        "ledArray"
+      ],
+      "legacyOptions": [
+        "High Logic Voltage",
+        "Bit Order"
+      ],
+      "reactParameters": {
+        "ledArray": []
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "LEDElm",
+      "dumpType": "162",
+      "source": "src/com/lushprojects/circuitjs1/client/LEDElm.java",
+      "reactCandidates": [
+        "led"
+      ],
+      "legacyOptions": [
+        "Red Value (0-1)",
+        "Green Value (0-1)",
+        "Blue Value (0-1)",
+        "Max Brightness Current (A)",
+        "Model",
+        "Create New Simple Model",
+        "Create New Advanced Model",
+        "Edit Model"
+      ],
+      "reactParameters": {
+        "led": [
+          "model",
+          "red",
+          "green",
+          "blue",
+          "maxCurrent"
+        ]
+      },
+      "status": "Properties implemented; bundled-source review recorded in PROPERTY-PARITY.md"
+    },
+    {
+      "legacy": "LabeledNodeElm",
+      "dumpType": "207",
+      "source": "src/com/lushprojects/circuitjs1/client/LabeledNodeElm.java",
+      "reactCandidates": [
+        "labeledNode"
+      ],
+      "legacyOptions": [
+        "Text",
+        "Internal Node",
+        "Rotate Text When Vertical"
+      ],
+      "reactParameters": {
+        "labeledNode": [
+          "name"
+        ]
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "LampElm",
+      "dumpType": "181",
+      "source": "src/com/lushprojects/circuitjs1/client/LampElm.java",
+      "reactCandidates": [
+        "lamp"
+      ],
+      "legacyOptions": [
+        "Nominal Power",
+        "Nominal Voltage",
+        "Warmup Time (s)",
+        "Cooldown Time (s)"
+      ],
+      "reactParameters": {
+        "lamp": [
+          "nominalPower",
+          "nominalVoltage",
+          "warmTime",
+          "coolTime",
+          "initialTemperature"
+        ]
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "LatchElm",
+      "dumpType": "168",
+      "source": "src/com/lushprojects/circuitjs1/client/LatchElm.java",
+      "reactCandidates": [
+        "latch"
+      ],
+      "legacyOptions": [
+        "High Logic Voltage",
+        "Bit Order"
+      ],
+      "reactParameters": {
+        "latch": [
+          "highVoltage",
+          "initialValue",
+          "edgeTriggered"
+        ]
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "LineElm",
+      "dumpType": "423",
+      "source": "src/com/lushprojects/circuitjs1/client/LineElm.java",
+      "reactCandidates": [
+        "line"
+      ],
+      "legacyOptions": [],
+      "reactParameters": {
+        "line": [
+          "width",
+          "height"
+        ]
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "LogicInputElm",
+      "dumpType": "L",
+      "source": "src/com/lushprojects/circuitjs1/client/LogicInputElm.java",
+      "reactCandidates": [
+        "logicInput"
+      ],
+      "legacyOptions": [
+        "Momentary Switch",
+        "High Logic Voltage",
+        "Low Voltage",
+        "Numeric",
+        "Ternary",
+        "IEC Symbol",
+        "Label (for linking)",
+        "On Resistance (ohms)"
+      ],
+      "reactParameters": {
+        "logicInput": [
+          "state",
+          "highVoltage",
+          "lowVoltage",
+          "mode"
+        ]
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "LogicOutputElm",
+      "dumpType": "M",
+      "source": "src/com/lushprojects/circuitjs1/client/LogicOutputElm.java",
+      "reactCandidates": [
+        "logicOutput"
+      ],
+      "legacyOptions": [
+        "Threshold",
+        "Current Required",
+        "Numeric",
+        "Ternary"
+      ],
+      "reactParameters": {
+        "logicOutput": [
+          "threshold",
+          "mode",
+          "pulldown"
+        ]
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "MBBSwitchElm",
+      "dumpType": "416",
+      "source": "src/com/lushprojects/circuitjs1/client/MBBSwitchElm.java",
+      "reactCandidates": [
+        "mbbSwitch"
+      ],
+      "legacyOptions": [
+        "Switch Group",
+        "On Resistance (ohms)",
+        "Momentary Switch",
+        "IEC Symbol",
+        "Label (for linking)"
+      ],
+      "reactParameters": {
+        "mbbSwitch": [
+          "onResistance",
+          "momentary",
+          "linkLabel",
+          "iecSymbol",
+          "group",
+          "position"
+        ]
+      },
+      "status": "Confirmed gaps: Keyboard shortcut"
+    },
+    {
+      "legacy": "MemristorElm",
+      "dumpType": "m",
+      "source": "src/com/lushprojects/circuitjs1/client/MemristorElm.java",
+      "reactCandidates": [
+        "memristor"
+      ],
+      "legacyOptions": [
+        "Min Resistance (ohms)",
+        "Max Resistance (ohms)",
+        "Width of Doped Region (nm)",
+        "Total Width (nm)",
+        "Mobility (um^2/(s*V))"
+      ],
+      "reactParameters": {
+        "memristor": [
+          "onResistance",
+          "offResistance",
+          "initialDopedWidth",
+          "totalWidth",
+          "mobility"
+        ]
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "MonostableElm",
+      "dumpType": "194",
+      "source": "src/com/lushprojects/circuitjs1/client/MonostableElm.java",
+      "reactCandidates": [],
+      "legacyOptions": [
+        "High Logic Voltage",
+        "Bit Order"
+      ],
+      "reactParameters": {},
+      "status": "Missing React component"
+    },
+    {
+      "legacy": "MotorProtectionSwitchElm",
+      "dumpType": "428",
+      "source": "src/com/lushprojects/circuitjs1/client/MotorProtectionSwitchElm.java",
+      "reactCandidates": [],
+      "legacyOptions": [
+        "I2t",
+        "On Resistance",
+        "Label (for linking)"
+      ],
+      "reactParameters": {},
+      "status": "Missing React component"
+    },
+    {
+      "legacy": "MultiplexerElm",
+      "dumpType": "184",
+      "source": "src/com/lushprojects/circuitjs1/client/MultiplexerElm.java",
+      "reactCandidates": [],
+      "legacyOptions": [
+        "High Logic Voltage",
+        "Bit Order"
+      ],
+      "reactParameters": {},
+      "status": "Missing React component"
+    },
+    {
+      "legacy": "NDarlingtonElm",
+      "dumpType": "400",
+      "source": "src/com/lushprojects/circuitjs1/client/NDarlingtonElm.java",
+      "reactCandidates": [],
+      "legacyOptions": [],
+      "reactParameters": {},
+      "status": "Missing React component"
+    },
+    {
+      "legacy": "NJfetElm",
+      "dumpType": "j",
+      "source": "src/com/lushprojects/circuitjs1/client/NJfetElm.java",
+      "reactCandidates": [
+        "njfet",
+        "pjfet"
+      ],
+      "legacyOptions": [
+        "Threshold Voltage",
+        "Show Bulk",
+        "Swap D/S",
+        "Digital Symbol",
+        "Simulate Body Diode",
+        "Body Terminal",
+        "Show Body Diode"
+      ],
+      "reactParameters": {
+        "njfet": [
+          "threshold",
+          "beta"
+        ],
+        "pjfet": [
+          "threshold",
+          "beta"
+        ]
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "NMosfetElm",
+      "dumpType": "f",
+      "source": "src/com/lushprojects/circuitjs1/client/NMosfetElm.java",
+      "reactCandidates": [
+        "nmos",
+        "pmos"
+      ],
+      "legacyOptions": [
+        "Threshold Voltage",
+        "Show Bulk",
+        "Swap D/S",
+        "Digital Symbol",
+        "Simulate Body Diode",
+        "Body Terminal",
+        "Show Body Diode"
+      ],
+      "reactParameters": {
+        "nmos": [
+          "threshold",
+          "beta",
+          "bodyDiode",
+          "bodyTerminal",
+          "showBulk",
+          "digitalSymbol",
+          "showBodyDiode",
+          "swapTerminals"
+        ],
+        "pmos": [
+          "threshold",
+          "beta",
+          "bodyDiode",
+          "bodyTerminal",
+          "showBulk",
+          "digitalSymbol",
+          "showBodyDiode",
+          "swapTerminals"
+        ]
+      },
+      "status": "Properties implemented; bundled-source review recorded in PROPERTY-PARITY.md"
+    },
+    {
+      "legacy": "NTransistorElm",
+      "dumpType": "t",
+      "source": "src/com/lushprojects/circuitjs1/client/NTransistorElm.java",
+      "reactCandidates": [
+        "npn",
+        "pnp"
+      ],
+      "legacyOptions": [
+        "Beta/hFE",
+        "Swap E/C",
+        "Draw Circle",
+        "Model",
+        "Create New Model",
+        "Edit Model"
+      ],
+      "reactParameters": {
+        "npn": [
+          "beta",
+          "model",
+          "swapTerminals",
+          "drawCircle"
+        ],
+        "pnp": [
+          "beta",
+          "model",
+          "swapTerminals",
+          "drawCircle"
+        ]
+      },
+      "status": "Properties implemented; bundled-source review recorded in PROPERTY-PARITY.md"
+    },
+    {
+      "legacy": "NandGateElm",
+      "dumpType": "151",
+      "source": "src/com/lushprojects/circuitjs1/client/NandGateElm.java",
+      "reactCandidates": [
+        "nandGate"
+      ],
+      "legacyOptions": [
+        "# of Inputs",
+        "High Logic Voltage",
+        "Schmitt Inputs",
+        "Invert Inputs",
+        "Propagation Delay (s)"
+      ],
+      "reactParameters": {
+        "nandGate": [
+          "highVoltage",
+          "inputCount",
+          "propagationDelay",
+          "schmittInputs",
+          "invertInputs"
+        ]
+      },
+      "status": "Properties implemented; bundled-source review recorded in PROPERTY-PARITY.md"
+    },
+    {
+      "legacy": "NoiseElm",
+      "dumpType": "R",
+      "source": "src/com/lushprojects/circuitjs1/client/NoiseElm.java",
+      "reactCandidates": [
+        "noiseSource",
+        "voltageRail"
+      ],
+      "legacyOptions": [
+        "Waveform",
+        "DC Offset (V)",
+        "Internal Resistance (ohms)",
+        "Show Voltage",
+        "Circle Symbol",
+        "Specify As",
+        "High Time (s)",
+        "Frequency (Hz)",
+        "Phase Offset (degrees)",
+        "Low Time (s)",
+        "Duty Cycle",
+        "Rise/Fall Time (s)"
+      ],
+      "reactParameters": {
+        "noiseSource": [
+          "amplitude",
+          "offset"
+        ],
+        "voltageRail": [
+          "waveform"
+        ]
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "NorGateElm",
+      "dumpType": "153",
+      "source": "src/com/lushprojects/circuitjs1/client/NorGateElm.java",
+      "reactCandidates": [
+        "norGate"
+      ],
+      "legacyOptions": [
+        "# of Inputs",
+        "High Logic Voltage",
+        "Schmitt Inputs",
+        "Invert Inputs",
+        "Propagation Delay (s)"
+      ],
+      "reactParameters": {
+        "norGate": [
+          "highVoltage",
+          "inputCount",
+          "propagationDelay",
+          "schmittInputs",
+          "invertInputs"
+        ]
+      },
+      "status": "Properties implemented; bundled-source review recorded in PROPERTY-PARITY.md"
+    },
+    {
+      "legacy": "OTAElm",
+      "dumpType": "402",
+      "source": "src/com/lushprojects/circuitjs1/client/OTAElm.java",
+      "reactCandidates": [],
+      "legacyOptions": [
+        "Positive Supply Voltage (5-20V)",
+        "Negative Supply Voltage (V)"
+      ],
+      "reactParameters": {},
+      "status": "Missing React component"
+    },
+    {
+      "legacy": "OhmMeterElm",
+      "dumpType": "216",
+      "source": "src/com/lushprojects/circuitjs1/client/OhmMeterElm.java",
+      "reactCandidates": [
+        "ohmmeter"
+      ],
+      "legacyOptions": [
+        "Current (A)",
+        "Max Voltage (V, 0=unlimited)"
+      ],
+      "reactParameters": {
+        "ohmmeter": [
+          "current",
+          "maxVoltage"
+        ]
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "OpAmpElm",
+      "dumpType": "a",
+      "source": "src/com/lushprojects/circuitjs1/client/OpAmpElm.java",
+      "reactCandidates": [
+        "opamp"
+      ],
+      "legacyOptions": [
+        "Max Output (V)",
+        "Min Output (V)",
+        "Gain"
+      ],
+      "reactParameters": {
+        "opamp": [
+          "gain",
+          "minOutput",
+          "maxOutput"
+        ]
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "OpAmpRealElm",
+      "dumpType": "409",
+      "source": "src/com/lushprojects/circuitjs1/client/OpAmpRealElm.java",
+      "reactCandidates": [],
+      "legacyOptions": [
+        "Swap Inputs",
+        "Slew Rate (V/usec)",
+        "Output Current Limit (A)"
+      ],
+      "reactParameters": {},
+      "status": "Missing React component"
+    },
+    {
+      "legacy": "OpAmpSwapElm",
+      "dumpType": "a",
+      "source": "src/com/lushprojects/circuitjs1/client/OpAmpSwapElm.java",
+      "reactCandidates": [
+        "opamp"
+      ],
+      "legacyOptions": [
+        "Max Output (V)",
+        "Min Output (V)",
+        "Gain"
+      ],
+      "reactParameters": {
+        "opamp": [
+          "gain",
+          "minOutput",
+          "maxOutput"
+        ]
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "OptocouplerElm",
+      "dumpType": "407",
+      "source": "src/com/lushprojects/circuitjs1/client/OptocouplerElm.java",
+      "reactCandidates": [],
+      "legacyOptions": [
+        "CTR Scale",
+        "LED Model"
+      ],
+      "reactParameters": {},
+      "status": "Missing React component"
+    },
+    {
+      "legacy": "OrGateElm",
+      "dumpType": "152",
+      "source": "src/com/lushprojects/circuitjs1/client/OrGateElm.java",
+      "reactCandidates": [
+        "orGate"
+      ],
+      "legacyOptions": [
+        "# of Inputs",
+        "High Logic Voltage",
+        "Schmitt Inputs",
+        "Invert Inputs",
+        "Propagation Delay (s)"
+      ],
+      "reactParameters": {
+        "orGate": [
+          "highVoltage",
+          "inputCount",
+          "propagationDelay",
+          "schmittInputs",
+          "invertInputs"
+        ]
+      },
+      "status": "Properties implemented; bundled-source review recorded in PROPERTY-PARITY.md"
+    },
+    {
+      "legacy": "OutputElm",
+      "dumpType": "O",
+      "source": "src/com/lushprojects/circuitjs1/client/OutputElm.java",
+      "reactCandidates": [
+        "output"
+      ],
+      "legacyOptions": [
+        "Show Voltage",
+        "Scale",
+        "Fixed Precision"
+      ],
+      "reactParameters": {
+        "output": [
+          "showVoltage"
+        ]
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "PDarlingtonElm",
+      "dumpType": "400",
+      "source": "src/com/lushprojects/circuitjs1/client/PDarlingtonElm.java",
+      "reactCandidates": [],
+      "legacyOptions": [],
+      "reactParameters": {},
+      "status": "Missing React component"
+    },
+    {
+      "legacy": "PMosfetElm",
+      "dumpType": "f",
+      "source": "src/com/lushprojects/circuitjs1/client/PMosfetElm.java",
+      "reactCandidates": [
+        "nmos",
+        "pmos"
+      ],
+      "legacyOptions": [
+        "Threshold Voltage",
+        "Show Bulk",
+        "Swap D/S",
+        "Digital Symbol",
+        "Simulate Body Diode",
+        "Body Terminal",
+        "Show Body Diode"
+      ],
+      "reactParameters": {
+        "nmos": [
+          "threshold",
+          "beta",
+          "bodyDiode",
+          "bodyTerminal",
+          "showBulk",
+          "digitalSymbol",
+          "showBodyDiode",
+          "swapTerminals"
+        ],
+        "pmos": [
+          "threshold",
+          "beta",
+          "bodyDiode",
+          "bodyTerminal",
+          "showBulk",
+          "digitalSymbol",
+          "showBodyDiode",
+          "swapTerminals"
+        ]
+      },
+      "status": "Properties implemented; bundled-source review recorded in PROPERTY-PARITY.md"
+    },
+    {
+      "legacy": "PTransistorElm",
+      "dumpType": "t",
+      "source": "src/com/lushprojects/circuitjs1/client/PTransistorElm.java",
+      "reactCandidates": [
+        "npn",
+        "pnp"
+      ],
+      "legacyOptions": [
+        "Beta/hFE",
+        "Swap E/C",
+        "Draw Circle",
+        "Model",
+        "Create New Model",
+        "Edit Model"
+      ],
+      "reactParameters": {
+        "npn": [
+          "beta",
+          "model",
+          "swapTerminals",
+          "drawCircle"
+        ],
+        "pnp": [
+          "beta",
+          "model",
+          "swapTerminals",
+          "drawCircle"
+        ]
+      },
+      "status": "Properties implemented; bundled-source review recorded in PROPERTY-PARITY.md"
+    },
+    {
+      "legacy": "PhaseCompElm",
+      "dumpType": "161",
+      "source": "src/com/lushprojects/circuitjs1/client/PhaseCompElm.java",
+      "reactCandidates": [],
+      "legacyOptions": [
+        "High Logic Voltage",
+        "Bit Order"
+      ],
+      "reactParameters": {},
+      "status": "Missing React component"
+    },
+    {
+      "legacy": "PisoShiftElm",
+      "dumpType": "186",
+      "source": "src/com/lushprojects/circuitjs1/client/PisoShiftElm.java",
+      "reactCandidates": [],
+      "legacyOptions": [
+        "High Logic Voltage",
+        "Bit Order"
+      ],
+      "reactParameters": {},
+      "status": "Missing React component"
+    },
+    {
+      "legacy": "PolarCapacitorElm",
+      "dumpType": "209",
+      "source": "src/com/lushprojects/circuitjs1/client/PolarCapacitorElm.java",
+      "reactCandidates": [
+        "polarizedCapacitor"
+      ],
+      "legacyOptions": [
+        "Max Reverse Voltage",
+        "Capacitance (F)",
+        "Trapezoidal Approximation",
+        "Initial Voltage (on Reset)",
+        "Series Resistance"
+      ],
+      "reactParameters": {
+        "polarizedCapacitor": [
+          "capacitance",
+          "initialVoltage",
+          "integration",
+          "maxReverseVoltage"
+        ]
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "PotElm",
+      "dumpType": "174",
+      "source": "src/com/lushprojects/circuitjs1/client/PotElm.java",
+      "reactCandidates": [
+        "potentiometer"
+      ],
+      "legacyOptions": [
+        "Resistance (ohms)",
+        "Slider Text",
+        "Show Values",
+        "Group Number (for linking)"
+      ],
+      "reactParameters": {
+        "potentiometer": [
+          "resistance",
+          "position",
+          "label"
+        ]
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "ProbeElm",
+      "dumpType": "p",
+      "source": "src/com/lushprojects/circuitjs1/client/ProbeElm.java",
+      "reactCandidates": [
+        "voltmeter"
+      ],
+      "legacyOptions": [
+        "Show Value",
+        "Value",
+        "Scale",
+        "Use Circle Symbol",
+        "Series Resistance (0 = infinite)"
+      ],
+      "reactParameters": {
+        "voltmeter": [
+          "mode",
+          "resistance"
+        ]
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "PushSwitchElm",
+      "dumpType": "s",
+      "source": "src/com/lushprojects/circuitjs1/client/PushSwitchElm.java",
+      "reactCandidates": [
+        "pushSwitch",
+        "switch"
+      ],
+      "legacyOptions": [
+        "Momentary Switch",
+        "IEC Symbol",
+        "Label (for linking)",
+        "On Resistance (ohms)"
+      ],
+      "reactParameters": {
+        "pushSwitch": [
+          "onResistance",
+          "momentary",
+          "linkLabel",
+          "iecSymbol",
+          "normallyClosed"
+        ],
+        "switch": [
+          "onResistance",
+          "momentary",
+          "linkLabel",
+          "iecSymbol",
+          "closed"
+        ]
+      },
+      "status": "Confirmed gaps: Keyboard shortcut"
+    },
+    {
+      "legacy": "ROMElm",
+      "dumpType": "436",
+      "source": "src/com/lushprojects/circuitjs1/client/ROMElm.java",
+      "reactCandidates": [],
+      "legacyOptions": [
+        "High Logic Voltage",
+        "Bit Order"
+      ],
+      "reactParameters": {},
+      "status": "Missing React component"
+    },
+    {
+      "legacy": "RailElm",
+      "dumpType": "R",
+      "source": "src/com/lushprojects/circuitjs1/client/RailElm.java",
+      "reactCandidates": [
+        "noiseSource",
+        "voltageRail"
+      ],
+      "legacyOptions": [
+        "Waveform",
+        "DC Offset (V)",
+        "Internal Resistance (ohms)",
+        "Show Voltage",
+        "Circle Symbol",
+        "Specify As",
+        "High Time (s)",
+        "Frequency (Hz)",
+        "Phase Offset (degrees)",
+        "Low Time (s)",
+        "Duty Cycle",
+        "Rise/Fall Time (s)"
+      ],
+      "reactParameters": {
+        "noiseSource": [
+          "amplitude",
+          "offset"
+        ],
+        "voltageRail": [
+          "waveform"
+        ]
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "RelayCoilElm",
+      "dumpType": "425",
+      "source": "src/com/lushprojects/circuitjs1/client/RelayCoilElm.java",
+      "reactCandidates": [],
+      "legacyOptions": [
+        "Type",
+        "Inductance (H)",
+        "On Current (A)",
+        "Off Current (A)",
+        "Coil Resistance (ohms)",
+        "Switching Time (s)",
+        "Label (for linking)"
+      ],
+      "reactParameters": {},
+      "status": "Missing React component"
+    },
+    {
+      "legacy": "RelayContactElm",
+      "dumpType": "426",
+      "source": "src/com/lushprojects/circuitjs1/client/RelayContactElm.java",
+      "reactCandidates": [],
+      "legacyOptions": [
+        "On Resistance (ohms)",
+        "Off Resistance (ohms)",
+        "Label (for linking)",
+        "Normally Closed",
+        "IEC Symbol"
+      ],
+      "reactParameters": {},
+      "status": "Missing React component"
+    },
+    {
+      "legacy": "RelayElm",
+      "dumpType": "178",
+      "source": "src/com/lushprojects/circuitjs1/client/RelayElm.java",
+      "reactCandidates": [],
+      "legacyOptions": [
+        "Model",
+        "Create New Model",
+        "Edit Model"
+      ],
+      "reactParameters": {},
+      "status": "Missing React component"
+    },
+    {
+      "legacy": "ResistorElm",
+      "dumpType": "r",
+      "source": "src/com/lushprojects/circuitjs1/client/ResistorElm.java",
+      "reactCandidates": [
+        "resistor"
+      ],
+      "legacyOptions": [
+        "Resistance (ohms)"
+      ],
+      "reactParameters": {
+        "resistor": [
+          "resistance"
+        ]
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "RoutedWireElm",
+      "dumpType": "0",
+      "source": "src/com/lushprojects/circuitjs1/client/RoutedWireElm.java",
+      "reactCandidates": [],
+      "legacyOptions": [
+        "Show Current",
+        "Show Voltage",
+        "Show Bus Value",
+        "Show Bus Value (Hex)"
+      ],
+      "reactParameters": {},
+      "status": "Missing React component"
+    },
+    {
+      "legacy": "SCRElm",
+      "dumpType": "177",
+      "source": "src/com/lushprojects/circuitjs1/client/SCRElm.java",
+      "reactCandidates": [
+        "scr"
+      ],
+      "legacyOptions": [
+        "Trigger Current (A)",
+        "Holding Current (A)",
+        "Gate Resistance (ohms)"
+      ],
+      "reactParameters": {
+        "scr": [
+          "triggerCurrent",
+          "holdingCurrent",
+          "gateResistance"
+        ]
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "SRAMElm",
+      "dumpType": "413",
+      "source": "src/com/lushprojects/circuitjs1/client/SRAMElm.java",
+      "reactCandidates": [],
+      "legacyOptions": [
+        "High Logic Voltage",
+        "Bit Order"
+      ],
+      "reactParameters": {},
+      "status": "Missing React component"
+    },
+    {
+      "legacy": "SchmittElm",
+      "dumpType": "182",
+      "source": "src/com/lushprojects/circuitjs1/client/SchmittElm.java",
+      "reactCandidates": [
+        "schmittTrigger"
+      ],
+      "legacyOptions": [
+        "Lower threshold (V)",
+        "Upper threshold (V)",
+        "Slew Rate (V/ns)",
+        "High Logic Voltage",
+        "Low Voltage (V)"
+      ],
+      "reactParameters": {
+        "schmittTrigger": [
+          "slewRate",
+          "lowerThreshold",
+          "upperThreshold",
+          "highVoltage",
+          "lowVoltage"
+        ]
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "SeqGenElm",
+      "dumpType": "188",
+      "source": "src/com/lushprojects/circuitjs1/client/SeqGenElm.java",
+      "reactCandidates": [],
+      "legacyOptions": [
+        "High Logic Voltage",
+        "Bit Order"
+      ],
+      "reactParameters": {},
+      "status": "Missing React component"
+    },
+    {
+      "legacy": "SevenSegDecoderElm",
+      "dumpType": "197",
+      "source": "src/com/lushprojects/circuitjs1/client/SevenSegDecoderElm.java",
+      "reactCandidates": [],
+      "legacyOptions": [
+        "High Logic Voltage",
+        "Bit Order"
+      ],
+      "reactParameters": {},
+      "status": "Missing React component"
+    },
+    {
+      "legacy": "SevenSegElm",
+      "dumpType": "157",
+      "source": "src/com/lushprojects/circuitjs1/client/SevenSegElm.java",
+      "reactCandidates": [],
+      "legacyOptions": [
+        "High Logic Voltage",
+        "Bit Order"
+      ],
+      "reactParameters": {},
+      "status": "Missing React component"
+    },
+    {
+      "legacy": "SipoShiftElm",
+      "dumpType": "189",
+      "source": "src/com/lushprojects/circuitjs1/client/SipoShiftElm.java",
+      "reactCandidates": [],
+      "legacyOptions": [
+        "High Logic Voltage",
+        "Bit Order"
+      ],
+      "reactParameters": {},
+      "status": "Missing React component"
+    },
+    {
+      "legacy": "SparkGapElm",
+      "dumpType": "187",
+      "source": "src/com/lushprojects/circuitjs1/client/SparkGapElm.java",
+      "reactCandidates": [
+        "sparkGap"
+      ],
+      "legacyOptions": [
+        "On resistance (ohms)",
+        "Off resistance (ohms)",
+        "Breakdown voltage",
+        "Holding current (A)"
+      ],
+      "reactParameters": {
+        "sparkGap": [
+          "onResistance",
+          "offResistance",
+          "breakdownVoltage",
+          "holdingCurrent"
+        ]
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "SquareRailElm",
+      "dumpType": "R",
+      "source": "src/com/lushprojects/circuitjs1/client/SquareRailElm.java",
+      "reactCandidates": [
+        "noiseSource",
+        "voltageRail"
+      ],
+      "legacyOptions": [
+        "Waveform",
+        "DC Offset (V)",
+        "Internal Resistance (ohms)",
+        "Show Voltage",
+        "Circle Symbol",
+        "Specify As",
+        "High Time (s)",
+        "Frequency (Hz)",
+        "Phase Offset (degrees)",
+        "Low Time (s)",
+        "Duty Cycle",
+        "Rise/Fall Time (s)"
+      ],
+      "reactParameters": {
+        "noiseSource": [
+          "amplitude",
+          "offset"
+        ],
+        "voltageRail": [
+          "waveform"
+        ]
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "StopTriggerElm",
+      "dumpType": "408",
+      "source": "src/com/lushprojects/circuitjs1/client/StopTriggerElm.java",
+      "reactCandidates": [
+        "stopTrigger"
+      ],
+      "legacyOptions": [
+        "Voltage",
+        "Trigger Type",
+        "Delay (s)"
+      ],
+      "reactParameters": {
+        "stopTrigger": [
+          "threshold",
+          "direction",
+          "delay"
+        ]
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "SweepElm",
+      "dumpType": "170",
+      "source": "src/com/lushprojects/circuitjs1/client/SweepElm.java",
+      "reactCandidates": [
+        "sweepSource"
+      ],
+      "legacyOptions": [
+        "Min Frequency (Hz)",
+        "Max Frequency (Hz)",
+        "Sweep Time (s)",
+        "Logarithmic",
+        "Max Voltage",
+        "Bidirectional"
+      ],
+      "reactParameters": {
+        "sweepSource": [
+          "minFrequency",
+          "maxFrequency",
+          "amplitude",
+          "sweepTime",
+          "logarithmic",
+          "bidirectional"
+        ]
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "Switch2Elm",
+      "dumpType": "S",
+      "source": "src/com/lushprojects/circuitjs1/client/Switch2Elm.java",
+      "reactCandidates": [
+        "spdtSwitch"
+      ],
+      "legacyOptions": [
+        "Center Off",
+        "Group Number (for linking)",
+        "# of Throws",
+        "Momentary Switch",
+        "IEC Symbol",
+        "Label (for linking)",
+        "On Resistance (ohms)"
+      ],
+      "reactParameters": {
+        "spdtSwitch": [
+          "onResistance",
+          "momentary",
+          "linkLabel",
+          "iecSymbol",
+          "group",
+          "throwCount",
+          "centerOff",
+          "position"
+        ]
+      },
+      "status": "Confirmed gaps: Keyboard shortcut"
+    },
+    {
+      "legacy": "SwitchElm",
+      "dumpType": "s",
+      "source": "src/com/lushprojects/circuitjs1/client/SwitchElm.java",
+      "reactCandidates": [
+        "pushSwitch",
+        "switch"
+      ],
+      "legacyOptions": [
+        "Momentary Switch",
+        "IEC Symbol",
+        "Label (for linking)",
+        "On Resistance (ohms)"
+      ],
+      "reactParameters": {
+        "pushSwitch": [
+          "onResistance",
+          "momentary",
+          "linkLabel",
+          "iecSymbol",
+          "normallyClosed"
+        ],
+        "switch": [
+          "onResistance",
+          "momentary",
+          "linkLabel",
+          "iecSymbol",
+          "closed"
+        ]
+      },
+      "status": "Confirmed gaps: Keyboard shortcut"
+    },
+    {
+      "legacy": "TFlipFlopElm",
+      "dumpType": "193",
+      "source": "src/com/lushprojects/circuitjs1/client/TFlipFlopElm.java",
+      "reactCandidates": [
+        "tFlipFlop"
+      ],
+      "legacyOptions": [
+        "High Logic Voltage",
+        "Bit Order"
+      ],
+      "reactParameters": {
+        "tFlipFlop": [
+          "highVoltage",
+          "initialState"
+        ]
+      },
+      "status": "Confirmed gaps: Set/reset pins and bit order"
+    },
+    {
+      "legacy": "TappedTransformerElm",
+      "dumpType": "169",
+      "source": "src/com/lushprojects/circuitjs1/client/TappedTransformerElm.java",
+      "reactCandidates": [
+        "tappedTransformer"
+      ],
+      "legacyOptions": [
+        "Primary Inductance (H)",
+        "Ratio (N1/N2)",
+        "Coupling Coefficient",
+        "Trapezoidal Approximation"
+      ],
+      "reactParameters": {
+        "tappedTransformer": [
+          "inductance",
+          "ratio",
+          "coupling",
+          "integration"
+        ]
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "TestPointElm",
+      "dumpType": "368",
+      "source": "src/com/lushprojects/circuitjs1/client/TestPointElm.java",
+      "reactCandidates": [
+        "testPoint"
+      ],
+      "legacyOptions": [
+        "Value",
+        "Label"
+      ],
+      "reactParameters": {
+        "testPoint": [
+          "mode",
+          "label"
+        ]
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "TextElm",
+      "dumpType": "x",
+      "source": "src/com/lushprojects/circuitjs1/client/TextElm.java",
+      "reactCandidates": [
+        "text"
+      ],
+      "legacyOptions": [
+        "Text",
+        "Size",
+        "Draw Bar On Top"
+      ],
+      "reactParameters": {
+        "text": [
+          "text",
+          "size",
+          "drawBar"
+        ]
+      },
+      "status": "Properties implemented; bundled-source review recorded in PROPERTY-PARITY.md"
+    },
+    {
+      "legacy": "ThermistorNTCElm",
+      "dumpType": "350",
+      "source": "src/com/lushprojects/circuitjs1/client/ThermistorNTCElm.java",
+      "reactCandidates": [
+        "thermistor"
+      ],
+      "legacyOptions": [
+        "R at 25\\u00b0C",
+        "R at 50\\u00b0C",
+        "Slider min temp (\\u00b0C)",
+        "Slider max temp (\\u00b0C)",
+        "Slider Text"
+      ],
+      "reactParameters": {
+        "thermistor": [
+          "resistance25",
+          "resistance50",
+          "minTemperature",
+          "maxTemperature",
+          "position"
+        ]
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "ThreePhaseMotorElm",
+      "dumpType": "427",
+      "source": "src/com/lushprojects/circuitjs1/client/ThreePhaseMotorElm.java",
+      "reactCandidates": [
+        "threePhaseMotor"
+      ],
+      "legacyOptions": [
+        "Stator Inductance (H)",
+        "Rotor Inductance (H)",
+        "Coupling Coefficient",
+        "Stator Resistance (ohms)",
+        "Rotor Resistance (ohms)",
+        "Friction coefficient (Nms/rad)",
+        "Moment of inertia (Kg.m^2)"
+      ],
+      "reactParameters": {
+        "threePhaseMotor": [
+          "statorResistance",
+          "rotorResistance",
+          "statorInductance",
+          "rotorInductance",
+          "mutualInductance",
+          "friction",
+          "inertia"
+        ]
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "TimeDelayRelayElm",
+      "dumpType": "414",
+      "source": "src/com/lushprojects/circuitjs1/client/TimeDelayRelayElm.java",
+      "reactCandidates": [],
+      "legacyOptions": [
+        "High Logic Voltage",
+        "Bit Order"
+      ],
+      "reactParameters": {},
+      "status": "Missing React component"
+    },
+    {
+      "legacy": "TimerElm",
+      "dumpType": "165",
+      "source": "src/com/lushprojects/circuitjs1/client/TimerElm.java",
+      "reactCandidates": [],
+      "legacyOptions": [
+        "High Logic Voltage",
+        "Bit Order"
+      ],
+      "reactParameters": {},
+      "status": "Missing React component"
+    },
+    {
+      "legacy": "TransLineElm",
+      "dumpType": "171",
+      "source": "src/com/lushprojects/circuitjs1/client/TransLineElm.java",
+      "reactCandidates": [
+        "transmissionLine"
+      ],
+      "legacyOptions": [
+        "Delay (s)",
+        "Impedance (ohms)"
+      ],
+      "reactParameters": {
+        "transmissionLine": [
+          "delay",
+          "impedance"
+        ]
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "TransformerElm",
+      "dumpType": "T",
+      "source": "src/com/lushprojects/circuitjs1/client/TransformerElm.java",
+      "reactCandidates": [
+        "transformer"
+      ],
+      "legacyOptions": [
+        "Primary Inductance (H)",
+        "Ratio (N1/N2)",
+        "Coupling Coefficient",
+        "Trapezoidal Approximation",
+        "Swap Secondary Polarity",
+        "Saturation Current (A) (0=none)"
+      ],
+      "reactParameters": {
+        "transformer": [
+          "inductance",
+          "ratio",
+          "coupling",
+          "integration"
+        ]
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "TriStateElm",
+      "dumpType": "180",
+      "source": "src/com/lushprojects/circuitjs1/client/TriStateElm.java",
+      "reactCandidates": [],
+      "legacyOptions": [
+        "On Resistance (ohms)",
+        "Off Resistance (ohms)",
+        "Output Pulldown Resistance (ohms)",
+        "High Logic Voltage",
+        "Bus Width"
+      ],
+      "reactParameters": {},
+      "status": "Missing React component"
+    },
+    {
+      "legacy": "TriacElm",
+      "dumpType": "206",
+      "source": "src/com/lushprojects/circuitjs1/client/TriacElm.java",
+      "reactCandidates": [
+        "triac"
+      ],
+      "legacyOptions": [
+        "Trigger Current (A)",
+        "Holding Current (A)",
+        "Gate-MT1 Resistance (ohms)"
+      ],
+      "reactParameters": {
+        "triac": [
+          "triggerCurrent",
+          "holdingCurrent",
+          "gateResistance"
+        ]
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "TriodeElm",
+      "dumpType": "173",
+      "source": "src/com/lushprojects/circuitjs1/client/TriodeElm.java",
+      "reactCandidates": [
+        "triode"
+      ],
+      "legacyOptions": [
+        "mu",
+        "kg1"
+      ],
+      "reactParameters": {
+        "triode": [
+          "mu",
+          "kg1"
+        ]
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "TunnelDiodeElm",
+      "dumpType": "175",
+      "source": "src/com/lushprojects/circuitjs1/client/TunnelDiodeElm.java",
+      "reactCandidates": [
+        "tunnelDiode"
+      ],
+      "legacyOptions": [],
+      "reactParameters": {
+        "tunnelDiode": []
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "UnijunctionElm",
+      "dumpType": "417",
+      "source": "src/com/lushprojects/circuitjs1/client/UnijunctionElm.java",
+      "reactCandidates": [],
+      "legacyOptions": [],
+      "reactParameters": {},
+      "status": "Missing React component"
+    },
+    {
+      "legacy": "VCCSElm",
+      "dumpType": "213",
+      "source": "src/com/lushprojects/circuitjs1/client/VCCSElm.java",
+      "reactCandidates": [],
+      "legacyOptions": [
+        "High Logic Voltage",
+        "Bit Order"
+      ],
+      "reactParameters": {},
+      "status": "Missing React component"
+    },
+    {
+      "legacy": "VCOElm",
+      "dumpType": "158",
+      "source": "src/com/lushprojects/circuitjs1/client/VCOElm.java",
+      "reactCandidates": [],
+      "legacyOptions": [
+        "High Logic Voltage",
+        "Bit Order"
+      ],
+      "reactParameters": {},
+      "status": "Missing React component"
+    },
+    {
+      "legacy": "VCVSElm",
+      "dumpType": "212",
+      "source": "src/com/lushprojects/circuitjs1/client/VCVSElm.java",
+      "reactCandidates": [],
+      "legacyOptions": [
+        "High Logic Voltage",
+        "Bit Order"
+      ],
+      "reactParameters": {},
+      "status": "Missing React component"
+    },
+    {
+      "legacy": "VarRailElm",
+      "dumpType": "172",
+      "source": "src/com/lushprojects/circuitjs1/client/VarRailElm.java",
+      "reactCandidates": [
+        "variableVoltage"
+      ],
+      "legacyOptions": [
+        "Min Voltage",
+        "Max Voltage",
+        "Slider Text",
+        "Waveform",
+        "DC Offset (V)",
+        "Internal Resistance (ohms)",
+        "Show Voltage",
+        "Circle Symbol",
+        "Specify As",
+        "High Time (s)",
+        "Frequency (Hz)",
+        "Phase Offset (degrees)",
+        "Low Time (s)",
+        "Duty Cycle",
+        "Rise/Fall Time (s)"
+      ],
+      "reactParameters": {
+        "variableVoltage": [
+          "minVoltage",
+          "maxVoltage",
+          "voltage",
+          "label"
+        ]
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "VaractorElm",
+      "dumpType": "176",
+      "source": "src/com/lushprojects/circuitjs1/client/VaractorElm.java",
+      "reactCandidates": [
+        "varactor"
+      ],
+      "legacyOptions": [
+        "Capacitance @ 0V (F)",
+        "Model",
+        "Create New Simple Model",
+        "Create New Advanced Model",
+        "Edit Model"
+      ],
+      "reactParameters": {
+        "varactor": [
+          "capacitance"
+        ]
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "WattmeterElm",
+      "dumpType": "420",
+      "source": "src/com/lushprojects/circuitjs1/client/WattmeterElm.java",
+      "reactCandidates": [
+        "wattmeter"
+      ],
+      "legacyOptions": [
+        "Value"
+      ],
+      "reactParameters": {
+        "wattmeter": [
+          "mode"
+        ]
+      },
+      "status": "Review required"
+    },
+    {
+      "legacy": "WireElm",
+      "dumpType": "w",
+      "source": "src/com/lushprojects/circuitjs1/client/WireElm.java",
+      "reactCandidates": [],
+      "legacyOptions": [
+        "Show Current",
+        "Show Voltage",
+        "Show Bus Value",
+        "Show Bus Value (Hex)"
+      ],
+      "reactParameters": {},
+      "status": "Missing React component"
+    },
+    {
+      "legacy": "XnorGateElm",
+      "dumpType": "431",
+      "source": "src/com/lushprojects/circuitjs1/client/XnorGateElm.java",
+      "reactCandidates": [
+        "xnorGate"
+      ],
+      "legacyOptions": [
+        "# of Inputs",
+        "High Logic Voltage",
+        "Schmitt Inputs",
+        "Invert Inputs",
+        "Propagation Delay (s)"
+      ],
+      "reactParameters": {
+        "xnorGate": [
+          "highVoltage",
+          "inputCount",
+          "propagationDelay",
+          "schmittInputs",
+          "invertInputs"
+        ]
+      },
+      "status": "Properties implemented; bundled-source review recorded in PROPERTY-PARITY.md"
+    },
+    {
+      "legacy": "XorGateElm",
+      "dumpType": "154",
+      "source": "src/com/lushprojects/circuitjs1/client/XorGateElm.java",
+      "reactCandidates": [
+        "xorGate"
+      ],
+      "legacyOptions": [
+        "# of Inputs",
+        "High Logic Voltage",
+        "Schmitt Inputs",
+        "Invert Inputs",
+        "Propagation Delay (s)"
+      ],
+      "reactParameters": {
+        "xorGate": [
+          "highVoltage",
+          "inputCount",
+          "propagationDelay",
+          "schmittInputs",
+          "invertInputs"
+        ]
+      },
+      "status": "Properties implemented; bundled-source review recorded in PROPERTY-PARITY.md"
+    },
+    {
+      "legacy": "ZenerElm",
+      "dumpType": "z",
+      "source": "src/com/lushprojects/circuitjs1/client/ZenerElm.java",
+      "reactCandidates": [
+        "zener"
+      ],
+      "legacyOptions": [
+        "Model",
+        "Create New Simple Model",
+        "Create New Advanced Model",
+        "Edit Model"
+      ],
+      "reactParameters": {
+        "zener": [
+          "model"
+        ]
+      },
+      "status": "Properties implemented; bundled-source review recorded in PROPERTY-PARITY.md"
+    }
+  ]
+}

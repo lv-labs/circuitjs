@@ -1,8 +1,6 @@
+import {editing as CircuitEditorModel, adapter as CircuitDocumentAdapter} from '../packages/circuit-core/index.mjs';
 import assert from 'node:assert/strict';
-import '../experiments/engine/document-adapter.js';
-import '../experiments/engine/revision-protocol.js';
-import '../experiments/engine/simulation-coordinator.js';
-import '../experiments/engine/output-tools.js';
+import {captureCsv, captureWav, normalizedAudio} from '../wires/src/editor/capture.ts';
 import {createEngine} from './engine_node_runtime.mjs';
 import {outputFamilyKinds,outputFamilyCircuit} from './output_family_fixtures.mjs';
 const M=CircuitEditorModel,A=CircuitDocumentAdapter,engine=createEngine(),session=A.createSession(engine);
@@ -11,7 +9,7 @@ assert.deepEqual(M.outputSpecs,A.outputSpecs,'Editor and compiler field contract
 for(const kind of outputFamilyKinds){
  const d=outputFamilyCircuit(kind),compiled=A.compile(d);M.validate(d);assert.equal(A.fromProjection(JSON.parse(compiled.canonical),d.id).canonical,compiled.canonical);
  for(const rotation of [0,90,180,270])for(const mirror of [false,true]){
-  const copy=structuredClone(d);Object.assign(copy.layout.components.part,{rotation,mirror});for(const pinId of Object.keys(M.definitions[kind].pins)){const p=M.pin(copy,{kind:'pin',componentId:'part',pinId});assert.equal(Math.abs(p.x%16),0);assert.equal(Math.abs(p.y%16),0);}assert.equal(A.compile(copy).canonical,compiled.canonical);
+  const copy=structuredClone(d);Object.assign(copy.layout.components.part,{rotation,mirror});for(const pinId of Object.keys(M.definitions[kind].pins)){const p=M.pin(copy,{kind:'pin',componentId:'part',pinId});assert.equal(Math.abs(p.x%M.grid),0);assert.equal(Math.abs(p.y%M.grid),0);}assert.equal(A.compile(copy).canonical,compiled.canonical);
  }
  const model=M.create(d),before=model.document;model.transaction('Edit',next=>{next.electrical.components[0].reference='Changed';});const after=model.document;model.undo();assert.deepEqual(model.document,before);model.redo();assert.deepEqual(model.document,after);
  const copy=structuredClone(d);M.pasteSelection(copy,M.copySelection(d,new Set([M.token('component','part')])));M.validate(copy);
@@ -91,14 +89,14 @@ for(let value=0;value<16;value++){
 {
  const d=outputFamilyCircuit('dataExport',{capacity:5});d.electrical.components.find(c=>c.id==='vin').parameters.waveform={kind:'sine',amplitude:1,offset:0,frequency:1000};session.loadDocument(d);session.step(12);const before=session.snapshot(),capture=session.readCapture('part');assert.equal(capture.values.length,5);near(capture.startTime,7*d.simulation.timeStep);
  for(let i=0;i<5;i++)near(capture.values[i],Math.sin(2*Math.PI*1000*(7+i)*d.simulation.timeStep));
- assert.deepEqual(session.snapshot(),before);const csv=CircuitOutputTools.csv(capture);assert.equal(csv.split('\n').length,7);assert.ok(csv.startsWith('time_s,voltage_V\n'));session.reset();assert.equal(session.readCapture('part').values.length,0);
+ assert.deepEqual(session.snapshot(),before);const csv=captureCsv(capture);assert.equal(csv.split('\n').length,7);assert.ok(csv.startsWith('time_s,voltage_V\n'));session.reset();assert.equal(session.readCapture('part').values.length,0);
 }
 {
  const d=outputFamilyCircuit('audioOutput',{duration:.01,sampleRate:8000});d.electrical.components.find(c=>c.id==='vin').parameters.waveform={kind:'sine',amplitude:1,offset:0,frequency:1000};session.loadDocument(d);session.step(1200);const capture=session.readCapture('part');assert.equal(capture.values.length,80);near(capture.timeStep,1/8000);
- assert.ok(Math.max(...capture.values)>.5&&Math.min(...capture.values)<-.5);const wav=CircuitOutputTools.wav(capture),view=new DataView(wav),bytes=new Uint8Array(wav);assert.equal(String.fromCharCode(...bytes.slice(0,4)),'RIFF');assert.equal(view.getUint32(24,true),8000);assert.equal(view.getUint32(40,true),160);assert.equal(wav.byteLength,204);assert.ok(CircuitOutputTools.normalized(capture.values).every(v=>Math.abs(v)<=.200001));session.reset();assert.equal(session.readCapture('part').values.length,0);
+ assert.ok(Math.max(...capture.values)>.5&&Math.min(...capture.values)<-.5);const wav=captureWav(capture),view=new DataView(wav),bytes=new Uint8Array(wav);assert.equal(String.fromCharCode(...bytes.slice(0,4)),'RIFF');assert.equal(view.getUint32(24,true),8000);assert.equal(view.getUint32(40,true),160);assert.equal(wav.byteLength,204);assert.ok(normalizedAudio(capture.values).every(v=>Math.abs(v)<=.200001));session.reset();assert.equal(session.readCapture('part').values.length,0);
 }
-assert.ok(CircuitOutputTools.normalized([Number.MAX_VALUE,-Number.MAX_VALUE]).every(Number.isFinite));
-assert.deepEqual([...CircuitOutputTools.normalized([1,1,1])],[0,0,0]);
+assert.ok(normalizedAudio([Number.MAX_VALUE,-Number.MAX_VALUE]).every(Number.isFinite));
+assert.deepEqual([...normalizedAudio([1,1,1])],[0,0,0]);
 // Trigger stops a bounded call and sampled batch at the requested physical step, without faulting.
 for(const channels of [undefined,[{id:'v',positive:{componentId:'part',pinId:'in'},negative:null}]]){
  session.loadDocument(outputFamilyCircuit('stopTrigger',{threshold:2,delay:.0002}));const f=session.step(1000,channels);assert.equal(f.stopRequested,true);assert.ok(f.time>=.00021-1e-12&&f.time<.00023);if(channels){assert.ok(f.sampleBatch.times.length<1000);assert.equal(f.sampleBatch.values.v.length,f.sampleBatch.times.length);}assert.doesNotThrow(()=>session.snapshot());

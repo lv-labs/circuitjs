@@ -18,14 +18,18 @@ final class EngineCircuitUpdate {
         if(old instanceof VarRailElm){VarRailElm a=(VarRailElm)old,b=(VarRailElm)fresh;a.sliderText=b.sliderText;}
         if(old instanceof CurrentElm){CurrentElm a=(CurrentElm)old,b=(CurrentElm)fresh;a.currentValue=b.currentValue;a.maxVoltage=b.maxVoltage;}
         if(old instanceof PotElm){PotElm a=(PotElm)old,b=(PotElm)fresh;a.position=b.position;a.maxResistance=b.maxResistance;a.sliderText=b.sliderText;}
-        if(old instanceof SwitchElm){SwitchElm a=(SwitchElm)old,b=(SwitchElm)fresh;a.position=b.position;}
+        if(old instanceof SwitchElm){SwitchElm a=(SwitchElm)old,b=(SwitchElm)fresh;a.position=b.position;a.resistance=b.resistance;a.momentary=b.momentary;a.label=b.label;
+            if(a instanceof Switch2Elm){((Switch2Elm)a).throwCount=((Switch2Elm)b).throwCount;((Switch2Elm)a).link=((Switch2Elm)b).link;}
+            if(a instanceof DPDTSwitchElm)((DPDTSwitchElm)a).poleCount=((DPDTSwitchElm)b).poleCount;
+            if(a instanceof MBBSwitchElm)((MBBSwitchElm)a).link=((MBBSwitchElm)b).link;
+            a.allocNodes();}
         if(old instanceof LogicInputElm){LogicInputElm a=(LogicInputElm)old,b=(LogicInputElm)fresh;a.hiV=b.hiV;a.loV=b.loV;}
         if(old instanceof LogicOutputElm){LogicOutputElm a=(LogicOutputElm)old,b=(LogicOutputElm)fresh;a.threshold=b.threshold;}
         if(old instanceof OpAmpElm){OpAmpElm a=(OpAmpElm)old,b=(OpAmpElm)fresh;a.maxOut=b.maxOut;a.minOut=b.minOut;a.gain=b.gain;a.gbw=b.gbw;}
         if(old instanceof AnalogSwitchElm){AnalogSwitchElm a=(AnalogSwitchElm)old,b=(AnalogSwitchElm)fresh;a.r_on=b.r_on;a.r_off=b.r_off;a.threshold=b.threshold;}
-        if(old instanceof TransistorElm){TransistorElm a=(TransistorElm)old,b=(TransistorElm)fresh;a.beta=b.beta;}
-        if(old instanceof MosfetElm){MosfetElm a=(MosfetElm)old,b=(MosfetElm)fresh;a.vt=b.vt;a.beta=b.beta;}
-        if(old instanceof GateElm){GateElm a=(GateElm)old,b=(GateElm)fresh;a.highVoltage=b.highVoltage;a.propagationDelay=b.propagationDelay;}
+        if(old instanceof TransistorElm){TransistorElm a=(TransistorElm)old,b=(TransistorElm)fresh;a.beta=b.beta;a.modelName=b.modelName;}
+        if(old instanceof MosfetElm){MosfetElm a=(MosfetElm)old,b=(MosfetElm)fresh;a.vt=b.vt;a.beta=b.beta;a.globalFlags=b.globalFlags;a.allocNodes();}
+        if(old instanceof GateElm){GateElm a=(GateElm)old,b=(GateElm)fresh;a.highVoltage=b.highVoltage;a.propagationDelay=b.propagationDelay;if(a.inputCount!=b.inputCount){a.inputCount=b.inputCount;a.allocNodes();a.setupVolts();}}
         if(old instanceof InverterElm){InverterElm a=(InverterElm)old,b=(InverterElm)fresh;a.slewRate=b.slewRate;a.highVoltage=b.highVoltage;}
         if(old instanceof ChipElm){ChipElm a=(ChipElm)old,b=(ChipElm)fresh;a.highVoltage=b.highVoltage;}
         if(old instanceof CounterElm){CounterElm a=(CounterElm)old,b=(CounterElm)fresh;a.modulus=b.modulus;a.invertreset=b.invertreset;}
@@ -47,7 +51,11 @@ final class EngineCircuitUpdate {
         if(old instanceof DCMotorElm){DCMotorElm a=(DCMotorElm)old;a.ind.setup(a.inductance,a.coilCurrent,Inductor.FLAG_BACK_EULER);a.indInertia.setup(a.J,a.inertiaCurrent,Inductor.FLAG_BACK_EULER);}
         if(old instanceof CustomTransformerElm)((CustomTransformerElm)old).parseDescription();
         if(old instanceof DiodeElm){DiodeElm a=(DiodeElm)old,b=(DiodeElm)fresh;a.modelName=b.modelName;a.setup();}
-        if(old instanceof TransistorElm)((TransistorElm)old).setup();
+        if(old instanceof TransistorElm){
+            TransistorElm a=(TransistorElm)old;a.setup();
+            if(a.model.junctionCapBE==0&&a.model.transitTimeF==0)a.geqBE=a.ceqBE=a.capCurBE=0;
+            if(a.model.junctionCapBC==0&&a.model.transitTimeR==0)a.geqBC=a.ceqBC=a.capCurBC=0;
+        }
         if(old instanceof InstructionDisplayElm)((InstructionDisplayElm)old).parseEntries(null);
         if(old instanceof TransLineElm){TransLineElm a=(TransLineElm)old,b=(TransLineElm)fresh;if(a.delay!=b.delay){a.delay=b.delay;a.reset();}a.imped=b.imped;}
         if(old instanceof DataRecorderElm){DataRecorderElm a=(DataRecorderElm)old,b=(DataRecorderElm)fresh;if(a.dataCount!=b.dataCount){a.dataCount=b.dataCount;a.data=b.data;a.dataPtr=0;a.dataFull=false;}}

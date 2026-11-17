@@ -1,12 +1,25 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react"
-import { GripVerticalIcon } from "lucide-react"
+import { GripVerticalIcon, PencilIcon, XIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
 import { cn } from "@/lib/utils"
-import { componentSliders } from "./componentSliders"
-import type { SliderAdjustment, SliderKind } from "./componentSliders"
+import { sliderField } from "./componentSliders"
+import type { SliderAdjustment } from "./componentSliders"
 import type { Component } from "./core"
-import { format } from "./componentValue"
+import type { PropertySlider } from "./PropertySliders"
+
+export type SliderItem = {
+  id: string
+  component: Component
+  field: string
+  label: string
+  min: number
+  max: number
+  step: number
+  value: number
+  displayValue: (value: number) => string
+  config?: PropertySlider
+}
 
 type Drop = { id: string; index: number }
 type RowDrag = {
@@ -18,19 +31,21 @@ type RowDrag = {
 }
 
 export function SliderList({
-  components,
-  names,
+  items,
   adjustment,
   onPreview,
   onCommit,
   onReorder,
+  onEdit,
+  onRemove,
 }: {
-  components: (Component & { kind: SliderKind })[]
-  names: ReadonlyMap<string, string>
+  items: SliderItem[]
   adjustment: SliderAdjustment | null
-  onPreview: (kind: SliderKind, id: string, value: number) => void
+  onPreview: (item: SliderItem, value: number) => void
   onCommit: (id: string, value: number) => void
   onReorder: (id: string, index: number) => void
+  onEdit: (config: PropertySlider) => void
+  onRemove: (id: string) => void
 }) {
   const list = useRef<HTMLOListElement>(null)
   const drag = useRef<RowDrag | null>(null)
@@ -46,7 +61,7 @@ export function SliderList({
     focusedHandle.current = null
     handle.focus({ preventScroll: true })
     handle.scrollIntoView({ block: "nearest" })
-  }, [components])
+  }, [items])
 
   useEffect(
     () => () => {
@@ -105,18 +120,18 @@ export function SliderList({
   }
 
   function move(id: string, destination: number, handle: HTMLButtonElement) {
-    const source = components.findIndex((component) => component.id === id)
-    const index = Math.max(0, Math.min(destination, components.length - 1))
+    const source = items.findIndex((item) => item.id === id)
+    const index = Math.max(0, Math.min(destination, items.length - 1))
     if (source < 0 || source === index) return
     focusedHandle.current = handle
     setAnnouncement(
-      `${names.get(id)} moved to position ${index + 1} of ${components.length}.`
+      `${items[source].label} moved to position ${index + 1} of ${items.length}.`
     )
     onReorder(id, index)
   }
 
   const dropBefore = drop
-    ? components.filter(({ id }) => id !== drop.id)[drop.index]?.id
+    ? items.filter(({ id }) => id !== drop.id)[drop.index]?.id
     : null
 
   return (
@@ -137,20 +152,22 @@ export function SliderList({
           cancelDrag()
         }}
       >
-        {components.map(({ id, kind, parameters }, index) => {
-          const isVoltage = kind === "variableVoltage"
-          const min = isVoltage ? Number(parameters.minVoltage) : 0
-          const max = isVoltage ? Number(parameters.maxVoltage) : 1
+        {items.map((item, index) => {
+          const {
+            id,
+            component,
+            field,
+            min,
+            max,
+            step,
+            label,
+            displayValue,
+            config,
+          } = item
           const value =
-            adjustment?.id === id
+            adjustment?.id === component.id && sliderField(adjustment) === field
               ? adjustment.value
-              : Number(parameters[componentSliders[kind].field])
-          const step = Math.max(Number.MIN_VALUE, (max - min) / 1000)
-          const label = names.get(id) ?? "Slider"
-          const displayValue = (number: number) =>
-            isVoltage
-              ? format(number, "V")
-              : `${Number((number * 100).toPrecision(4))}%`
+              : item.value
           return (
             <li
               key={id}
@@ -172,7 +189,7 @@ export function SliderList({
                   size="icon-xs"
                   variant="ghost"
                   className="cursor-grab touch-none active:cursor-grabbing"
-                  disabled={components.length < 2 || !!adjustment}
+                  disabled={items.length < 2 || !!adjustment}
                   aria-label={`Reorder ${label}`}
                   aria-describedby={instructions}
                   aria-keyshortcuts="ArrowUp ArrowDown"
@@ -231,6 +248,28 @@ export function SliderList({
                 <output className="shrink-0 tabular-nums">
                   {displayValue(value)}
                 </output>
+                {config && (
+                  <>
+                    <Button
+                      type="button"
+                      size="icon-xs"
+                      variant="ghost"
+                      aria-label={`Edit ${label}`}
+                      onClick={() => onEdit(config)}
+                    >
+                      <PencilIcon aria-hidden="true" />
+                    </Button>
+                    <Button
+                      type="button"
+                      size="icon-xs"
+                      variant="ghost"
+                      aria-label={`Remove ${label}`}
+                      onClick={() => onRemove(config.id)}
+                    >
+                      <XIcon aria-hidden="true" />
+                    </Button>
+                  </>
+                )}
               </div>
               <Slider
                 value={value}
@@ -238,14 +277,19 @@ export function SliderList({
                 max={max}
                 step={step}
                 largeStep={10 * step}
-                disabled={!!drop || (!!adjustment && adjustment.id !== id)}
+                disabled={
+                  !!drop ||
+                  (!!adjustment &&
+                    (adjustment.id !== component.id ||
+                      sliderField(adjustment) !== field))
+                }
                 getAriaLabel={() => label}
                 getAriaValueText={(_, value) => displayValue(value)}
                 onValueChange={(next) => {
-                  if (typeof next === "number") onPreview(kind, id, next)
+                  if (typeof next === "number") onPreview(item, next)
                 }}
                 onValueCommitted={(next) => {
-                  if (typeof next === "number") onCommit(id, next)
+                  if (typeof next === "number") onCommit(component.id, next)
                 }}
                 className="py-1"
               />

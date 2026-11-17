@@ -13,8 +13,6 @@ import threading
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--screenshot', type=Path, help='Optional editor screenshot PNG (requires --editor)')
-    parser.add_argument('--editor', action='store_true', help='Run editor keyboard/pointer checks instead of engine checks')
     parser.add_argument('--site', type=Path, default=Path('build/engine-site'))
     parser.add_argument('--baseline', type=Path, help='Unchanged makeSite output copied before edits')
     parser.add_argument('--chrome', default=shutil.which('google-chrome') or shutil.which('chromium') or
@@ -55,11 +53,11 @@ def main():
         thread.start()
         try:
             with tempfile.TemporaryDirectory(prefix='circuitjs-chrome-') as profile:
-                url = f'http://127.0.0.1:{server.server_port}/' + ('editor.html' if args.editor else 'verify.html')
+                url = f'http://127.0.0.1:{server.server_port}/' + 'verify.html'
                 if args.baseline:
                     url += '?baseline=1' + ('&capture=1' if args.capture else '')
-                result = subprocess.run(['node', str(Path(__file__).with_name('test_editor_browser.mjs' if args.editor else 'run_engine_browser.mjs')),
-                    args.chrome, profile, url] + ([str(args.screenshot)] if args.editor and args.screenshot else []),
+                result = subprocess.run(['node', str(Path(__file__).with_name('run_engine_browser.mjs')),
+                    args.chrome, profile, url],
                     capture_output=True, text=True, timeout=90)
         finally:
             server.shutdown()

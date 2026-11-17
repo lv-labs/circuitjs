@@ -46,6 +46,12 @@ public class EngineEntryPoint implements EntryPoint {
                 int flags = Integer.parseInt(fields[5]);
                 if (x1 == x2 && y1 == y2)
                     throw new IllegalArgumentException("Zero-length elements are unsupported");
+                CircuitElm switchModel=EngineSwitchSupport.construct(fields,x1,y1,x2,y2,flags);
+                if(switchModel!=null){switchModel.setPoints();elements.add(switchModel);continue;}
+                CircuitElm transistorModel=EngineTransistorSupport.construct(fields,x1,y1,x2,y2,flags);
+                if(transistorModel!=null){transistorModel.setPoints();elements.add(transistorModel);continue;}
+                CircuitElm diodeModel=EngineDiodeSupport.construct(fields,x1,y1,x2,y2,flags);
+                if(diodeModel!=null){diodeModel.setPoints();elements.add(diodeModel);continue;}
                 CircuitElm signal = EngineSourceSupport.construct(fields, x1, y1, x2, y2, flags, timeStep);
                 if (signal != null) { signal.setPoints(); elements.add(signal); continue; }
                 CircuitElm passiveModel = EnginePassiveSupport.construct(fields, x1, y1, x2, y2, flags, timeStep);
@@ -63,7 +69,7 @@ public class EngineEntryPoint implements EntryPoint {
                 // have optional trailing parameters in the legacy text format.
                 boolean display = type.equals("O") || type.equals("L") || type.equals("M");
                 boolean chip = type.equals("155") || type.equals("156") || type.equals("193");
-                int expected = analog ? 9 : type.equals("209") ? 10 : type.equals("T") ? 12 : type.equals("S") ? 10 : type.equals("429") ? 9 : type.equals("162") ? 11 : type.equals("z") ? 8 : gate ? 9 : type.equals("t") ? 10 : fet || type.equals("I") ? 8 : type.equals("r") ? 7 : type.equals("c") ? 9 :
+                int expected = analog ? 9 : type.equals("209") ? 10 : type.equals("T") ? 12 : type.equals("S") ? 10 : type.equals("429") ? 9 : type.equals("162") ? 11 : type.equals("z") ? 8 : gate ? 10 : type.equals("t") ? 10 : fet || type.equals("I") ? 8 : type.equals("r") ? 7 : type.equals("c") ? 9 :
                     type.equals("174") ? 9 : type.equals("i") ? 8 : type.equals("l") ? 10 : type.equals("s") ? 8 :
                     voltage || type.equals("a") ? 12 : type.equals("w") || type.equals("g") || type.equals("d") ? 6 : -1;
                 boolean passive = type.equals("169") || type.equals("406") || type.equals("171") || type.equals("416");
@@ -71,7 +77,7 @@ public class EngineEntryPoint implements EntryPoint {
                 int extraVoltage = (flags & 8192) != 0 ? 1 : 0;
                 boolean countOk = passive ? fields.length == (type.equals("169") ? 12 : type.equals("406") ? 13 : type.equals("171") ? 10 : 9) : nextChip ? fields.length == ((type.equals("164") ? 13 : type.equals("168") ? 11 : type.equals("195") ? 6 : 7) + extraVoltage) : chip ? fields.length == (((flags & 8192) != 0) ? 9 : 8) :
                     display ? (type.equals("L") ? (fields.length == 8 || fields.length == 10) :
-                    (fields.length == 6 || fields.length == 7)) : fields.length == expected;
+                    (fields.length == 6 || fields.length == 7)) : (gate ? fields.length == 9 || fields.length == 10 : fields.length == expected);
                 if (!countOk)
                     throw new IllegalArgumentException("Unsupported type or field count: " + type);
                 int chipFlags = flags & ~8192;
@@ -79,7 +85,7 @@ public class EngineEntryPoint implements EntryPoint {
                     type.equals("168") ? chipFlags == 2 || chipFlags == 6 : type.equals("196") ? chipFlags == 2 : chipFlags == 0;
                 if (nextChip && !nextChipFlags)
                     throw new IllegalArgumentException("Unsupported chip flags");
-                if (flags != 0 && !(passive && (type.equals("169") || type.equals("406")) && flags == 2) && !(nextChip && nextChipFlags) && !(chip && (type.equals("156") ? (flags == 4 || flags == 8192 || flags == 8196) : flags == 8192)) && !(analog && flags >= 0 && flags <= 3) && !(display && flags >= 0 && flags <= (type.equals("M") ? 7 : 3)) && !((type.equals("S") || type.equals("162") || type.equals("z")) && flags == 1) && !(type.equals("T") && flags == 2) && !(fet && flags == 1) && !((capacitor || type.equals("l")) && flags == 2) && !(type.equals("a") && flags == 8) && !(voltage && flags == 4 && fields[6].equals("5")))
+                if (flags != 0 && !(gate && (flags == 2 || flags == 4 || flags == 6)) && !(passive && (type.equals("169") || type.equals("406")) && flags == 2) && !(nextChip && nextChipFlags) && !(chip && (type.equals("156") ? (flags == 4 || flags == 8192 || flags == 8196) : flags == 8192)) && !(analog && flags >= 0 && flags <= 3) && !(display && flags >= 0 && flags <= (type.equals("M") ? 7 : 3)) && !((type.equals("S") || type.equals("162") || type.equals("z")) && flags == 1) && !(type.equals("T") && flags == 2) && !(fet && (type.equals("f") ? flags >= 0 && flags <= 255 : flags == 1)) && !((capacitor || type.equals("l")) && flags == 2) && !(type.equals("a") && flags == 8) && !(voltage && flags == 4 && fields[6].equals("5")))
                     throw new IllegalArgumentException("Unsupported flags");
                 for (int i = 6; i < fields.length; i++)
                     if (!(type.equals("406") && i == 8) && !(type.equals("416") && i == 7) && !(type.equals("164") && i == fields.length - 2) && !((type.equals("s") || type.equals("S") || type.equals("429")) && i == 7) && !(type.equals("L") && i == 7) && !(type.equals("174") && i == 8) && !finite(Double.parseDouble(fields[i])))
@@ -172,8 +178,8 @@ public class EngineEntryPoint implements EntryPoint {
                 }
                 if ((gate || type.equals("t") || fet) && (y1 != y2 || x2-x1 != 64))
                     throw new IllegalArgumentException("Model requires horizontal synthetic geometry");
-                if (gate && (!fields[6].equals("2") || Double.parseDouble(fields[8]) <= 0))
-                    throw new IllegalArgumentException("Gate requires two inputs and positive logic voltage");
+                if (gate && (Integer.parseInt(fields[6]) < 1 || Integer.parseInt(fields[6]) > 8 || Double.parseDouble(fields[8]) <= 0 || (fields.length == 10 && Double.parseDouble(fields[9]) < 0)))
+                    throw new IllegalArgumentException("Invalid gate input count, logic voltage or delay");
                 if (type.equals("I") && (Double.parseDouble(fields[6]) <= 0 || Double.parseDouble(fields[7]) <= 0))
                     throw new IllegalArgumentException("Invalid inverter parameters");
                 if (fet && Double.parseDouble(fields[7]) <= 0)
@@ -268,6 +274,7 @@ public class EngineEntryPoint implements EntryPoint {
                 else if (type.equals("a")) elm = new OpAmpElm(x1, y1, x2, y2, flags, tokens);
                 else if (type.equals("w")) elm = new WireElm(x1, y1, x2, y2, flags, tokens);
                 else elm = new GroundElm(x1, y1, x2, y2, flags, tokens);
+                if (gate && fields.length == 10) ((GateElm)elm).propagationDelay=Double.parseDouble(fields[9]);
                 elm.setPoints();
                 elements.add(elm);
             } catch (Exception e) {

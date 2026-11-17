@@ -2,13 +2,15 @@ import { Lead } from "../svg";
 
 export const kind = "diode";
 export const metadata = {
+  // Original 16-unit artwork, scaled to the 50-unit sheet grid.
+  drawingScale: 3.125,
   prefix: "D",
   name: "Diode",
   pins: {
     anode: [-48, 0],
     cathode: [48, 0],
   },
-  parameters: {},
+  parameters: { model: "default" },
 } as const;
 
 export function Symbol() {

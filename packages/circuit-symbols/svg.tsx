@@ -64,10 +64,10 @@ export function Meter({
 }) {
   return (
     <>
-      <Lead from={pins.a} to={[-24, 0]} />
-      <Lead from={pins.b} to={[24, 0]} />
-      <circle r={24} />
-      <UprightText pose={pose} y={6} textAnchor="middle" fontSize={16}>
+      <Lead from={pins.a} to={[-50, 0]} />
+      <Lead from={pins.b} to={[50, 0]} />
+      <circle r={50} />
+      <UprightText pose={pose} y={16} textAnchor="middle" fontSize={64}>
         {letter}
       </UprightText>
     </>
@@ -98,17 +98,29 @@ export function Gate({
   pins,
   label,
   pose,
+  parameters = {},
 }: {
   pins: { a: Pin; b: Pin; out: Pin };
   label: string;
   pose?: Pose;
+  parameters?: Record<string, unknown>;
 }) {
+  const count = Number(parameters.inputCount ?? 2);
+  let offset = -Math.floor(count / 2);
+  const inputs: Pin[] = count === 2 ? [pins.a, pins.b] : Array.from({ length: count }, () => {
+    if (offset === 0 && count % 2 === 0) offset++;
+    return [-48, 16 * offset++];
+  });
+  const height = Math.max(28, ...inputs.map(pin => Math.abs(pin[1]) + 12));
   return (
     <>
-      <Lead from={pins.a} to={[-24, -16]} />
-      <Lead from={pins.b} to={[-24, 16]} />
+      {inputs.map((pin, index) => <g key={index}>
+        <Lead from={pin} to={[parameters.invertInputs ? -32 : -24, pin[1]]} />
+        {parameters.invertInputs === true && <circle cx={-28} cy={pin[1]} r={4} />}
+      </g>)}
       <Lead from={pins.out} to={[24, 0]} />
-      <rect x={-24} y={-28} width={48} height={56} />
+      <rect x={-24} y={-height} width={48} height={height * 2} />
+      {parameters.schmittInputs === true && <path d="M-20-8H-16V-16H-12M-20-16H-18V-8H-12" />}
       <UprightText pose={pose} y={4} textAnchor="middle" fontSize={11}>
         {label}
       </UprightText>

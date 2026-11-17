@@ -1,10 +1,6 @@
+import {adapter as CircuitDocumentAdapter, protocol as CircuitRevisionProtocol, simulation as CircuitSimulation, signals as CircuitScopeModel} from '../packages/circuit-core/index.mjs';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import '../experiments/engine/editor-model.js';
-import '../experiments/engine/document-adapter.js';
-import '../experiments/engine/revision-protocol.js';
-import '../experiments/engine/simulation-coordinator.js';
-import '../experiments/engine/scope-model.js';
 import {createEngine} from './engine_node_runtime.mjs';
 const A=CircuitDocumentAdapter,S=CircuitScopeModel;
 const doc=JSON.parse(await readFile(new URL('../docs/new-simulator/examples/voltage-divider.json',import.meta.url)));

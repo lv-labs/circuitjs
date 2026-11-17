@@ -1,5 +1,5 @@
+import {editing as CircuitEditorModel, adapter as CircuitDocumentAdapter} from '../packages/circuit-core/index.mjs';
 import assert from 'node:assert/strict';
-import '../experiments/engine/document-adapter.js';
 import {createEngine} from './engine_node_runtime.mjs';
 import {flipFlopKinds,flipFlopCircuit} from './flip_flop_fixtures.mjs';
 const M=CircuitEditorModel,A=CircuitDocumentAdapter,engine=createEngine(),session=A.createSession(engine);
@@ -17,7 +17,7 @@ for(const kind of flipFlopKinds){
     const rotated=structuredClone(d);Object.assign(rotated.layout.components.part,{rotation,mirror});
     for(const pinId of Object.keys(M.definitions[kind].pins)){
       const point=M.pin(rotated,{kind:'pin',componentId:'part',pinId});
-      assert.equal(point.x%16,0);assert.equal(Math.abs(point.y%16),0);
+      assert.equal(point.x%M.grid,0);assert.equal(Math.abs(point.y%M.grid),0);
     }
     assert.equal(A.compile(rotated).canonical,compiled.canonical);
   }

@@ -3,6 +3,8 @@ import type { SymbolProps } from "../svg";
 
 export const kind = "decimalDisplay";
 export const metadata = {
+  // Original 16-unit artwork, scaled to the 50-unit sheet grid.
+  drawingScale: 3.125,
   prefix: "DISP",
   name: "Decimal display (4 bit)",
   pins: {

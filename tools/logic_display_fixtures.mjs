@@ -1,4 +1,4 @@
-import '../experiments/engine/editor-model.js';
+import {editing as CircuitEditorModel} from '../packages/circuit-core/index.mjs';
 export const logicDisplayKinds=['output','logicOutput','logicInput'];
 export function logicDisplayCircuit(kind,parameters={},voltage=5,load=1000){
   const M=CircuitEditorModel,d=M.empty();d.id='logic-display-'+kind;
@@ -18,5 +18,5 @@ export function logicDisplayCircuit(kind,parameters={},voltage=5,load=1000){
     add('r1','resistor',{resistance:1000});
     wire('vin','p','r1','a');wire('r1','b','part','in');wire('part','in','load','a');wire('load','b','g','g');
   }
-  return d;
+  return CircuitEditorModel.alignGrid(d);
 }

@@ -1,4 +1,4 @@
-import '../experiments/engine/editor-model.js';
+import {editing as CircuitEditorModel} from '../packages/circuit-core/index.mjs';
 export const passiveSwitchKinds=['polarizedCapacitor','analogSwitch','analogSpdtSwitch'];
 export function passiveSwitchCircuit(kind,parameters={},voltage=5,control=5){
   const M=CircuitEditorModel,d=M.empty();d.id='passive-'+kind;
@@ -22,5 +22,5 @@ export function passiveSwitchCircuit(kind,parameters={},voltage=5,control=5){
       add('loadB','resistor',{resistance:2000});wire('part','b','loadB','a');wire('loadB','b','g','g');
     }
   }
-  return d;
+  return CircuitEditorModel.alignGrid(d);
 }

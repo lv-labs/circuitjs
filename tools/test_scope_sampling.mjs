@@ -1,12 +1,9 @@
+import {editing as CircuitEditorModel, adapter as CircuitDocumentAdapter, protocol as CircuitRevisionProtocol, simulation as CircuitSimulation} from '../packages/circuit-core/index.mjs';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import '../experiments/engine/document-adapter.js';
-import '../experiments/engine/revision-protocol.js';
-import '../experiments/engine/simulation-coordinator.js';
-import '../experiments/engine/editor-model.js';
 const doc=JSON.parse(await readFile(new URL('../docs/new-simulator/examples/voltage-divider.json',import.meta.url))),A=CircuitDocumentAdapter;
 const channels=[{id:'input',positive:{componentId:'v1',pinId:'p'},negative:null},{id:'output',positive:{componentId:'r2',pinId:'a'},negative:null},{id:'difference',positive:{componentId:'v1',pinId:'p'},negative:{componentId:'r2',pinId:'a'}}];
-function engine(){let time=0;const calls=[],compiled=A.compile(doc);return {calls,load(){time=0;},step(count){calls.push(count);time+=count*1e-5;return this.snapshot();},snapshot(){const value=Math.sin(2*Math.PI*1000*(time-1e-5));return {time,timeStep:1e-5,elements:compiled.mapping.map(c=>({current:0,voltages:c.pins.map(p=>c.id==='v1'&&p==='p'?value:c.id==='r2'&&p==='a'?2*value:0)}))};}};}
+function engine(){let time=0;const calls=[],compiled=A.compile(doc);return {calls,load(){time=0;},step(count){calls.push(count);time+=count*1e-5;return this.snapshot();},snapshot(){const value=Math.sin(2*Math.PI*1000*(time-1e-5));return {time,timeStep:1e-5,elements:compiled.mapping.map(c=>({current:c.id==='r2'?0.002:c.id==='v1'?0.004:0,voltages:c.pins.map(p=>c.id==='v1'&&p==='p'?value:c.id==='r2'&&p==='a'?2*value:0)}))};}};}
 const e=engine(),session=A.createSession(e);session.loadDocument(doc);const frame=session.step(100,channels);
 assert.equal(frame.sampleBatch.times.length,100);assert.equal(e.calls.length,100);assert.ok(e.calls.every(count=>count===1));
 assert.ok(Math.max(...frame.sampleBatch.values.input)>.999,'Intermediate peak captured even when final frame is near zero');
@@ -15,10 +12,18 @@ assert.equal(frame.sampleBatch.times[0],0);assert.ok(Math.abs(frame.sampleBatch.
 const before=session.snapshot();assert.throws(()=>session.step(2,[{id:'bad',positive:{componentId:'missing',pinId:'x'},negative:null}]),/Unknown scope/);assert.deepEqual(session.snapshot(),before,'Invalid channels do not advance/fault engine');
 assert.throws(()=>session.step(2,[channels[0],channels[0]]),/duplicate/);assert.throws(()=>A.normalizeSampleChannels(Array.from({length:33},(_,i)=>({...channels[0],id:String(i)}))),/32/);
 assert.throws(()=>session.step(2,[{...channels[0],positive:{kind:'pin',...channels[0].positive}}]),/fields/);
+const currentFrame=session.step(3,[channels[0],{id:'current',kind:'current',componentId:'r2'}]);
+assert.equal(currentFrame.sampleBatch.values.current.length,3);
+assert.ok(currentFrame.sampleBatch.values.current.every(value=>value===0.002),'Sample signed component current on every solver step');
+const sourceFrame=session.step(2,[{id:'source-current',kind:'current',componentId:'v1'}]);
+assert.ok(sourceFrame.sampleBatch.values['source-current'].every(value=>value===-0.004),'Preserve source current sign from native mapping');
+const currentBefore=session.snapshot();
+assert.throws(()=>session.step(2,[{id:'bad-current',kind:'current',componentId:'missing'}]),/Current unavailable/);
+assert.deepEqual(session.snapshot(),currentBefore,'Invalid current targets do not advance solver');
 session.step(10);assert.equal(e.calls.at(-1),10,'Unsampled callers retain one bounded engine call');
 // Explicit probe graph resolution is deterministic, including differential and orphan targets.
-const m=CircuitEditorModel.create(doc);m.addProbe({kind:'wire',id:'w2',point:{x:240,y:80}});
-const resolved=CircuitEditorModel.scopeChannels(m.document);assert.equal(resolved.channels.length,2);assert.equal(resolved.unresolved.length,0);
+const m=CircuitEditorModel.create(doc);const wire=m.document.electrical.wires[0],route=CircuitEditorModel.route(m.document,wire);m.addProbe({kind:'wire',id:wire.id,point:{x:(route[0].x+route[1].x)/2,y:(route[0].y+route[1].y)/2}});
+const resolved=CircuitEditorModel.scopeChannels(m.document);assert.equal(resolved.channels.length,doc.probes.length+1);assert.equal(resolved.unresolved.length,0);
 const split=m.document;split.electrical.wires.reverse();assert.deepEqual(CircuitEditorModel.scopeChannels(split),resolved);
 const orphan=structuredClone(split);orphan.electrical.wires=orphan.electrical.wires.filter(w=>!w.from.junctionId&&!w.to.junctionId);
 assert.ok(CircuitEditorModel.scopeChannels(orphan).unresolved.length>0);

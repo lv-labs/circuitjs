@@ -7,13 +7,13 @@ self.onmessage = ({data}) => {
   if (reply.ok && data.operation === 'dispose') self.close();
 };
 self.oncircuitengineready = engine => {
-  protocol = CircuitRevisionProtocol.create(CircuitDocumentAdapter.createSession(engine));
+  protocol = CircuitCoreModules.protocol.create(CircuitCoreModules.adapter.createSession(engine));
   self.postMessage({type: 'ready', protocolVersion: 1,
     dedicatedWorker: self instanceof DedicatedWorkerGlobalScope,
     hasDocument: typeof document !== 'undefined', hasWindow: typeof window !== 'undefined'});
 };
 try {
-  importScripts('core/catalog.js','core/adapter.js','core/worker-api.js','document-adapter.js', 'core/protocol.js','revision-protocol.js', 'circuitjsworker/engine-worker.js');
+  importScripts('core/catalog.js','core/adapter.js', 'core/protocol.js', 'circuitjsworker/engine-worker.js');
 } catch (error) {
   self.postMessage({type: 'fatal', error: {message: String(error.stack || error)}});
 }

@@ -1,8 +1,6 @@
+import {adapter as CircuitDocumentAdapter, simulation as CircuitSimulation} from '../packages/circuit-core/index.mjs';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import '../experiments/engine/document-adapter.js';
-import '../experiments/engine/revision-protocol.js';
-import '../experiments/engine/simulation-coordinator.js';
 const circuit=JSON.parse(await readFile(new URL('../docs/new-simulator/examples/switched-rc.json',import.meta.url)));
 const compile=CircuitDocumentAdapter.compile;
 const compiled=compile(circuit),projection=JSON.parse(compiled.canonical);

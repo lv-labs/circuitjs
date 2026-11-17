@@ -40,7 +40,10 @@ def main():
                         '-localWorkers', '2', '-sourceLevel', '1.8', '-style', 'PRETTY',
                         'com.lushprojects.circuitjs1.' + module], cwd=ROOT, check=True)
     site = ROOT / 'build/engine-site'
-    for folder in ['build/engine', 'build/engine-worker', 'experiments/engine']:
+    # Reassemble from sources so retired editor assets cannot survive a rebuild.
+    if site.exists():
+        shutil.rmtree(site)
+    for folder in ['build/engine', 'build/engine-worker', 'packages/circuit-runtime', 'tools/engine-harness']:
         shutil.copytree(ROOT / folder, site, dirs_exist_ok=True)
     shutil.copytree(ROOT / 'packages/circuit-core', site / 'core', dirs_exist_ok=True)
     modules = re.findall(r"^import './([^']+)';$", (ROOT / 'packages/circuit-core/index.mjs').read_text(), re.M)

@@ -1,5 +1,5 @@
+import {editing as CircuitEditorModel, adapter as CircuitDocumentAdapter, catalog} from '../packages/circuit-core/index.mjs';
 import assert from 'node:assert/strict';
-import '../experiments/engine/document-adapter.js';
 import {createEngine} from './engine_node_runtime.mjs';
 import {expansionKinds,expansionCircuit} from './component_expansion_fixtures.mjs';
 const M=CircuitEditorModel,A=CircuitDocumentAdapter,engine=createEngine(),session=A.createSession(engine);
@@ -10,13 +10,13 @@ for(const kind of expansionKinds){
   for(const rotation of [0,90,180,270])for(const mirror of [false,true]){
     const rotated=structuredClone(d);Object.assign(rotated.layout.components.part,{rotation,mirror});
     for(const pinId of Object.keys(M.definitions[kind].pins)){
-      const p=M.pin(rotated,{kind:'pin',componentId:'part',pinId});assert.ok(p.x%16===0&&p.y%16===0);
+      const p=M.pin(rotated,{kind:'pin',componentId:'part',pinId});assert.ok(p.x%M.grid===0&&p.y%M.grid===0);
     }
     assert.equal(A.compile(rotated).canonical,compiled.canonical);
   }
   const model=M.create(d),before=model.document;
-  model.transaction('Property edit',next=>{const c=next.electrical.components[0];if('position' in c.parameters)c.parameters.position=1;else if('inductance' in c.parameters)c.parameters.inductance=8;else c.parameters.forwardVoltage+=.1;});
-  const after=model.document;model.undo();assert.deepEqual(model.document,before);model.redo();assert.deepEqual(model.document,after);
+  model.transaction('Property edit',next=>{const c=next.electrical.components[0];if('position' in c.parameters)c.parameters.position=1;else if('inductance' in c.parameters)c.parameters.inductance=8;else if(c.kind==='led')c.parameters.maxCurrent=.03;else c.parameters.model={name:'history-zener',mode:'advanced',...catalog.resolveDiodeModel('default-zener'),breakdownVoltage:6.2};});
+  const after=model.document;assert.notDeepEqual(after,before,kind+' edit creates a history entry');model.undo();assert.deepEqual(model.document,before);model.redo();assert.deepEqual(model.document,after);
   const fragment=M.copySelection(d,new Set([M.token('component','part')])),pasted=structuredClone(d),selected=M.pasteSelection(pasted,fragment);
   assert.ok(selected.size);M.validate(pasted);assert.equal(new Set(pasted.electrical.components.map(c=>c.id)).size,pasted.electrical.components.length);
   const bad=structuredClone(d);bad.electrical.components[0].parameters.unrecognized=1;assert.throws(()=>A.compile(bad));
@@ -33,8 +33,10 @@ for(const kind of ['led','zener'])for(const voltage of [5,-2,-10]){
   // Current law plus the inherited diode model's forward equation, independently evaluated.
   near(i,(voltage-v)/1000,1e-7);
   if(voltage>0){
-    const forward=d.electrical.components[0].parameters.forwardVoltage,scale=2*.025865;
-    const expected=Math.expm1(v/scale)/Math.expm1(forward/scale);near(i,expected,1e-10);assert.ok(v>0&&v<forward);
+    const parameters=d.electrical.components[0].parameters;
+    const spec=catalog.resolveDiodeModel(parameters.model);
+    const expected=spec.saturationCurrent*Math.expm1((v-i*spec.seriesResistance)/(spec.emissionCoefficient*.025865));
+    near(i,expected,1e-10);assert.ok(v>0&&v<voltage);
   }else if(kind==='zener'&&voltage===-10){assert.ok(v< -5&&v> -6.5);assert.ok(i<-.003);}
   else {assert.ok(Math.abs(i)<1e-6);near(v,voltage,.001);}
 }

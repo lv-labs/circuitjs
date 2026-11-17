@@ -3,6 +3,8 @@ import type { SymbolProps } from "../svg";
 
 export const kind = "mbbSwitch";
 export const metadata = {
+  // Original 16-unit artwork, scaled to the 50-unit sheet grid.
+  drawingScale: 3.125,
   prefix: "S",
   name: "Make-before-break switch",
   pins: {
@@ -11,6 +13,12 @@ export const metadata = {
     b: [48, 16],
   },
   parameters: {
+    onResistance: 0,
+    momentary: false,
+    linkLabel: "",
+    iecSymbol: false,
+    group: 0,
+
     position: 0,
   },
 } as const;
@@ -25,6 +33,7 @@ export function Symbol({ parameters = metadata.parameters }: SymbolProps) {
       <Lead from={metadata.pins.b} to={[20, 16]} />
       {(position === 0 || bridging) && <path d="M-20 0L20-16" />}
       {(position === 2 || bridging) && <path d="M-20 0L20 16" />}
+      {parameters.iecSymbol === true && <path d="M0-32V-16M-8-32H8" strokeDasharray="3 3" />}
     </>
   );
 }

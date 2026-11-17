@@ -15,15 +15,58 @@ export type Target =
 export type SampleTerminal = { componentId: string; pinId: string }
 export type SampleChannel = {
   id: string
-  positive: SampleTerminal
-  negative: SampleTerminal | null
+  kind?: string
+  componentId?: string
+  positive?: SampleTerminal
+  negative?: SampleTerminal | null
 }
-export type ScopeChannel = SampleChannel & { label: string }
-export type Hit = Entity | Target
+export type TraceSettings = {
+  color?: string
+  scale?: number
+  offset?: number
+  coupling?: string
+  kind?: string
+}
+export type ScopeChannel = SampleChannel & TraceSettings & { label: string }
+export type Hit = (Entity & { anchor?: boolean }) | Target
 export type Component = {
   id: string
   kind: string
   parameters: Record<string, unknown>
+}
+export type LabelSettings = {
+  position?: "auto" | "left" | "right" | "above" | "below"
+  showValue?: boolean
+  showDetails?: boolean
+}
+export type ScopePaneLayout = {
+  mode: "docked" | "floating" | "sheet"
+  timeDivision: number
+  sheetScale?: number
+  order?: number
+  x: number
+  y: number
+  width: number
+  height: number
+  weight: number
+}
+export type ScopeDockNode =
+  | { type: "scope"; id: string }
+  | {
+      type: "split"
+      axis: "horizontal" | "vertical"
+      ratio: number
+      first: ScopeDockNode
+      second: ScopeDockNode
+    }
+export type ScopeLayout = {
+  version: 1
+  open: boolean
+  assignments: Record<string, string>
+  activeTraces: Record<string, string>
+  panes: Record<string, ScopePaneLayout>
+  height: number
+  dock?: ScopeDockNode | null
 }
 export type CircuitDocument = {
   schemaVersion: number
@@ -35,12 +78,16 @@ export type CircuitDocument = {
     wires: { id: string; from: Target; to: Target }[]
   }
   layout: {
-    components: Record<string, Point & { rotation: number; mirror: boolean }>
+    components: Record<
+      string,
+      Point & { rotation: number; mirror: boolean; label?: LabelSettings }
+    >
     junctions: Record<string, Point>
     wires: Record<string, { bends: Point[] }>
+    scopes?: ScopeLayout
     probes?: Record<string, Point>
   }
-  probes: {
+  probes: (TraceSettings & {
     id: string
     kind: string
     label?: string
@@ -48,7 +95,7 @@ export type CircuitDocument = {
     positive?: Target
     negative?: Target
     componentId?: string
-  }[]
+  })[]
   simulation: { timeStep: number }
 }
 export type Command =
@@ -138,6 +185,7 @@ export type Drag = {
 }
 export const core = implementation as {
   geometry: {
+    grid: number
     snap(n: number): number
     placementPose(
       kind: string,
@@ -162,7 +210,12 @@ export const core = implementation as {
       w: CircuitDocument["electrical"]["wires"][number]
     ): Point[]
     referenceKey(ref: Target): string
-    hit(d: CircuitDocument, p: Point, scale: number): Hit | null
+    hit(
+      d: CircuitDocument,
+      p: Point,
+      scale: number,
+      ignoreProbes?: boolean
+    ): Hit | null
     boxSelection(d: CircuitDocument, a: Point, b: Point): Set<string>
     zoom(
       camera: Point & { scale: number },
@@ -180,6 +233,17 @@ export const core = implementation as {
     }
   }
   editing: {
+    toggleSwitches(document: CircuitDocument, id: string): void
+    replaceParameters(
+      document: CircuitDocument,
+      componentId: string,
+      parameters: Record<string, unknown>
+    ): void
+    retargetProbe(
+      document: CircuitDocument,
+      id: string,
+      target: Target
+    ): CircuitDocument
     copySelection(d: CircuitDocument, selection: Set<string>): CircuitDocument
     pasteSelection(
       d: CircuitDocument,
@@ -228,11 +292,49 @@ export const core = implementation as {
     normalizeWires(d: CircuitDocument): CircuitDocument
   }
   catalog: {
+    switchKind(kind: string): boolean
+    switchDefaults(kind: string): Record<string, unknown>
+    switchPositionCount(component: Component): number
+    momentary(component?: Component): boolean
+    componentPins(component: Component): Record<string, [number, number]>
+    gateKind(kind: string): boolean
+    mosfetKind(kind: string): boolean
+    mosfetOptions: Record<string, boolean>
+    transistorModels: string[]
+    transistorModelFields: Record<
+      string,
+      { label: string; default: number; positive?: boolean }
+    >
+    transistorKind(kind: string): boolean
+    resolveTransistorModel(model: unknown): Record<string, number>
+    diodeModels: string[]
+    diodeModelSpecs: Record<
+      string,
+      {
+        saturationCurrent: number
+        seriesResistance: number
+        emissionCoefficient: number
+        breakdownVoltage: number
+      }
+    >
+    diodeKind(kind: string): boolean
+    resolveDiodeModel(model: unknown): {
+      saturationCurrent: number
+      seriesResistance: number
+      emissionCoefficient: number
+      breakdownVoltage: number
+    }
+    diodeEditorParameters(
+      kind: string,
+      parameters: Record<string, unknown>
+    ): Record<string, unknown>
+    simulationModels: Record<string, { sign: number | null }>
     definitions: Record<
       string,
       {
         prefix: string
         name: string
+        drawingScale?: number
         pins: Record<string, [number, number]>
         parameters: Record<string, unknown>
       }
@@ -285,7 +387,7 @@ export const core = implementation as {
         stored: number
         capacity: number
         times: number[]
-        channels: {
+        channels: (TraceSettings & {
           id: string
           label: string
           color: string
@@ -293,7 +395,7 @@ export const core = implementation as {
           min: number | null
           max: number | null
           last?: number
-        }[]
+        })[]
       }
     }
     color(id: string): string

@@ -3,7 +3,7 @@
 (() => {
   const registry=globalThis.CircuitCoreModules ||= {};
   const Adapter=typeof module==='object'&&module.exports?require('./adapter.js'):registry.adapter;
-  const descriptors=channels=>Adapter.normalizeSampleChannels(channels.map(({id,positive,negative})=>({id,positive,negative})));
+  const descriptors=channels=>Adapter.normalizeSampleChannels(channels.map(c=>c.kind==='current'?{id:c.id,kind:'current',componentId:c.componentId}:{id:c.id,positive:c.positive,negative:c.negative}));
   const key=channels=>JSON.stringify(descriptors(channels));
   function color(id){let hash=2166136261;for(const c of id)hash=Math.imul(hash^c.charCodeAt(0),16777619);return `hsl(${(hash>>>0)%360} 72% 72%)`;}
   function create({capacity=20000}={}) {
@@ -14,7 +14,7 @@
     function reset(){clear();identity=null;sequence=0;revision=0;lastTime=-Infinity;timeOffset=0;lastStep=0;preserveNext=false;}
     function setChannels(next){
       const signatureNext=key(next),labels=new Map(next.map(c=>[c.id,c.label]));
-      channels=descriptors(next).map(c=>({...c,label:labels.get(c.id)||c.id,color:color(c.id)}));
+      channels=descriptors(next).map(c=>({...c,...next.find(n=>n.id===c.id),label:labels.get(c.id)||c.id,color:next.find(n=>n.id===c.id)?.color||color(c.id)}));
       if(signature!==signatureNext){signature=signatureNext;values=channels.map(()=>new Float64Array(capacity));reset();}
       return descriptors(channels);
     }

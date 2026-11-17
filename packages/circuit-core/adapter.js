@@ -41,6 +41,7 @@
     if(device.parameters.pulldown)for(const pin of [p.a,p.b])pairs.push([pin,ground]);
     return pairs;
   }
+  const modelFor=c=>{const model=Catalog.componentModel(c);return {...model,pins:model.postOrder};};
   const bipolar=kind=>['npn','pnp'].includes(kind);
   const fet=kind=>['nmos','pmos','njfet','pjfet'].includes(kind);
   const unaryLogic=kind=>['inverter','schmittTrigger','invertingSchmittTrigger'].includes(kind);
@@ -58,10 +59,10 @@
     if(device.kind==='transmissionLine')return [[p.left,p.leftReturn],[p.right,p.rightReturn]];
     if(device.kind==='tappedTransformer')return [[p.p1,p.p2],[p.s1,p.tap],[p.tap,p.s2]];
     if(device.kind==='customTransformer')return [[p.p1a,p.p1b],[p.p2a,p.p2b],[p.sa,p.sb]];
-    if(device.kind==='mbbSwitch')return device.parameters.position%2?[[p.common,p.a],[p.common,p.b]]:[[p.common,device.parameters.position===0?p.a:p.b]];
+
     if(device.kind==='transformer')return [[p.p1,p.p2],[p.s1,p.s2]];
-    if(device.kind==='spdtSwitch')return device.parameters.position===2?[]:[[p.common,device.parameters.position===0?p.a:p.b]];
-    if(device.kind==='dpdtSwitch')return [[p.common1,device.parameters.position===0?p.a1:p.b1],[p.common2,device.parameters.position===0?p.a2:p.b2]];
+    if(Catalog.switchKind(device.kind))return Catalog.switchPairs(device);
+
     return [];
   }
   function exactFields(value, fields, label) {
@@ -138,6 +139,8 @@
     check(record(document.simulation) && Number.isFinite(document.simulation.timeStep) &&
       document.simulation.timeStep > 0, 'Expected positive finite timestep');
     const components = unique(document.electrical.components, 'components');
+    Catalog.validateSharedDiodeModels([...components.values()]);
+    Catalog.validateSharedTransistorModels([...components.values()]);
     const junctions = unique(document.electrical.junctions, 'junctions');
     const wires = unique(document.electrical.wires, 'wires');
     check(components.size > 0, 'Circuit must contain components');
@@ -162,15 +165,13 @@
     const devices = [...components.values()].sort((a, b) => compare(a.id, b.id)).map(component => {
       check(Object.keys(component).every(field => ['id', 'kind', 'modelVersion', 'reference', 'parameters'].includes(field)),
         'Unexpected component field: ' + component.id);
-      const model = catalog.get(component.kind);
+      const model = catalog.has(component.kind)?modelFor(component):null;
       if (!model || component.modelVersion !== 1)
         fail('UNSUPPORTED_MODEL', 'Unsupported model/version: ' + component.kind + ' (' + component.id + ')');
       let parameters;
       if(outputSpecs[component.kind]){try{parameters=validateOutput(component,document.simulation.timeStep);}catch(error){check(false,component.id+': '+error.message);}}
-      else if(component.kind==='pushSwitch'){
-        exactFields(component.parameters,['normallyClosed'],component.id);check(typeof component.parameters.normallyClosed==='boolean',component.id+': invalid push-switch rest state');parameters={normallyClosed:component.parameters.normallyClosed};
-      }else if(component.kind==='mbbSwitch'){
-        exactFields(component.parameters,['position'],component.id);const {position}=component.parameters;check(Number.isInteger(position)&&position>=0&&position<=3,component.id+': invalid MBB position');parameters={position};
+      else if(Catalog.switchKind(component.kind)){
+        parameters=Catalog.validateSwitchParameters(component.kind,component.parameters);
       }else if(component.kind==='transmissionLine'){
         exactFields(component.parameters,['delay','impedance'],component.id);const {delay,impedance}=component.parameters,steps=Math.floor(delay/document.simulation.timeStep);
         check(Number.isFinite(delay)&&delay>0&&Number.isFinite(impedance)&&impedance>0&&Number.isFinite(1/impedance)&&steps>=1&&steps<=100000,component.id+': line delay must span 1 to 100000 timesteps and impedance must be positive');parameters={delay,impedance};
@@ -224,35 +225,31 @@
         const l2=inductance*ratio*ratio/(component.kind==='tappedTransformer'?4:1),mutual=coupling*Math.sqrt(inductance*l2),det=inductance*l2-mutual*mutual;
         check(Number.isFinite(inductance)&&inductance>0&&Number.isFinite(ratio)&&ratio>0&&Number.isFinite(coupling)&&coupling>0&&coupling<1&&Number.isFinite(det)&&det>0&&Number.isFinite(1/det)&&['backwardEuler','trapezoidal'].includes(integration),component.id+': invalid transformer inductance, ratio, coupling or integration');
         parameters={inductance,ratio,coupling,integration};
-      } else if(['spdtSwitch','dpdtSwitch'].includes(component.kind)){
-        exactFields(component.parameters,['position'],component.id);const {position}=component.parameters;
-        check(Number.isInteger(position)&&position>=0&&position<=(component.kind==='spdtSwitch'?2:1),component.id+': invalid switch position');parameters={position};
-      } else if(['led','zener'].includes(component.kind)){
-        const extra=component.kind==='led'?'maxCurrent':'breakdownVoltage';exactFields(component.parameters,['forwardVoltage',extra],component.id);
-        const {forwardVoltage}=component.parameters,value=component.parameters[extra];
-        check(Number.isFinite(forwardVoltage)&&forwardVoltage>0&&Number.isFinite(value)&&value>0,component.id+': invalid diode parameters');parameters={forwardVoltage,[extra]:value};
+      } else if(Catalog.diodeKind(component.kind)){
+        parameters=Catalog.validateDiodeParameters(component.kind,component.parameters);
       } else if(analog(component.kind)){
         exactFields(component.parameters,['onResistance','offResistance','threshold','inverted','pulldown'],component.id);
         const {onResistance,offResistance,threshold,inverted,pulldown}=component.parameters;
         check([onResistance,offResistance].every(r=>Number.isFinite(r)&&r>0&&Number.isFinite(1/r))&&Number.isFinite(threshold)&&typeof inverted==='boolean'&&typeof pulldown==='boolean',component.id+': invalid analog switch parameters');
         parameters={onResistance,offResistance,threshold,inverted,pulldown};
       } else if(bipolar(component.kind)){
-        exactFields(component.parameters,['beta'],component.id);const {beta}=component.parameters;
-        check(Number.isFinite(beta)&&beta>0,component.id+': invalid transistor beta');parameters={beta};
+        parameters=Catalog.validateTransistorParameters(component.parameters);
       } else if(fet(component.kind)){
-        exactFields(component.parameters,['threshold','beta'],component.id);const {threshold,beta}=component.parameters;
-        check(Number.isFinite(threshold)&&Number.isFinite(beta)&&beta>0,component.id+': invalid FET parameters');parameters={threshold,beta};
+        if(Catalog.mosfetKind(component.kind))parameters=Catalog.validateMosfetParameters(component.parameters);
+        else {exactFields(component.parameters,['threshold','beta'],component.id);const {threshold,beta}=component.parameters;
+        check(Number.isFinite(threshold)&&Number.isFinite(beta)&&beta>0,component.id+': invalid FET parameters');parameters={threshold,beta};}
       } else if(logic(component.kind)){
-        const inverter=component.kind==='inverter';exactFields(component.parameters,inverter?['highVoltage','slewRate']:['highVoltage'],component.id);
-        const {highVoltage,slewRate}=component.parameters;check(Number.isFinite(highVoltage)&&highVoltage>0&&(!inverter||Number.isFinite(slewRate)&&slewRate>0),component.id+': invalid logic parameters');
-        parameters={highVoltage,...(inverter?{slewRate}:{})};
+        if(Catalog.gateKind(component.kind))parameters=Catalog.validateGateParameters(component.parameters);
+        else {
+          exactFields(component.parameters,['highVoltage','slewRate'],component.id);
+          const {highVoltage,slewRate}=component.parameters;
+          check(Number.isFinite(highVoltage)&&highVoltage>0&&Number.isFinite(slewRate)&&slewRate>0,component.id+': invalid inverter parameters');parameters={highVoltage,slewRate};
+        }
       } else if (component.kind === 'inductor') {
         exactFields(component.parameters, ['inductance','initialCurrent','integration'], component.id);
         const {inductance,initialCurrent,integration}=component.parameters;
         check(Number.isFinite(inductance)&&inductance>0&&Number.isFinite(initialCurrent)&&['backwardEuler','trapezoidal'].includes(integration),component.id+': invalid inductor');
         parameters={inductance,initialCurrent,integration};
-      } else if (component.kind === 'diode') {
-        exactFields(component.parameters, [], component.id);parameters={};
       } else if (component.kind === 'currentSource') {
         exactFields(component.parameters,['current','maxVoltage'],component.id);
         const {current,maxVoltage}=component.parameters;
@@ -281,10 +278,6 @@
         check(Number.isFinite(gain) && gain > 0 && Number.isFinite(minOutput) && Number.isFinite(maxOutput) &&
           minOutput < maxOutput && Number.isFinite(maxOutput-minOutput), component.id + ': invalid op-amp gain or output limits');
         parameters = {gain, minOutput, maxOutput};
-      } else if (component.kind === 'switch') {
-        exactFields(component.parameters, ['closed'], component.id);
-        check(typeof component.parameters.closed === 'boolean', component.id + ': closed must be boolean');
-        parameters = {closed: component.parameters.closed};
       } else if ((component.kind === 'voltageSource' || component.kind === 'voltageRail')) {
         exactFields(component.parameters, ['waveform'], component.id);
         const waveform = component.parameters.waveform;
@@ -324,7 +317,7 @@
       if (ref.kind === 'pin') {
         exactFields(ref, ['kind', 'componentId', 'pinId'], 'pin endpoint');
         const c = components.get(ref.componentId);
-        check(c && catalog.get(c.kind).pins.includes(ref.pinId), 'Unknown component/pin endpoint');
+        check(c && modelFor(c).pins.includes(ref.pinId), 'Unknown component/pin endpoint');
         return key(['pin', ref.componentId, ref.pinId]);
       }
       exactFields(ref, ['kind', 'junctionId'], 'junction endpoint');
@@ -337,7 +330,7 @@
     }
     const labels=new Map();for(const device of devices)if(device.kind==='labeledNode'){const terminal=key(['pin',device.id,'in']),name=device.parameters.name;if(labels.has(name))join(terminal,labels.get(name));else labels.set(name,terminal);}
     const groups = new Map();
-    for (const device of devices) for (const pin of catalog.get(device.kind).pins) {
+    for (const device of devices) for (const pin of modelFor(device).pins) {
       const root = find(key(['pin', device.id, pin]));
       if (!groups.has(root)) groups.set(root, []);
       groups.get(root).push([device.id, pin]);
@@ -350,7 +343,7 @@
       for (const [c, p] of terminals) terminalNets.set(key(['pin', c, p]), netKey);
       return {key: netKey, ground: grounded, terminals};
     }).sort((a, b) => compare(a.key, b.key));
-    for (const device of devices) device.pins = Object.fromEntries(catalog.get(device.kind).pins.map(pin =>
+    for (const device of devices) device.pins = Object.fromEntries(modelFor(device).pins.map(pin =>
       [pin, terminalNets.get(key(['pin', device.id, pin]))]));
 
     // Retain ideal-loop guards; floating islands use the legacy solver stabilization.
@@ -379,7 +372,7 @@
       }
       for(const [left,right] of windingOrSwitchPairs(device)){
         adjacency.get(left).add(right);adjacency.get(right).add(left);
-        if(['spdtSwitch','dpdtSwitch','mbbSwitch','ammeter','wattmeter'].includes(device.kind)){
+        if(['spdtSwitch','dpdtSwitch','mbbSwitch','ammeter','wattmeter'].includes(device.kind)&&!(device.parameters.onResistance>0)){
           const a=sourceRoot(left),b=sourceRoot(right);check(a!==b,'Unsupported ideal switch loop: '+device.id);sourceParent.set(a,b);
         }
       }
@@ -392,6 +385,7 @@
       }
       if(fet(device.kind)){
         adjacency.get(device.pins.source).add(device.pins.drain);adjacency.get(device.pins.drain).add(device.pins.source);
+        if(device.pins.body){for(const terminal of [device.pins.source,device.pins.drain]){adjacency.get(device.pins.body).add(terminal);adjacency.get(terminal).add(device.pins.body);}}
         if(device.kind.includes('jfet')){adjacency.get(device.pins.gate).add(device.pins.source);adjacency.get(device.pins.source).add(device.pins.gate);}
       }
       if(device.kind==='potentiometer'){
@@ -407,7 +401,7 @@
         if (!spst(device.kind) || contactClosed(device)) {
           adjacency.get(pins[0]).add(pins[1]); adjacency.get(pins[1]).add(pins[0]);
         }
-        if (device.kind === 'voltageSource' || (spst(device.kind) && contactClosed(device))) {
+        if (device.kind === 'voltageSource' || (spst(device.kind) && contactClosed(device) && !(device.parameters.onResistance>0))) {
           const a = sourceRoot(pins[0]), b = sourceRoot(pins[1]);
           check(a !== b, 'Unsupported ideal source/switch loop: ' + device.id);
           sourceParent.set(a, b);
@@ -426,7 +420,7 @@
         const pins=Object.values(d.pins);
         if(pins.length===2&&!logic(d.kind)&&d.kind!=='voltmeter'&&(!spst(d.kind)||contactClosed(d)))link(pins[0],pins[1]);
         if(bipolar(d.kind)){link(d.pins.base,d.pins.collector);link(d.pins.base,d.pins.emitter);}
-        if(fet(d.kind)){link(d.pins.source,d.pins.drain);if(d.kind.includes('jfet'))link(d.pins.gate,d.pins.source);}
+        if(fet(d.kind)){link(d.pins.source,d.pins.drain);if(d.pins.body){link(d.pins.body,d.pins.source);link(d.pins.body,d.pins.drain);}if(d.kind.includes('jfet'))link(d.pins.gate,d.pins.source);}
         if(d.kind==='potentiometer'){link(d.pins.a,d.pins.wiper);link(d.pins.b,d.pins.wiper);}
         if(railSource(d.kind)||logicSource(d.kind))link(railSource(d.kind)?d.pins.p:d.pins.out,groundNet);
         if(d.kind==='logicOutput'&&d.parameters.pulldown)link(d.pins.in,groundNet);
@@ -473,7 +467,7 @@
     const records = [], connections = [], mapping = [];
     let groundIndex = null;
     devices.forEach((device, index) => {
-      const model = catalog.get(device.kind);
+      const model = modelFor(device);
       // GroundElm implicitly joins ground symbols. Emitting extra explicit hub
       // wires as well would make redundant loops in legacy wire-current analysis.
       // All public ground pins alias the one physical reference element instead.
@@ -487,6 +481,12 @@
       let parameters = '';
       let flags = 0;
       if(outputSpecs[device.kind]){const encoding=outputRecord(device,x);parameters=encoding.parameters;flags=encoding.flags;}
+      if (Catalog.diodeKind(device.kind) && Object.hasOwn(device.parameters,'model')) {
+        flags=2;
+        const p=device.parameters,m=p.model;
+        parameters=typeof m==='string'?' '+m:' custom '+Object.values(Catalog.resolveDiodeModel(m)).join(' ');
+        if(device.kind==='led')parameters+=` ${p.red} ${p.green} ${p.blue} ${p.maxCurrent}`;
+      }
       if (device.kind === 'resistor') parameters = ' ' + device.parameters.resistance;
       if (device.kind === 'voltageSource' || device.kind === 'voltageRail') {
         const w=device.parameters.waveform;
@@ -508,8 +508,8 @@
       if(device.kind==='transformer'){flags=device.parameters.integration==='backwardEuler'?2:0;parameters=` ${device.parameters.inductance} ${device.parameters.ratio} 0 0 ${device.parameters.coupling} 0`;}
       if(device.kind==='spdtSwitch'){flags=1;parameters=` ${device.parameters.position} false 0 2`;}
       if(device.kind==='dpdtSwitch')parameters=` ${device.parameters.position} false 2`;
-      if(device.kind==='led'){flags=1;parameters=` ${device.parameters.forwardVoltage} 1 0 0 ${device.parameters.maxCurrent}`;}
-      if(device.kind==='zener'){flags=1;parameters=` ${device.parameters.forwardVoltage} ${device.parameters.breakdownVoltage}`;}
+      if(device.kind==='led'&&!Object.hasOwn(device.parameters,'model')){flags=1;parameters=` ${device.parameters.forwardVoltage} 1 0 0 ${device.parameters.maxCurrent}`;}
+      if(device.kind==='zener'&&!Object.hasOwn(device.parameters,'model')){flags=1;parameters=` ${device.parameters.forwardVoltage} ${device.parameters.breakdownVoltage}`;}
       if(device.kind==='output')flags=device.parameters.showVoltage?1:0;
       if(device.kind==='logicOutput'){
         flags=(device.parameters.mode==='ternary'?1:0)|(device.parameters.mode==='numeric'?2:0)|(device.parameters.pulldown?4:0);
@@ -534,9 +534,19 @@
         if(device.kind==='counter')parameters+=' '+[3,2,1,0].map(bit=>(p.initialValue>>bit)&1?p.highVoltage:0).join(' ')+` ${p.invertReset} ${p.modulus}`;
         if(device.kind==='latch')parameters+=' '+[0,1,2,3].map(bit=>(p.initialValue>>bit)&1?p.highVoltage:0).join(' ');
       }
+      if(bipolar(device.kind))flags=(device.parameters.swapTerminals?1:0)|(device.parameters.drawCircle?2:0);
       if(bipolar(device.kind))parameters=` ${device.kind==='pnp'?-1:1} 0 0 ${device.parameters.beta}`;
+      if(bipolar(device.kind)&&(Object.hasOwn(device.parameters,'model')||device.parameters.swapTerminals||device.parameters.drawCircle)) {
+        const m=device.parameters.model??'default';
+        parameters+=typeof m==='string'?' '+m:' custom '+Object.values(Catalog.resolveTransistorModel(m)).join(' ');
+      }
       if(fet(device.kind)){flags=device.kind.startsWith('p')?1:0;parameters=` ${device.parameters.threshold} ${device.parameters.beta}`;}
-      if(logic(device.kind)&&!outputSpecs[device.kind])parameters=device.kind==='inverter'?` ${device.parameters.slewRate} ${device.parameters.highVoltage}`:` 2 0 ${device.parameters.highVoltage}`;
+      if(Catalog.mosfetKind(device.kind)){
+        const p=device.parameters;
+        flags|=(p.bodyDiode?32:0)|(p.bodyTerminal?64:0)|(p.showBulk===false?16:0)|(p.digitalSymbol?4:0)|(p.showBodyDiode?128:0)|(p.swapTerminals?8:0);
+      }
+      if(Catalog.gateKind(device.kind))flags=(device.parameters.schmittInputs?2:0)|(device.parameters.invertInputs?4:0);
+      if(logic(device.kind)&&!outputSpecs[device.kind])parameters=device.kind==='inverter'?` ${device.parameters.slewRate} ${device.parameters.highVoltage}`:` ${device.parameters.inputCount??2} 0 ${device.parameters.highVoltage} ${device.parameters.propagationDelay??0}`;
       if(device.kind==='inductor'){
         flags=device.parameters.integration==='backwardEuler'?2:0;
         parameters=` ${device.parameters.inductance} ${device.parameters.initialCurrent} ${device.parameters.initialCurrent} 0`;
@@ -547,13 +557,22 @@
       if (device.kind === 'opamp') {
         flags=8;parameters=` ${device.parameters.maxOutput} ${device.parameters.minOutput} 1000000 0 0 ${device.parameters.gain}`;
       }
+      if(Catalog.switchKind(device.kind)&&Object.keys(device.parameters).some(k=>Object.hasOwn(Catalog.switchDefaults(device.kind),k))){
+        const p={...Catalog.switchDefaults(device.kind),...device.parameters};
+        const pos=device.kind==='switch'?(p.closed?0:1):device.kind==='pushSwitch'?(p.normallyClosed?0:1):p.position;
+        flags=(p.iecSymbol?2:0)|(device.kind==='spdtSwitch'&&p.centerOff&&p.throwCount===2?1:0);
+        parameters=` ${pos} ${p.momentary} ${p.onResistance} ${encodeURIComponent(p.linkLabel)||'%00'}`;
+        if(device.kind==='spdtSwitch')parameters+=` ${p.group} ${p.throwCount}`;
+        if(device.kind==='mbbSwitch')parameters+=` ${p.group}`;
+        if(device.kind==='dpdtSwitch')parameters+=` ${p.poleCount}`;
+      }
       const semiconductorPosts=semiconductorPostPoints(device.kind,x);
       const pot=device.kind==='potentiometer',three=bipolar(device.kind)||fet(device.kind)||(logic(device.kind)&&!unaryLogic(device.kind));
       const multiSwitch=['spdtSwitch','dpdtSwitch','mbbSwitch','tappedTransformer','customTransformer','transmissionLine'].includes(device.kind)||analog(device.kind),transformer=device.kind==='transformer';
       const chip=flipFlop(device.kind)||nextChip(device.kind)||['wattmeter','decimalDisplay','instructionDisplay','ledArray','threePhaseMotor'].includes(device.kind);
       records.push(`${model.type} ${x} 32 ${chip?x+64:device.kind==='opamp'?x+32:pot||three||multiSwitch||transformer||semiconductorPosts?x+64:x} ${chip?32:device.kind==='opamp'||three||multiSwitch||semiconductorPosts?32:pot?0:64} ${flags}${parameters}`);
       mapping.push({id: device.id, kind: device.kind, index: engineIndex, pins: [...model.pins], sign: model.sign});
-      const chipPosts=outputPostPoints(device.kind,x)|| (chip?chipPostPoints(device.kind,x):null);
+      const chipPosts=Catalog.switchPostPoints(device,x)|| (Catalog.mosfetKind(device.kind)?[[x,32],[x+64,device.parameters.swapTerminals?16:48],[x+64,device.parameters.swapTerminals?48:16],...(Catalog.activeBody(device.parameters)?[[x+64,32]]:[])]:null)|| (bipolar(device.kind)?[[x,32],[x+64,(device.kind==='pnp')!==!!device.parameters.swapTerminals?48:16],[x+64,(device.kind==='pnp')!==!!device.parameters.swapTerminals?16:48]]:null)|| (Catalog.gateKind(device.kind)?[...Catalog.gateOffsets(device.parameters.inputCount??2).map(y=>[x,32-y]),[x+64,32]]:null)||outputPostPoints(device.kind,x)|| (chip?chipPostPoints(device.kind,x):null);
       model.pins.forEach((pin, post) => {
         const [hx, hy] = hubs.get(device.pins[pin]);
         const [px,py]=semiconductorPosts?semiconductorPosts[post]:device.kind==='tappedTransformer'?[[x,32],[x,96],[x+64,32],[x+64,64],[x+64,96]][post]:device.kind==='customTransformer'?[[x,32],[x,64],[x,80],[x,112],[x+64,32],[x+64,112]][post]:device.kind==='transmissionLine'?[[x,64],[x+64,64],[x,32],[x+64,32]][post]:device.kind==='mbbSwitch'?[[x,32],[x+64,16],[x+64,48]][post]:chipPosts?chipPosts[post]:device.kind==='analogSwitch'?[[x,32],[x+64,32],[x+32,48]][post]:device.kind==='analogSpdtSwitch'?[[x,32],[x+64,16],[x+64,48],[x+32,16]][post]:transformer?[[x,32],[x+64,32],[x,64],[x+64,64]][post]:device.kind==='spdtSwitch'?[[x,32],[x+64,16],[x+64,48]][post]:device.kind==='dpdtSwitch'?[[x,32],[x+64,48],[x+64,16],[x,80],[x+64,96],[x+64,64]][post]:bipolar(device.kind)?[[x,32],[x+64,device.kind==='pnp'?48:16],[x+64,device.kind==='pnp'?16:48]][post]:fet(device.kind)?[[x,32],[x+64,48],[x+64,16]][post]:logic(device.kind)&&three?[[x,48],[x,16],[x+64,32]][post]:device.kind==='opamp'?[[x,16],[x,48],[x+32,32]][post]:pot?[[x,32],[x+64,32],[x+32,0]][post]:[x,32+post*32];
@@ -591,10 +610,11 @@
   }
 
   function normalizeSampleChannels(channels=[]) {
-    check(Array.isArray(channels)&&channels.length<=32,'Scope supports at most 32 voltage channels');
+    check(Array.isArray(channels)&&channels.length<=32,'Scope supports at most 32 scope channels');
     const seen=new Set();
     const terminal=ref=>{exactFields(ref,['componentId','pinId'],'sample terminal');check(id(ref.componentId)&&id(ref.pinId),'Invalid sample terminal');return {componentId:ref.componentId,pinId:ref.pinId};};
     return channels.map(channel=>{
+      if(channel.kind==='current'){exactFields(channel,['id','kind','componentId'],'sample channel');check(id(channel.id)&&!seen.has(channel.id)&&id(channel.componentId),'Invalid current sample channel');seen.add(channel.id);return {id:channel.id,kind:'current',componentId:channel.componentId};}
       exactFields(channel,['id','positive','negative'],'sample channel');check(id(channel.id)&&!seen.has(channel.id),'Missing/duplicate sample channel ID');seen.add(channel.id);
       return {id:channel.id,positive:terminal(channel.positive),negative:channel.negative===null?null:terminal(channel.negative)};
     }).sort((a,b)=>compare(a.id,b.id));
@@ -692,7 +712,7 @@
         };
         // Validate every channel before advancing the solver. Only one batch crosses
         // the worker boundary; no display-frame downsampling hides intermediate peaks.
-        const targets=normalized.map(channel=>({positive:locate(channel.positive),negative:locate(channel.negative)}));
+        const targets=normalized.map(channel=>{if(channel.kind==='current'){const entry=compiled.mapping.find(item=>item.id===channel.componentId);check(entry&&entry.sign!==null,'Current unavailable for scope component');return {current:entry};}return {positive:locate(channel.positive),negative:locate(channel.negative)};});
         return invoke(() => {
           if(!normalized.length){const raw=engine.step(count);sequence++;hasFrame=true;return frame(raw);}
           const times=[],values=normalized.map(()=>[]);let raw;
@@ -701,7 +721,7 @@
             raw=engine.step(1);
             check(Number.isFinite(raw.time)&&Number.isFinite(raw.timeStep)&&raw.timeStep>0,'Invalid scope sample time');
             times.push(Math.max(0,raw.time-raw.timeStep));
-            targets.forEach((target,j)=>{const value=voltage(target.positive)-voltage(target.negative);check(Number.isFinite(value),'Invalid scope sample voltage');values[j].push(value);});
+            targets.forEach((target,j)=>{const value=target.current?target.current.sign*raw.elements[target.current.index].current:voltage(target.positive)-voltage(target.negative);check(Number.isFinite(value),'Invalid scope sample voltage');values[j].push(value);});
             if(raw.stopRequested)break;
           }
           sequence++;hasFrame=true;

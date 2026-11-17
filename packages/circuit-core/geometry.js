@@ -12,7 +12,7 @@
   function pin(document, ref) {
     if (ref.kind === 'junction') return document.layout.junctions[ref.junctionId];
     const component = document.electrical.components.find(c => c.id === ref.componentId);
-    const pose = document.layout.components[component.id], offset = definitions[component.kind].pins[ref.pinId];
+    const pose = document.layout.components[component.id], offset = Catalog.componentPins(component)[ref.pinId];
     const [rx, ry] = rotateOffset(offset[0] * (pose.mirror ? -1 : 1), offset[1], pose.rotation);
     return { x: pose.x + rx, y: pose.y + ry };
   }
@@ -29,7 +29,7 @@
     pose.mirror = !pose.mirror;
   }
   function probePoint(document, probe) {
-    const anchor = pin(document, probe.positive), offset = document.layout.probes?.[probe.id] || { x: 16, y: -32 };
+    const anchor = pin(document, probe.positive), offset = document.layout.probes?.[probe.id] || { x: 50, y: -100 };
     return { x: anchor.x + offset.x, y: anchor.y + offset.y };
   }
   function probeVoltage(document, probe, frame) {
@@ -59,10 +59,12 @@
       return pins.length ? { componentId: pins[0].componentId, pinId: pins[0].pinId } : null;
     }
     const channels = [], unresolved = [];
-    for (const probe of document.probes) if (probe.kind === 'voltage') {
+    for (const probe of document.probes) {
+      if(probe.kind==='current'){channels.push({...probe,label:probe.label||'Current'});continue;}
+      if(probe.kind!=='voltage')continue;
       const positive = terminal(probe.positive), negative = probe.reference === 'ground' ? null : terminal(probe.negative);
       if (!positive || (probe.reference !== 'ground' && !negative)) { unresolved.push(probe.id); continue; }
-      channels.push({ id: probe.id, label: probe.label || 'Wire', positive, negative });
+      channels.push({ ...probe, id: probe.id, label: probe.label || 'Wire', positive, negative });
     }
     return { channels, unresolved };
   }
@@ -107,21 +109,23 @@
   function graphicSize(c){const p=c.parameters;return c.kind==='text'?{width:Math.max(32,...p.text.split('\n').map(line=>line.length*p.size*.65)),height:Math.max(p.size,p.text.split('\n').length*p.size*1.3)}:{width:p.width,height:Math.max(8,p.height)};}
   function bounds(document, component) {
     const pose = document.layout.components[component.id];
-    const points = Object.keys(definitions[component.kind].pins).map(pinId => pin(document, { kind: 'pin', componentId: component.id, pinId }));
+    const drawingScale = definitions[component.kind].drawingScale || 1, sheetScale = grid / 16;
+    const points = Object.keys(Catalog.componentPins(component)).map(pinId => pin(document, { kind: 'pin', componentId: component.id, pinId }));
     if(graphic(component.kind)){const b=graphicSize(component);for(const [x,y] of [[-b.width/2,-b.height/2],[b.width/2,-b.height/2],[-b.width/2,b.height/2],[b.width/2,b.height/2]]){const [rx,ry]=rotateOffset(x*(pose.mirror?-1:1),y,pose.rotation);points.push({x:pose.x+rx,y:pose.y+ry});}}
-    if(component.kind==='ledArray'||['decimalDisplay','instructionDisplay'].includes(component.kind)){const w=component.kind==='ledArray'?128:48,h=component.kind==='ledArray'?128:64;for(const [x,y] of [[-w,-h],[w,-h],[-w,h],[w,h]]){const [rx,ry]=rotateOffset(x,y,pose.rotation);points.push({x:pose.x+rx,y:pose.y+ry});}}
-    if(!graphic(component.kind))points.push({ x: pose.x - 24, y: pose.y - 24 }, { x: pose.x + 24, y: pose.y + 24 });
+    if(component.kind==='ledArray'||['decimalDisplay','instructionDisplay'].includes(component.kind)){const w=component.kind==='ledArray'?128*drawingScale:48*drawingScale,h=component.kind==='ledArray'?128*drawingScale:64*drawingScale;for(const [x,y] of [[-w,-h],[w,-h],[-w,h],[w,h]]){const [rx,ry]=rotateOffset(x,y,pose.rotation);points.push({x:pose.x+rx,y:pose.y+ry});}}
+    if(!graphic(component.kind))points.push({ x: pose.x - 24*sheetScale, y: pose.y - 24*sheetScale }, { x: pose.x + 24*sheetScale, y: pose.y + 24*sheetScale });
     return {
-      x: Math.min(...points.map(p => p.x)) - 8, y: Math.min(...points.map(p => p.y)) - 8,
-      right: Math.max(...points.map(p => p.x)) + 8, bottom: Math.max(...points.map(p => p.y)) + 8
+      x: Math.min(...points.map(p => p.x)) - 8*sheetScale, y: Math.min(...points.map(p => p.y)) - 8*sheetScale,
+      right: Math.max(...points.map(p => p.x)) + 8*sheetScale, bottom: Math.max(...points.map(p => p.y)) + 8*sheetScale
     };
   }
-  function hit(document, point, scale = 1) {
-    for (const probe of document.probes) if (probe.kind === 'voltage' && document.layout.probes?.[probe.id]) {
-      const p = probePoint(document, probe); if (point.x >= p.x - 5 && point.x <= p.x + 130 && Math.abs(point.y - p.y) < 14 / scale) return { kind: 'probe', id: probe.id };
+  function hit(document, point, scale = 1, ignoreProbes = false) {
+    for (const probe of document.probes) if (!ignoreProbes && probe.kind === 'voltage' && document.layout.probes?.[probe.id]) {
+      if (distance(point, pin(document, probe.positive)) < Math.min(12 / scale, 25)) return { kind: 'probe', id: probe.id, anchor: true };
+      const p = probePoint(document, probe); if (point.x >= p.x - 15.625 && point.x <= p.x + 406.25 && Math.abs(point.y - p.y) < 43.75) return { kind: 'probe', id: probe.id };
     }
     let best = null;
-    for (const c of document.electrical.components) for (const pinId of Object.keys(definitions[c.kind].pins)) {
+    for (const c of document.electrical.components) for (const pinId of Object.keys(Catalog.componentPins(c))) {
       const ref = { kind: 'pin', componentId: c.id, pinId }, d = distance(point, pin(document, ref));
       if (d < Math.min(10 / scale, 20) && (!best || d < best.distance)) best = { ...ref, distance: d };
     }
@@ -134,8 +138,10 @@
       const pose = document.layout.components[c.id], r = -pose.rotation * Math.PI / 180;
       const dx = point.x - pose.x, dy = point.y - pose.y, x = dx * Math.cos(r) - dy * Math.sin(r), y = dx * Math.sin(r) + dy * Math.cos(r);
       if(graphic(c.kind)){const b=graphicSize(c),ux=pose.mirror?-x:x;if(c.kind==='line'){if(distance({x:ux,y},closest({x:ux,y},{x:-b.width/2,y:-c.parameters.height/2},{x:b.width/2,y:c.parameters.height/2}))<8/scale)return {kind:'component',id:c.id};}else if(c.kind==='box'){if(Math.abs(ux)<=b.width/2+8/scale&&Math.abs(y)<=b.height/2+8/scale&&Math.min(Math.abs(Math.abs(ux)-b.width/2),Math.abs(Math.abs(y)-b.height/2))<8/scale)return {kind:'component',id:c.id};}else if(Math.abs(ux)<=b.width/2+6&&Math.abs(y)<=b.height/2+6)return {kind:'component',id:c.id};continue;}
-      if(outputSpecs[c.kind]&&Object.keys(definitions[c.kind].pins).length>2){const ps=Object.values(definitions[c.kind].pins);if(Math.abs(x)<Math.max(32,...ps.map(p=>Math.abs(p[0])))&&Math.abs(y)<Math.max(24,...ps.map(p=>Math.abs(p[1])))+16)return {kind:'component',id:c.id};}
-      if (Math.abs(x) < (c.kind === 'ground' ? 25 : 34) && Math.abs(y) < (['dFlipFlop','jkFlipFlop','tFlipFlop','counter','latch','halfAdder','fullAdder'].includes(c.kind) ? Math.max(...Object.values(definitions[c.kind].pins).map(p=>Math.abs(p[1])))+16 : c.kind==='pushSwitch'?40:c.kind==='tappedTransformer'?64:c.kind==='customTransformer'?80:c.kind === 'dpdtSwitch' ? 56 : ['voltageSource', 'voltageRail', 'opamp', 'transformer'].includes(c.kind) ? 36 : 24)) return { kind: 'component', id: c.id };
+      const bodyScale = definitions[c.kind].drawingScale || 1;
+      if(c.kind==='resistor' && Math.abs(x)<70 && Math.abs(y)<30) return {kind:'component',id:c.id};
+      if(outputSpecs[c.kind]&&Object.keys(Catalog.componentPins(c)).length>2){const ps=Object.values(Catalog.componentPins(c));if(Math.abs(x)<Math.max(32*bodyScale,...ps.map(p=>Math.abs(p[0])))&&Math.abs(y)<Math.max(24*bodyScale,...ps.map(p=>Math.abs(p[1])))+16*bodyScale)return {kind:'component',id:c.id};}
+      if (Math.abs(x) < (c.kind === 'ground' ? 25 : 34)*bodyScale && Math.abs(y) < (['dFlipFlop','jkFlipFlop','tFlipFlop','counter','latch','halfAdder','fullAdder'].includes(c.kind) ? Math.max(...Object.values(Catalog.componentPins(c)).map(p=>Math.abs(p[1])))/bodyScale+16 : c.kind==='pushSwitch'?40:c.kind==='tappedTransformer'?64:c.kind==='customTransformer'?80:c.kind === 'dpdtSwitch' ? 56 : ['voltageSource', 'voltageRail', 'opamp', 'transformer'].includes(c.kind) ? 36 : 24)*bodyScale) return { kind: 'component', id: c.id };
     }
     for (const wire of [...document.electrical.wires].reverse()) {
       const points = route(document, wire);
@@ -165,11 +171,11 @@
     for (const c of d.electrical.components) if (rectangle(bounds(d, c))) result.add(token('component', c.id));
     for (const w of d.electrical.wires) { const points = route(d, w); if (crossing ? points.some((p, i) => inside(p) || (i && segment(points[i - 1], p))) : points.every(inside)) result.add(token('wire', w.id)); }
     for (const j of d.electrical.junctions) if (inside(d.layout.junctions[j.id])) result.add(token('junction', j.id));
-    for (const probe of d.probes) if (d.layout.probes?.[probe.id]) { const p = probePoint(d, probe); if (rectangle({ x: p.x - 5, y: p.y - 14, right: p.x + 130, bottom: p.y + 14 })) result.add(token('probe', probe.id)); }
+    for (const probe of d.probes) if (d.layout.probes?.[probe.id]) { const p = probePoint(d, probe); if (rectangle({ x: p.x - 15.625, y: p.y - 43.75, right: p.x + 406.25, bottom: p.y + 43.75 })) result.add(token('probe', probe.id)); }
     return result;
   }
   function zoom(camera, point, factor) {
-    const scale = Math.max(.2, Math.min(4, camera.scale * factor));
+    const scale = Math.max(.064, Math.min(1.28, camera.scale * factor));
     return { scale, x: point.x - (point.x - camera.x) * scale / camera.scale, y: point.y - (point.y - camera.y) * scale / camera.scale };
   }
   const api=Object.freeze({clone,grid,snap,token,referenceKey,same,distance,pin,rotateOffset,placementPose,flipPose,probePoint,probeVoltage,scopeChannels,alignGrid,clean,route,closest,graphicSize,bounds,hit,boxSelection,zoom});

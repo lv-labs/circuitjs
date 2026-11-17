@@ -3,14 +3,19 @@ import type { SymbolProps } from "../svg";
 
 export const kind = "led";
 export const metadata = {
+  // Original 16-unit artwork, scaled to the 50-unit sheet grid.
+
   prefix: "D",
   name: "LED",
   pins: {
-    anode: [-48, 0],
-    cathode: [48, 0],
+    anode: [-100, 0],
+    cathode: [100, 0],
   },
   parameters: {
-    forwardVoltage: 2.1,
+    model: "default-led",
+    red: 1,
+    green: 0,
+    blue: 0,
     maxCurrent: 0.01,
   },
 } as const;
@@ -21,15 +26,15 @@ export function Symbol({
 }: SymbolProps) {
   const brightness = Math.max(
     0,
-    Math.min(1, current / Number(parameters.maxCurrent)),
+    Math.min(1, current > 0 ? 1 + .2 * Math.log(current / Number(parameters.maxCurrent)) : 0),
   );
   return (
     <>
-      <Lead from={metadata.pins.anode} to={[-16, 0]} />
-      <Lead from={metadata.pins.cathode} to={[16, 0]} />
-      <path d="M-16-16V16L16 0Z" fill={`rgba(255,80,64,${brightness})`} />
-      <path d="M16-16V16" />
-      <path d="M0-22L12-34M6-34H12V-28M12-14L24-26M18-26H24V-20" />
+      <Lead from={metadata.pins.anode} to={[-30, 0]} />
+      <Lead from={metadata.pins.cathode} to={[30, 0]} />
+      <polygon points="30,0 -30,-40, -30,40" fill={`rgb(${Math.round(255 * Number(parameters.red ?? 1) * brightness)},${Math.round(255 * Number(parameters.green ?? 0) * brightness)},${Math.round(255 * Number(parameters.blue ?? 0) * brightness)})`} />
+      <path d="M30-40V40" />
+      <path d="M-12-56L12-80M0-80H12V-68M12-40L36-64M24-64H36V-52" />
     </>
   );
 }

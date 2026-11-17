@@ -29,7 +29,7 @@ export const WireLayer = memo(function WireLayer({
     return undefined
   }
   return (
-    <g fill="none" stroke="currentColor" strokeWidth={2}>
+    <g fill="none" stroke="currentColor" strokeWidth={6.25}>
       {document.electrical.wires.map((w) => {
         const isSelected = selection.some((s) => s.kind === "wire" && s.id === w.id)
         const value = voltage(w.from)
@@ -39,7 +39,7 @@ export const WireLayer = memo(function WireLayer({
             key={w.id}
             className={isSelected ? "text-blue-600 dark:text-blue-400" : undefined}
             stroke={isSelected ? undefined : tint}
-            strokeWidth={isSelected ? 3 : undefined}
+            strokeWidth={isSelected ? 9.375 : undefined}
             points={core.geometry
               .route(document, w)
               .map((p) => `${p.x},${p.y}`)
@@ -52,7 +52,7 @@ export const WireLayer = memo(function WireLayer({
           key={`${point.x},${point.y}`}
           cx={point.x}
           cy={point.y}
-          r={4}
+          r={12.5}
           fill="currentColor"
           stroke="none"
         />
@@ -61,7 +61,7 @@ export const WireLayer = memo(function WireLayer({
         document.electrical.wires.filter((wire) => wire.from.kind === "junction" && wire.from.junctionId === junction.id || wire.to.kind === "junction" && wire.to.junctionId === junction.id).length === 1
       ).map(({ id }) => {
         const point = document.layout.junctions[id]
-        return <rect key={`loose-${id}`} x={point.x - 3} y={point.y - 3} width={6} height={6} fill="var(--background)" stroke="currentColor" />
+        return <rect key={`loose-${id}`} x={point.x - 9.375} y={point.y - 9.375} width={18.75} height={18.75} fill="var(--background)" stroke="currentColor" />
       })}
       {selection.filter(({ kind }) => kind === "junction").map(({ id }) => {
         const point = document.layout.junctions[id]
@@ -70,7 +70,7 @@ export const WireLayer = memo(function WireLayer({
             key={id}
             cx={point.x}
             cy={point.y}
-            r={4}
+            r={12.5}
             className="text-blue-600 dark:text-blue-400"
             fill="currentColor"
             stroke="none"

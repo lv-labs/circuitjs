@@ -1,6 +1,5 @@
+import {signals as CircuitScopeModel} from '../packages/circuit-core/index.mjs';
 import assert from 'node:assert/strict';
-import '../experiments/engine/document-adapter.js';
-import '../experiments/engine/scope-model.js';
 const S=CircuitScopeModel;
 const channels=[{id:'in',label:'Vin',positive:{componentId:'v',pinId:'p'},negative:null},{id:'out',label:'Vout',positive:{componentId:'u',pinId:'out'},negative:null}];
 const scope=S.create({capacity:5}),descriptors=scope.setChannels(channels);

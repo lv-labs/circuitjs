@@ -6,8 +6,8 @@ export const metadata = {
   name: "Box",
   pins: {},
   parameters: {
-    width: 128,
-    height: 96,
+    width: 400,
+    height: 300,
   },
 } as const;
 

@@ -1,28 +1,23 @@
+import {sliderField, setProperty, clampSliderValue} from '../wires/src/editor/componentSliders.ts';
+import {editing as CircuitEditorModel, adapter as CircuitDocumentAdapter, protocol as CircuitRevisionProtocol, simulation as CircuitSimulation} from '../packages/circuit-core/index.mjs';
 import assert from 'node:assert/strict';
-import '../experiments/engine/voltage-slider.js';
-import '../experiments/engine/document-adapter.js';
-import '../experiments/engine/revision-protocol.js';
-import '../experiments/engine/simulation-coordinator.js';
 import {createEngine} from './engine_node_runtime.mjs';
 import {outputFamilyCircuit} from './output_family_fixtures.mjs';
 const tick=()=>new Promise(r=>setImmediate(r));
-const deferred=()=>{let resolve;const promise=new Promise(r=>resolve=r);return {promise,resolve};};
-const tasks=new Map();let id=0,saved=2,physical=2,gate=null,commits=0,previewCount=0;
-const slider=CircuitVoltageSlider.create({schedule:fn=>{tasks.set(++id,fn);return id;},cancel:key=>tasks.delete(key),
- preview(value){previewCount++;physical=value?.voltage??saved;return gate?.promise;},
- commit(value){if(saved===value.voltage)return false;saved=value.voltage;physical=saved;commits++;return true;}});
-function fire(){assert.equal(tasks.size,1);const [id,fn]=tasks.entries().next().value;tasks.delete(id);fn();}
-// Latest target wins; a slow worker does not receive an unbounded drag backlog.
-slider.input('v',3);slider.input('v',4);assert.equal(tasks.size,1);gate=deferred();fire();assert.equal(physical,4);
-for(let v=0;v<100;v++)slider.input('v',v/20);assert.equal(tasks.size,0);assert.equal(previewCount,1);
-gate.resolve();gate=null;await tick();fire();await tick();assert.equal(physical,4.95);assert.equal(previewCount,2);assert.equal(saved,2);
-slider.finish();assert.equal(saved,4.95);assert.equal(commits,1);assert.equal(slider.draft,null);assert.equal(tasks.size,0);
-// Return to saved value after previews: history no-op still restores the source.
-slider.input('v',1);fire();await tick();assert.equal(physical,1);slider.input('v',saved);slider.finish();assert.equal(physical,saved);assert.equal(commits,1);assert.equal(tasks.size,0);
-// Cancel removes queued frames and restores saved value; a new gesture survives
-// completion of an older pending update.
-gate=deferred();slider.input('v',0);fire();slider.cancel();assert.equal(physical,saved);slider.input('v',3);gate.resolve();gate=null;await tick();fire();await tick();assert.equal(physical,3);slider.finish();assert.equal(commits,2);
-slider.input('v',1);slider.clear();assert.equal(tasks.size,0);assert.equal(slider.draft,null);
+// Exercise the actual property mapping used by React, including nested waveform
+// fields and safe potentiometer endpoints, before checking native live edits.
+const parameters={voltage:2,position:.5,waveform:{amplitude:1}};
+assert.equal(sliderField({kind:'variableVoltage'}),'voltage');
+assert.equal(sliderField({kind:'potentiometer'}),'position');
+assert.equal(sliderField({kind:'voltageSource',field:'waveform.amplitude'}),'waveform.amplitude');
+assert.throws(()=>sliderField({kind:'resistor'}),/Missing slider property/);
+setProperty(parameters,'waveform.amplitude',3);
+assert.equal(parameters.waveform.amplitude,3);assert.equal(parameters.voltage,2);
+assert.equal(clampSliderValue('potentiometer','position',0),.001);
+assert.equal(clampSliderValue('potentiometer','position',1),.999);
+assert.equal(clampSliderValue('potentiometer','position',.4),.4);
+assert.equal(clampSliderValue('variableVoltage','voltage',-5),-5);
+let id=0;
 // Real native source + RC load: repeated slider steps advance physics immediately,
 // preserve epoch and follow the continuous capacitor recurrence without resetting.
 const d=outputFamilyCircuit('variableVoltage'),M=CircuitEditorModel,A=CircuitDocumentAdapter;
@@ -45,4 +40,4 @@ for(let i=0;i<50;i++){
 }
 assert.equal(workerCount,1);assert.equal(updates,50);await sim.pause();const next=structuredClone(d);next.electrical.components[0].parameters.voltage=4.9;await sim.setDocument(next);assert.equal(timers.size,0);assert.equal(sim.getState().runRequested,false);
 const state=sim.getState();for(const status of ['error','loading','disposed'])assert.equal(CircuitSimulation.presentationFrame({...state,status}),null);assert.equal(CircuitSimulation.presentationFrame({...state,accepted:{...state.accepted,runEpoch:999}}),null);sim.dispose();
-console.log('Voltage slider checks passed: bounded preview queue, final/no-op restore, cancellation, history, continuous native RC charge/time across 50 edits, prompt solves and safe presentation frames.');
+console.log('Voltage slider checks passed: React property mapping, nested fields, safe pot endpoints, continuous native RC charge/time across 50 edits, prompt solves and safe presentation frames.');

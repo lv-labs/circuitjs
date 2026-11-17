@@ -194,7 +194,7 @@ tasks.register('compileEngineWorker', JavaExec) {
          'com.lushprojects.circuitjs1.worker'
 }
 
-// The classic prototype loads one deterministic core asset. The same package
+// The browser verification harness loads one deterministic core asset. The package
 // also retains its native ESM entry for independent frontend consumers.
 def coreBrowserBundle = layout.buildDirectory.file('core/browser.js')
 tasks.register('bundleCircuitCore') {
@@ -212,14 +212,15 @@ tasks.register('bundleCircuitCore') {
     }
 }
 
-tasks.register('makeEngineSite', Copy) {
+tasks.register('makeEngineSite', Sync) {
     group 'circuitjs1'
-    description 'Assemble the engine prototype and browser verification page'
+    description 'Assemble the simulation runtime and browser verification harness'
     dependsOn 'compileEngine', 'compileEngineWorker', 'bundleCircuitCore'
     into layout.buildDirectory.dir('engine-site')
     from(layout.buildDirectory.dir('engine'))
     from(layout.buildDirectory.dir('engine-worker'))
-    from('experiments/engine')
+    from('packages/circuit-runtime')
+    from('tools/engine-harness')
     from(layout.buildDirectory.dir('core')) {
         into 'core'
     }

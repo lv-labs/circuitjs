@@ -1,6 +1,8 @@
 import { Lead } from "../svg";
 export const kind = "scr";
 export const metadata = {
+  // Original 16-unit artwork, scaled to the 50-unit sheet grid.
+  drawingScale: 3.125,
   name: "SCR",
   prefix: "D",
   pins: {

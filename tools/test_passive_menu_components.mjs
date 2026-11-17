@@ -1,5 +1,5 @@
+import {editing as CircuitEditorModel, adapter as CircuitDocumentAdapter} from '../packages/circuit-core/index.mjs';
 import assert from 'node:assert/strict';
-import '../experiments/engine/document-adapter.js';
 import {createEngine} from './engine_node_runtime.mjs';
 import {passiveMenuKinds,passiveMenuCircuit} from './passive_menu_fixtures.mjs';
 const M=CircuitEditorModel,A=CircuitDocumentAdapter,engine=createEngine(),session=A.createSession(engine);
@@ -7,7 +7,7 @@ const near=(a,b,tol=1e-9)=>assert.ok(Math.abs(a-b)<tol,`${a} != ${b}`);
 for(const kind of passiveMenuKinds){
  const d=passiveMenuCircuit(kind),compiled=A.compile(d);M.validate(d);assert.equal(A.fromProjection(JSON.parse(compiled.canonical),d.id).canonical,compiled.canonical);
  for(const rotation of [0,90,180,270])for(const mirror of [false,true]){
-  const copy=structuredClone(d);Object.assign(copy.layout.components.part,{rotation,mirror});for(const pinId of Object.keys(M.definitions[kind].pins)){const p=M.pin(copy,{kind:'pin',componentId:'part',pinId});assert.equal(Math.abs(p.x%16),0);assert.equal(Math.abs(p.y%16),0);}assert.equal(A.compile(copy).canonical,compiled.canonical);
+  const copy=structuredClone(d);Object.assign(copy.layout.components.part,{rotation,mirror});for(const pinId of Object.keys(M.definitions[kind].pins)){const p=M.pin(copy,{kind:'pin',componentId:'part',pinId});assert.equal(Math.abs(p.x%M.grid),0);assert.equal(Math.abs(p.y%M.grid),0);}assert.equal(A.compile(copy).canonical,compiled.canonical);
  }
  const model=M.create(d),before=model.document;model.transaction('Edit',next=>{const p=next.electrical.components[0].parameters;if(kind==='pushSwitch')p.normallyClosed=true;else if(kind==='mbbSwitch')p.position=1;else if(kind==='transmissionLine')p.delay=.002;else p.inductance=8;});const after=model.document;model.undo();assert.deepEqual(model.document,before);model.redo();assert.deepEqual(model.document,after);
  const copy=structuredClone(d);M.pasteSelection(copy,M.copySelection(d,new Set([M.token('component','part')])));M.validate(copy);

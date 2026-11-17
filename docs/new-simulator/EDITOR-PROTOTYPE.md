@@ -1,5 +1,11 @@
 # Circuit editor canvas prototype
 
+> Cleanup note (2026-11-17): the intermediate JavaScript editor has been retired.
+> Old `experiments/engine` paths and prototype browser commands below describe the
+> historical implementation. Runtime workers now live in `packages/circuit-runtime`,
+> verification assets in `tools/engine-harness`, and the active editor in `wires/`.
+> See [HANDOFF.md](HANDOFF.md) for current build and verification status.
+
 Updated 2026-11-16. This is a browser/SVG interaction prototype using the existing
 document model and worker coordinator. It is a reference harness, not the final UI
 stack, and does not port the electrical simulation maths. Current priorities are

@@ -6,10 +6,10 @@ export const metadata = {
   prefix: "WM",
   name: "Wattmeter",
   pins: {
-    returnIn: [-48, 16],
-    returnOut: [48, 16],
-    currentIn: [-48, -16],
-    currentOut: [48, -16],
+    returnIn: [-100, 50],
+    returnOut: [100, 50],
+    currentIn: [-100, -50],
+    currentOut: [100, -50],
   },
   parameters: {
     mode: 0,
@@ -33,12 +33,12 @@ export const output = {
 export function Symbol({ pose }: SymbolProps) {
   return (
     <>
-      <Lead from={metadata.pins.returnIn} to={[-24, 16]} />
-      <Lead from={metadata.pins.returnOut} to={[24, 16]} />
-      <Lead from={metadata.pins.currentIn} to={[-24, -16]} />
-      <Lead from={metadata.pins.currentOut} to={[24, -16]} />
-      <rect x={-24} y={-28} width={48} height={56} />
-      <UprightText pose={pose} y={5} textAnchor="middle" fontSize={14}>
+      <Lead from={metadata.pins.returnIn} to={[-50, 50]} />
+      <Lead from={metadata.pins.returnOut} to={[50, 50]} />
+      <Lead from={metadata.pins.currentIn} to={[-50, -50]} />
+      <Lead from={metadata.pins.currentOut} to={[50, -50]} />
+      <rect x={-50} y={-80} width={100} height={160} />
+      <UprightText pose={pose} y={16} textAnchor="middle" fontSize={64}>
         W
       </UprightText>
     </>

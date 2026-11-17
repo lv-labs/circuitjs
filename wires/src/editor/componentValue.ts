@@ -49,7 +49,7 @@ function outputReading(c: Component, measured: Record<string, any>) {
     ["voltmeter", "testPoint"].includes(c.kind) &&
     (c.parameters as any).mode === 5
   )
-    return String(measured.value)
+    return measured.value == null ? "—" : String(measured.value)
   const unit: Record<string, string> = {
     voltmeter: "V",
     testPoint: "V",
@@ -73,6 +73,17 @@ export function componentValue(
   }
 ) {
   const p = c.parameters as Record<string, any>
+  if (c.kind === "ammeter")
+    return `${outputReading(c, live?.measurement || {})}${p.mode === 1 ? " RMS" : ""}`
+  if (["voltmeter", "ohmmeter", "wattmeter", "testPoint"].includes(c.kind)) {
+    const mode = Number(p.mode || 0)
+    const suffix = c.kind === "wattmeter"
+      ? mode === 1 ? " avg" : ""
+      : ["voltmeter", "testPoint"].includes(c.kind)
+        ? ["", " RMS", " max", " min", " pk–pk", ""][mode] || ""
+        : ""
+    return `${outputReading(c, live?.measurement || {})}${suffix}`
+  }
   if (core.catalog.outputSpecs[c.kind])
     return c.kind === "variableVoltage"
       ? format(p.voltage, "V")
@@ -95,6 +106,11 @@ export function componentValue(
     return `1:${p.ratio} · ${format(p.inductance, "H")}`
   if (["spdtSwitch", "dpdtSwitch"].includes(c.kind))
     return p.position === 2 ? "Off" : p.position === 0 ? "A" : "B"
+  if (["diode", "led", "zener"].includes(c.kind) && p.model) {
+    const model = core.catalog.resolveDiodeModel(p.model)
+    const name = typeof p.model === "string" ? p.model : (p.model as { name: string }).name
+    return c.kind === "zener" ? `${format(model.breakdownVoltage, "V")} Zener · ${name}` : name
+  }
   if (c.kind === "led") return format(p.forwardVoltage, "V")
   if (c.kind === "zener") return `${format(p.breakdownVoltage, "V")} Zener`
   if (c.kind === "inductor") return format(p.inductance, "H")

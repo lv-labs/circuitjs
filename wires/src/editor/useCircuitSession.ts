@@ -34,8 +34,26 @@ export function useCircuitSession(
   const run = useRef<Run | null>(null)
   useEffect(() => {
     let active = true
+    let displayFrame: number | null = null
+    let latestState: RunState | null = null
+    let scopeDirty = false
+    function scheduleDisplay() {
+      if (!active || displayFrame !== null) return
+      displayFrame = requestAnimationFrame(() => {
+        displayFrame = null
+        if (!active) return
+        if (scopeDirty) {
+          scopeDirty = false
+          setScopeData(scope.window(scopeSpan.current))
+        }
+        if (latestState) {
+          setSimulation(latestState)
+          latestState = null
+        }
+      })
+    }
     const coordinator = core.simulation.create({
-      // Match experiments/engine/editor.js: advance ten solver steps every 16 ms.
+      // Preserve the established simulation cadence: advance ten solver steps every 16 ms.
       // The core default is intentionally larger for headless consumers.
       batchSteps: 10,
       intervalMs: 16,
@@ -46,21 +64,24 @@ export function useCircuitSession(
         ),
       }),
       onFrame: (frame) => {
-        if (active && scope.append(frame))
-          setScopeData(scope.window(scopeSpan.current))
+        if (active && scope.append(frame)) {
+          scopeDirty = true
+          scheduleDisplay()
+        }
       },
       onState: (state) => {
         if (!active) return
         const samples = scope.count
         scope.followState(state)
-        if (scope.count !== samples)
-          setScopeData(scope.window(scopeSpan.current))
-        setSimulation(state)
+        if (scope.count !== samples) scopeDirty = true
+        latestState = state
+        scheduleDisplay()
       },
     })
     run.current = coordinator
     return () => {
       active = false
+      if (displayFrame !== null) cancelAnimationFrame(displayFrame)
       coordinator.dispose()
       run.current = null
     }
@@ -72,7 +93,11 @@ export function useCircuitSession(
     setScopeData(scope.window(scopeSpan.current))
     const coordinator = run.current
     coordinator?.setSampleChannels(
-      channels.map(({ id, positive, negative }) => ({ id, positive, negative }))
+      channels.map(({ id, kind, componentId, positive, negative }) =>
+        kind === "current"
+          ? { id, kind, componentId }
+          : { id, positive, negative }
+      )
     )
     void coordinator
       ?.setDocument(document)

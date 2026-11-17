@@ -1,4 +1,4 @@
-import '../experiments/engine/editor-model.js';
+import {editing as CircuitEditorModel} from '../packages/circuit-core/index.mjs';
 export const passiveMenuKinds=['pushSwitch','mbbSwitch','tappedTransformer','customTransformer','transmissionLine'];
 export function passiveMenuCircuit(kind,parameters={},options={}){
  const M=CircuitEditorModel,d=M.empty();d.id='passive-menu-'+kind;if(options.timeStep)d.simulation.timeStep=options.timeStep;
@@ -18,5 +18,5 @@ export function passiveMenuCircuit(kind,parameters={},options={}){
   add('sourceR','resistor',{resistance:impedance});wire('vin','p','sourceR','a');wire('sourceR','b','part','left');
   wire('part','leftReturn','g','g');wire('part','rightReturn','g','g');load('load','right',options.load??impedance);
  }
- return d;
+ return CircuitEditorModel.alignGrid(d);
 }

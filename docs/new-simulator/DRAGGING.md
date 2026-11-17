@@ -1,5 +1,11 @@
 # Connected schematic dragging
 
+> Cleanup note (2026-11-17): the intermediate JavaScript editor has been retired.
+> Old `experiments/engine` paths and prototype browser commands below describe the
+> historical implementation. Runtime workers now live in `packages/circuit-runtime`,
+> verification assets in `tools/engine-harness`, and the active editor in `wires/`.
+> See [HANDOFF.md](HANDOFF.md) for current build and verification status.
+
 The editor uses one gesture-local drag graph for pointer dragging, G, junctions,
 wire sections, and floating endpoints. `CircuitCore.editing.createDragSession` (also exposed through the prototype
 `CircuitEditorModel` compatibility adapter)

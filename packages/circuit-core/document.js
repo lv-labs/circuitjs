@@ -11,6 +11,8 @@
     assert(e && l && Array.isArray(e.components) && Array.isArray(e.junctions) && Array.isArray(e.wires), 'Missing circuit graph or layout');
     for (const map of [l.components, l.junctions, l.wires]) assert(map && typeof map === 'object' && !Array.isArray(map), 'Missing layout maps');
     const ids = items => { const set = new Set(); for (const item of items) { assert(item && typeof item.id === 'string' && item.id && !set.has(item.id), 'Missing or duplicate ID'); set.add(item.id); } return set; };
+    Catalog.validateSharedDiodeModels(e.components);
+    Catalog.validateSharedTransistorModels(e.components);
     const components = ids(e.components), junctions = ids(e.junctions); ids(e.wires);
     const point = p => p && Number.isFinite(p.x) && Number.isFinite(p.y);
     for (const c of e.components) {
@@ -20,16 +22,17 @@
       const v = c.parameters;
       if (c.kind === 'resistor') assert(Number.isFinite(v.resistance) && v.resistance > 0, 'Resistance must be positive');
       if (['npn', 'pnp'].includes(c.kind)) assert(Number.isFinite(v.beta) && v.beta > 0, 'Transistor beta must be positive');
+      if(Catalog.mosfetKind(c.kind)) Catalog.validateMosfetParameters(v);
       if (['nmos', 'pmos', 'njfet', 'pjfet'].includes(c.kind)) assert(Number.isFinite(v.threshold) && Number.isFinite(v.beta) && v.beta > 0, 'Invalid FET parameters');
+      if (Catalog.gateKind(c.kind)) Catalog.validateGateParameters(v);
       if (['andGate', 'nandGate', 'orGate', 'norGate', 'xorGate', 'xnorGate', 'inverter'].includes(c.kind)) assert(Number.isFinite(v.highVoltage) && v.highVoltage > 0 && (c.kind !== 'inverter' || Number.isFinite(v.slewRate) && v.slewRate > 0), 'Invalid logic level or slew rate');
       if(outputSpecs[c.kind])validateOutput(c,document.simulation?.timeStep);
+      if(Catalog.switchKind(c.kind)) Catalog.validateSwitchParameters(c.kind,v);
       if(c.kind==='pushSwitch')assert(typeof v.normallyClosed==='boolean','Invalid push-switch rest state');
       if(c.kind==='mbbSwitch')assert(Number.isInteger(v.position)&&v.position>=0&&v.position<=3,'Invalid MBB position');
       if(c.kind==='transmissionLine')assert(Number.isFinite(v.delay)&&v.delay>0&&Number.isFinite(v.impedance)&&v.impedance>0&&Number.isFinite(1/v.impedance),'Invalid transmission line');
       if(c.kind==='customTransformer')assert(Number.isFinite(v.inductance)&&v.inductance>0&&Number.isFinite(v.coupling)&&v.coupling>0&&v.coupling<1&&[v.turns1,v.turns2,v.turns3].every(n=>Number.isFinite(n)&&n!==0)&&['backwardEuler','trapezoidal'].includes(v.integration),'Invalid custom transformer');
       if (['transformer','tappedTransformer'].includes(c.kind)) assert(Number.isFinite(v.inductance) && v.inductance > 0 && Number.isFinite(v.ratio) && v.ratio > 0 && Number.isFinite(v.coupling) && v.coupling > 0 && v.coupling < 1 && ['backwardEuler', 'trapezoidal'].includes(v.integration), 'Transformer needs positive inductance/ratio and coupling strictly between 0 and 1');
-      if (['spdtSwitch', 'dpdtSwitch'].includes(c.kind)) assert(Number.isInteger(v.position) && v.position >= 0 && v.position <= (c.kind === 'spdtSwitch' ? 2 : 1), 'Invalid switch position');
-      if (['led', 'zener'].includes(c.kind)) assert(Number.isFinite(v.forwardVoltage) && v.forwardVoltage > 0 && Number.isFinite(c.kind === 'led' ? v.maxCurrent : v.breakdownVoltage) && (c.kind === 'led' ? v.maxCurrent : v.breakdownVoltage) > 0, 'Invalid diode parameters');
       if (c.kind === 'inductor') assert(Number.isFinite(v.inductance) && v.inductance > 0 && Number.isFinite(v.initialCurrent) && ['backwardEuler', 'trapezoidal'].includes(v.integration), 'Invalid inductor parameters');
       if (c.kind === 'currentSource') assert(Number.isFinite(v.current) && Number.isFinite(v.maxVoltage) && v.maxVoltage >= 0, 'Invalid current source parameters');
       if (c.kind === 'potentiometer') {
@@ -56,12 +59,42 @@
       if (ref?.kind === 'junction') return junctions.has(ref.junctionId);
       if (ref?.kind !== 'pin' || !components.has(ref.componentId)) return false;
       const c = e.components.find(c => c.id === ref.componentId);
-      return Object.hasOwn(definitions[c.kind].pins, ref.pinId);
+      return Object.hasOwn(Catalog.componentPins(c), ref.pinId);
     };
     for (const w of e.wires) assert(endpoint(w.from) && endpoint(w.to) && Array.isArray(l.wires?.[w.id]?.bends) && l.wires[w.id].bends.every(point), 'Invalid wire endpoint or route');
     assert(Array.isArray(document.probes) && document.simulation && Number.isFinite(document.simulation.timeStep) && document.simulation.timeStep > 0, 'Invalid probes or timestep');
     const probeIds = ids(document.probes);
     for (const p of document.probes) assert(p.kind === 'voltage' ? endpoint(p.positive) && (p.reference === 'ground' || endpoint(p.negative)) : p.kind === 'current' && components.has(p.componentId), 'Invalid probe target');
+    for (const p of document.probes) {
+      assert(p.color === undefined || typeof p.color === 'string' && p.color.length > 0 && p.color.length <= 200, 'Invalid trace colour');
+      assert(p.scale === undefined || Number.isFinite(p.scale) && p.scale > 0, 'Invalid trace vertical scale');
+      assert(p.offset === undefined || Number.isFinite(p.offset) && Math.abs(p.offset) <= 8, 'Invalid trace vertical position');
+      assert(p.coupling === undefined || ['dc','ac'].includes(p.coupling), 'Invalid trace coupling');
+    }
+    if (l.scopes !== undefined) {
+      const scopes = l.scopes, record = value => value && typeof value === 'object' && !Array.isArray(value);
+      assert(record(scopes) && scopes.version === 1 && typeof scopes.open === 'boolean' && Number.isFinite(scopes.height) && scopes.height > 0 && scopes.height <= 10000, 'Invalid scope workspace');
+      for (const map of [scopes.assignments, scopes.activeTraces]) {
+        assert(record(map) && Object.keys(map).length <= 10000, 'Invalid scope trace mapping');
+        for (const [key,value] of Object.entries(map)) assert(key.length > 0 && typeof value === 'string' && value.length > 0, 'Invalid scope trace mapping');
+      }
+      if (scopes.dock != null) {
+        let count = 0; const seen = new Set();
+        function dock(node, depth) {
+          assert(record(node) && depth <= 64 && ++count <= 2048, 'Invalid scope dock tree');
+          if (node.type === 'scope') { assert(typeof node.id === 'string' && node.id.length > 0 && !seen.has(node.id), 'Invalid/duplicate dock scope'); seen.add(node.id); }
+          else { assert(node.type === 'split' && ['horizontal','vertical'].includes(node.axis) && Number.isFinite(node.ratio) && node.ratio > 0 && node.ratio < 1, 'Invalid scope split'); dock(node.first, depth+1); dock(node.second, depth+1); }
+        }
+        dock(scopes.dock, 0);
+      }
+      assert(record(scopes.panes) && Object.keys(scopes.panes).length <= 10000, 'Invalid scope panes');
+      for (const [id,pane] of Object.entries(scopes.panes)) {
+        assert(id.length > 0 && record(pane) && ['docked','floating','sheet'].includes(pane.mode), 'Invalid scope pane mode');
+        assert(point(pane) && [pane.width,pane.height,pane.weight,pane.timeDivision].every(n => Number.isFinite(n) && n > 0) && pane.timeDivision <= 60, 'Invalid scope pane geometry or scale');
+        assert(pane.order === undefined || Number.isSafeInteger(pane.order) && pane.order >= 0, 'Invalid scope order');
+        assert(pane.sheetScale === undefined || Number.isFinite(pane.sheetScale) && pane.sheetScale > 0, 'Invalid scope sheet reference scale');
+      }
+    }
     if (l.probes) { assert(typeof l.probes === 'object' && !Array.isArray(l.probes), 'Invalid probe layout'); for (const [id, pose] of Object.entries(l.probes)) assert(probeIds.has(id) && point(pose), 'Invalid probe layout'); }
     return document;
   }
