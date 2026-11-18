@@ -819,10 +819,9 @@ public class SimulationManager {
 	    return;
 	}
 	detectBusWidths();
-	if (app.ui != null && app.ui.elmList != app.elmList)
+	if (app.ui.elmList != app.elmList)
 	    detectBusWidths(app.ui.elmList);
-	if (app.ui != null)
-	    makePostDrawList();
+	makePostDrawList();
 
 	needsStamp = true;
     }
@@ -840,7 +839,7 @@ public class SimulationManager {
 
 	// if UI is showing composite internals, run wire closure on UI list to assign
 	// nodes to display-only wires and build wireInfoList for current display
-	if (app.ui != null && app.ui.elmList != app.elmList) {
+	if (app.ui.elmList != app.elmList) {
 	    detectBusWidths(app.ui.elmList);
 	    calculateWireClosureForList(app.ui.elmList, true);
 	    assignUiWireNodes();
@@ -930,8 +929,7 @@ public class SimulationManager {
 	timeStep = maxTimeStep;
 	needsStamp = true;
 	
-	if (app.jsInterface != null)
-	    app.jsInterface.callAnalyzeHook();
+	app.jsInterface.callAnalyzeHook();
 	return true;
     }
 
@@ -1278,18 +1276,6 @@ public class SimulationManager {
     int subIterations;
     
     void runCircuit(boolean didAnalyze) {
-	runCircuit(didAnalyze, 0);
-    }
-
-    // Use the same numerical loop without UI speed controls or wall-clock pacing.
-    // Count successful steps, not convergence retries. Zero retains editor pacing.
-    void stepCircuit(int count) {
-	if (count < 1 || count > 10000)
-	    throw new IllegalArgumentException("Step count must be between 1 and 10000");
-	runCircuit(false, count);
-    }
-
-    private void runCircuit(boolean didAnalyze, int stepLimit) {
 	if (matrices == null || elmList.size() == 0) {
 	    matrices = null;
 	    return;
@@ -1298,22 +1284,20 @@ public class SimulationManager {
 	//int maxIter = getIterCount();
 	boolean debugprint = app.dumpMatrix;
 	app.dumpMatrix = false;
-	boolean bounded = stepLimit > 0;
-	int completedSteps = 0;
-	long steprate = bounded ? 0 : (long) (160*app.getIterCount());
+	long steprate = (long) (160*app.getIterCount());
 	long tm = System.currentTimeMillis();
 	long lit = lastIterTime;
-	if (!bounded && lit == 0) {
+	if (lit == 0) {
 	    lastIterTime = tm;
 	    return;
 	}
 	
 	// Check if we don't need to run simulation (for very slow simulation speeds).
 	// If the circuit changed, do at least one iteration to make sure everything is consistent.
-	if (!bounded && 1000 >= steprate*(tm-lastIterTime) && !didAnalyze)
+	if (1000 >= steprate*(tm-lastIterTime) && !didAnalyze)
 	    return;
 	
-	boolean delayWireProcessing = app.scopeManager != null && app.scopeManager.canDelayWireProcessing();
+	boolean delayWireProcessing = app.scopeManager.canDelayWireProcessing();
 	
 	int timeStepCountAtFrameStart = timeStepCount;
 	
@@ -1333,8 +1317,7 @@ public class SimulationManager {
 	    int i, j, subiter;
 	    for (i = 0; i != elmArr.length; i++)
 		elmArr[i].startIteration();
-	    if (app.ui != null)
-		app.ui.steps++;
+	    app.ui.steps++;
 	    int subiterCount = (adjustTimeStep && timeStep/2 > minTimeStep) ? 100 : 5000;
 	    for (subiter = 0; subiter != subiterCount; subiter++) {
 		converged = true;
@@ -1427,13 +1410,8 @@ public class SimulationManager {
 		timeStepAccum -= maxTimeStep;
 		timeStepCount++;
 	    }
-	    for (i = 0; i != elmArr.length; i++) {
+	    for (i = 0; i != elmArr.length; i++)
 		elmArr[i].stepFinished();
-		// A model may stop here (for example, a reverse-biased polarized cap).
-		// stop() retires the matrices; do not read them or emit a sample afterward.
-		if (app.stopMessage != null)
-		    return;
-	    }
 	    if (!delayWireProcessing)
 		calcWireCurrents();
 	    app.onTimeStep();
@@ -1444,11 +1422,6 @@ public class SimulationManager {
 		    m.lastNodeVoltages[i] = m.nodeVoltages[i];
 	    }
 //	    console("set lastrightside at " + t + " " + lastNodeVoltages);
-	    if (bounded) {
-		if (++completedSteps >= stepLimit)
-		    break;
-		continue;
-	    }
 		
 	    tm = System.currentTimeMillis();
 	    lit = tm;

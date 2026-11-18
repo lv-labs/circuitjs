@@ -124,15 +124,9 @@ public abstract class CircuitElm implements Editable {
 
     boolean hasFlag(int f) { return (flags & f) != 0; }
     
-    static void initSimulationClass(CirSim app_, SimulationManager sim_) {
+    static void initClass(CirSim app_, SimulationManager sim_) {
 	sim = sim_;
 	app = app_;
-	ps1 = new Point();
-	ps2 = new Point();
-    }
-
-    static void initClass(CirSim app_, SimulationManager sim_) {
-	initSimulationClass(app_, sim_);
 
 	colorScale = new Color[colorScaleCount];
 

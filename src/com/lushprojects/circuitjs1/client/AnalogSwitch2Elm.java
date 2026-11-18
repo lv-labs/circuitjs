@@ -112,12 +112,6 @@ class AnalogSwitch2Elm extends AnalogSwitchElm {
 	return true;
     }
 
-    // Either throw may conduct after analysis. Keep both in the same solver
-    // matrix even when pulldowns make getConnection() report only the active one.
-    boolean getMatrixConnection(int n1, int n2) {
-	return n1 != 3 && n2 != 3;
-    }
-
     boolean hasGroundConnection(int n) {
 	return needsPulldown() && n != 3;
     }

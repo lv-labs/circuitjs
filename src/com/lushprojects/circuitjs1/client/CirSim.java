@@ -260,12 +260,7 @@ public class CirSim implements NativePreviewHandler {
     SimulationManager sim;
     public JSInterface jsInterface;
 
-    public void setSimRunning(boolean s) {
-	if (ui != null)
-	    ui.setSimRunning(s);
-	else
-	    simRunning = s && stopMessage == null;
-    }
+    public void setSimRunning(boolean s) { ui.setSimRunning(s); }
 
     public boolean simIsRunning() { return ui.simIsRunning(); }
 
@@ -283,10 +278,8 @@ public class CirSim implements NativePreviewHandler {
     Color getBackgroundColor() { return ui.getBackgroundColor(); }
     
     void onTimeStep() {
-	if (scopeManager != null)
-	    scopeManager.timeStep();
-	if (jsInterface != null)
-	    jsInterface.callTimeStepHook();
+	scopeManager.timeStep();
+	jsInterface.callTimeStepHook();
     }
 
     void needAnalyze() {

@@ -138,7 +138,6 @@ class PotElm extends CircuitElm implements Command, MouseWheelHandler {
     }
 
     void createSlider() {
-        if (app.ui == null) return;
         if (link != 0) {
             for (CircuitElm ce : app.elmList) {
                 if (ce instanceof PotElm && ce != this) {
@@ -205,7 +204,7 @@ class PotElm extends CircuitElm implements Command, MouseWheelHandler {
 	dn = distance(point1, point2);
 	int bodyLen = 32;
 	calcLeads(bodyLen);
-	if (slider != null) position = slider.getValue() / 100.;
+	position = slider.getValue() / 100.;
 	int soff = (int) ((position - .5) * bodyLen);
 	// int offset2 = offset - sign(offset)*4;
 	post3 = interpPoint(point1, point2, .5, offset);

@@ -61,7 +61,6 @@ import com.google.gwt.event.dom.client.MouseWheelHandler;
 	int getDumpType() { return 172; }
 	void createSlider() {
 	    waveform = WF_VAR;
-            if (app.ui == null) return;
 	    app.addWidgetToVerticalPanel(label = new Label(Locale.LS(sliderText)));
 	    label.addStyleName("topSpace");
 	    int value = (int) ((frequency-bias)*100/(maxVoltage-bias));
@@ -70,7 +69,6 @@ import com.google.gwt.event.dom.client.MouseWheelHandler;
 //	    sim.verticalPanel.validate();
 	}
 	double getVoltage() {
-	    if (slider == null) return frequency;
 	    frequency = slider.getValue() * (maxVoltage-bias) / 100. + bias;
 	    return frequency;
 	}

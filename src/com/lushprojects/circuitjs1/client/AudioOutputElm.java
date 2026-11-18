@@ -238,7 +238,6 @@ public class AudioOutputElm extends CircuitElm {
 	}
 	
         void createButton() {
-            if (app.ui == null) return;
             app.addWidgetToVerticalPanel(button = new Button(""));
             button.setStylePrimaryName("topButton");
 	    setButtonLabel();

@@ -26,6 +26,12 @@ Removed from this fork:
 - local dev server scripts and container/dev-environment helpers
 - old IDE project metadata
 
+## New simulator
+
+The new React simulator has moved to a separate local repository, `../wires`.
+This fork keeps the original LV Labs reskin, short-link service configuration and
+existing deployment. The new simulator is built and maintained independently.
+
 ## Build
 
 Requirements:
@@ -48,33 +54,6 @@ If you only want the compiled web assets in `war/`:
 ```
 
 ## Local Preview
-
-The active new editor is the React app in `wires/`, backed by the retained
-CircuitJS worker and `packages/circuit-core`. Start with the
-[current handoff](docs/new-simulator/HANDOFF.md) and
-[React editor README](wires/src/editor/README.md).
-
-```bash
-pnpm deps:install
-pnpm engine:build
-pnpm dev
-```
-
-These commands require Java 8, Node 24+ and pnpm 10.30.3. Root scripts orchestrate
-the existing app; its dependencies and lockfile remain in `wires/`.
-`pnpm build` builds the engine plus React; `pnpm check` runs all computational
-checks, builds React and checks SSR/worker packaging. `pnpm verify` performs a
-fresh engine build followed by those checks. No browser interaction checks or
-deployment are performed by these commands.
-
-`pnpm --dir wires build` produces the React deployment in `wires/dist/`.
-Worker entry points live in `packages/circuit-runtime`; development-only engine
-verification pages live in `tools/engine-harness` and are assembled into
-`build/engine-site`. The intermediate JavaScript editor has been removed.
-The original Falstad interface and its existing build/deployment remain available
-through `makeSite`; this cleanup does not change that deployment workflow.
-See [upstream architecture](docs/new-simulator/UPSTREAM-ARCHITECTURE.md) for the
-proposed next steps; no submodule or repository split has been made.
 
 After `makeSite`:
 
